@@ -130,8 +130,8 @@ def generate_compatible_profiles(simul,**kwargs):
     for species in range(Nspecies):
         #Here we specify temperatures that should satisfy deltaT condition
         THatPre =(lambda psiN: (Tpeds[species] - TCoreGrads[species]*(psiMinPed-psi[0]) + TCoreGrads[species]*(psiN-psi[0])))
-        THatPed =(lambda psiN: (Tpeds[species] + TCoreGrads[species]*(psiN-psiMinPed)))
-        THatAft =(lambda psiN: (Tpeds[species] + TCoreGrads[species]*(psiMaxPed-psiMinPed) + TSOLGrads[species]*(psiN-psiMaxPed)))
+        THatPed =(lambda psiN: (Tpeds[species] + TpedGrads[species]*(psiN-psiMinPed)))
+        THatAft =(lambda psiN: (Tpeds[species] + TpedGrads[species]*(psiMaxPed-psiMinPed) + TSOLGrads[species]*(psiN-psiMaxPed)))
         Tlist=[THatPre,THatPed,THatAft]
         THats[species]=bezier_transition(Tlist,psiList,pairList,psi)
         #THats[species] = interp1d(psi, THats[species], kind='cubic')
