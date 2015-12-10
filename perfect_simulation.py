@@ -88,9 +88,17 @@ class perfect_simulation(object):
             self.output_filename_nodir =None
         else:
             self.output_filename="." + "/" + output_filename
-            self.outputs=h5py.File(self.output_filename)
-            self.output_dir = self.output_filename.rsplit('/',1)[:-1][0]
-            self.output_filename_nodir = "." + "/" + self.output_filename.rsplit('/',1)[-1]
+            try:
+                 self.outputs=h5py.File(self.output_filename)
+            except:
+                print "Could not read desired output file '"+self.output_filename+"', setting it to 'None'."
+                self.output_filename=None
+                self.outputs=None
+                self.output_dir=self.input_dir
+                self.output_filename_nodir =None
+            else:
+                self.output_dir = self.output_filename.rsplit('/',1)[:-1][0]
+                self.output_filename_nodir = "." + "/" + self.output_filename.rsplit('/',1)[-1]
 
     def always_run_simulation(self,cmdline):
         print "Starting:\n>>"+cmdline+"\nin directory '"+self.input_dir+"'"      
