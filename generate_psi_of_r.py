@@ -3,8 +3,16 @@ from toroidal_flux_q import toroidal_flux_derivative,func_polyfit,func_polyfit_d
 #psi(r),dpsiNdr
 from r_to_psi import func_psi,psi_pedestal_width,drdPsiN_at_psiN_one
 import numpy
+import matplotlib.pyplot as plt
+
+
 
 def drdpsiN_of_r(a,simul):
+    print "++++++++++++++++++++++++++++"
+    print "GENERATING PSI"
+    print "++++++++++++++++++++++++++++"
+
+    
     q95=simul.inputs.Miller_q
     kappa90=simul.inputs.Miller_kappa
     RBar=simul.RBar
@@ -31,11 +39,34 @@ def drdpsiN_of_r(a,simul):
     q_rho=func_q(1.0,3.5*scale_q,0.6,1.6*scale_q) #q(rho)
     q_r=lambda r:q_rho(r/a) #q(rho=r/a)
 
+    plotNum = 1
+
+    numRows = 1
+    numCols = 4
+    fig = plt.figure()
+    xp=numpy.linspace(0,1)
+    ax = fig.add_subplot(numRows, numCols, plotNum); plotNum += 1
+    ax.plot(xp, q_rho(xp))
+    ax = fig.add_subplot(numRows, numCols, plotNum); plotNum += 1
+    ax.plot(xp, kappa_rho(xp))
+    ax = fig.add_subplot(numRows, numCols, plotNum); plotNum += 1
+    ax.plot(xp, dPsiTdr(xp))
+
     #calculate psi(r)
     psi_r=func_psi(q_r,dPsiTdr) #psi(r), will be in the same units as BBar and RBar
+    
     psiAHat=psi_r(a)/(BBar*RBar**2) #translates to/from unitless psi to psi_N
 
     simul.inputs.changevar("physicsParameters","psiAHat",psiAHat)
     simul.inputs.read(simul.input_filename)
     #print  drdPsiN_at_psiN_one(q_r,dPsiTdr,psi_r,a)
+
+    print drdPsiN_at_psiN_one(q_r,dPsiTdr,psi_r,a)[0]
+    ax = fig.add_subplot(numRows, numCols, plotNum); plotNum += 1
+    xr=numpy.linspace(0.1,0.7)
+    psi_array=[psi_r(xxx) for xxx in xr]
+    ax.plot(xr,psi_array)
+
+    plt.show()
+
     return drdPsiN_at_psiN_one(q_r,dPsiTdr,psi_r,a)[0]

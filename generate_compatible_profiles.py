@@ -43,7 +43,7 @@ def generate_compatible_profiles(simul,**kwargs):
 
 
     x_width=kwargs["xwidth"]
-    psiN_width=x_width*dxdpsiN_at_a
+    psiN_width=x_width/dxdpsiN_at_a
     #calculate new psiMid and diameter for this profile
     psiMid=1-psiN_width/2.0
     psiDiameter=3*psiN_width
@@ -76,7 +76,7 @@ def generate_compatible_profiles(simul,**kwargs):
     if not isinstance(ms, list):
         ms=[ms]
 
-    upShift=-psiN_width/2.0
+    upShift=-psiN_width/3.0
 
     #determine gridpoints to start and stop pedestal
     #psiMinPedIndex=numpy.argmin(numpy.abs(psi-(psiMid-psiN_width/2.0)))
@@ -116,11 +116,15 @@ def generate_compatible_profiles(simul,**kwargs):
         Tpeds[i]=kwargs["Tped_"+species[i]]
         TCoreGrads[i]=kwargs["dTCoredx_"+species[i]]*dxdpsiN_at_a
         TpedGrads[i]=kwargs["dTpeddx_"+species[i]]*dxdpsiN_at_a
+        print "-------------------------"
+        print "TpedGrads["+str(i)+"] = " + str(TpedGrads[i])
+        print "-------------------------"
         TSOLGrads[i]=kwargs["dTSOLdx_"+species[i]]*dxdpsiN_at_a
     Tpeds=numpy.array(Tpeds)
     TCoreGrads=numpy.array(TCoreGrads)
     TSOLGrads=numpy.array(TSOLGrads)
     TpedGrads=numpy.array(TpedGrads)
+    print Tpeds
     #TpedGrads=Tpeds/psiN_width
 
     niPed=kwargs["nped_"+species[main_index]]
@@ -131,7 +135,7 @@ def generate_compatible_profiles(simul,**kwargs):
     #generate T profiles
     for species in range(Nspecies):
         #Here we specify temperatures that should satisfy deltaT condition
-        THatPre =(lambda psiN: (Tpeds[species] - TCoreGrads[species]*(psiMinPed-psi[0]) + TCoreGrads[species]*(psiN-psi[0])))
+        THatPre =(lambda psiN: (Tpeds[species] + TCoreGrads[species]*(psiN-psiMinPed)))
         THatPed =(lambda psiN: (Tpeds[species] + TpedGrads[species]*(psiN-psiMinPed)))
         THatAft =(lambda psiN: (Tpeds[species] + TpedGrads[species]*(psiMaxPed-psiMinPed) + TSOLGrads[species]*(psiN-psiMaxPed)))
         Tlist=[THatPre,THatPed,THatAft]
@@ -170,15 +174,19 @@ def generate_compatible_profiles(simul,**kwargs):
 
     #eta profiles that satisfy the orderings
     #setting eta_i=n_i at the pedestal top makes Phi=0 there
-    #etaHats[main_index] = nHats[main_index][psiMinPedIndex]
-    etaHats[main_index] = niPed
+    etaHats[main_index] = nHats[main_index][psiMinPedIndex]
     detaHatdpsis[main_index] = 0
+    #etaHats[main_index] = niPed*(1-0.5*(psi-psi[0]))
+    #detaHatdpsis[main_index] = -niPed*0.5
+
+    
     #if Phi=0 at top of the pedestal, this gives the top of the n_z pedestal.
     #To make n_z and n_i same at points, those points should satisfy
     # eta_z=n_i (n_i/eta_i)^(-[Zz/Zi] Ti/Tz)
     #etaHats[imp_index] = 0.01*nHats[main_index][psiMinPedIndex]
     imp_conc=kwargs["imp_conc"]
     etaHats[imp_index]=imp_conc*niPed
+    #etaHats[imp_index]=imp_conc*niPed
     detaHatdpsis[imp_index] = 0
 
     #solve for Phi to make delta_etai the above value

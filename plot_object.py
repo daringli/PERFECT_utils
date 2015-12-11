@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib import rc
 from perfect_simulation import perfect_simulation
+import scipy.constants
 
 sentinel=object()
 rc('text', usetex=True)
@@ -75,6 +76,7 @@ class plot_object(object):
             self.ax.legend(loc=1,prop={'size':6})
             self.ax.set_xlabel(xlabel)
             self.ax.set_ylabel(ylabel)
+            self.ax.set_ylim(bottom=0)
             i=i+1
         
     def particle_flux_plot_func(self,simul):
@@ -97,12 +99,13 @@ class plot_object(object):
         self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel)
 
     def T_plot_func(self,simul):
+        e=scipy.constants.e
         x=simul.psi
-        y=simul.T
+        y=simul.T/(1000*e)
         legend=simul.description
         species=simul.species
         xlabel=r"$\psi_N$"
-        ylabel=r"$T$"
+        ylabel=r"$T/eV$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel)
 
     def n_plot_func(self,simul):
@@ -111,7 +114,7 @@ class plot_object(object):
         legend=simul.description
         species=simul.species
         xlabel=r"$\psi_N$"
-        ylabel=r"$n$"
+        ylabel=r"$n/m^{-3}$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel)
 
 

@@ -4,7 +4,7 @@ import scipy.integrate,scipy.misc
 from toroidal_flux_q import func_q,func_polyfit,func_polyfit_derivative,toroidal_flux_derivative
 
 def dpsidr(q,dPsiTdr):
-    return lambda r: 1/(2*numpy.pi*q(r))*dPsiTdr(r)
+    return lambda r: (1/(2*numpy.pi*q(r)))*dPsiTdr(r)
 
 def func_psi(q,dPsiTdr):
     integrand=dpsidr(q,dPsiTdr)
