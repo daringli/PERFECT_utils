@@ -29,7 +29,7 @@ def generate_compatible_profiles(simul,**kwargs):
     imp_index=kwargs["zI"]
     e_index=kwargs["eI"]
 
-
+    
 
 
     #parse keywords to see how this object should be initialized
@@ -79,10 +79,12 @@ def generate_compatible_profiles(simul,**kwargs):
     upShift=-psiN_width/2.0
 
     #determine gridpoints to start and stop pedestal
-    psiMinPedIndex=numpy.argmin(numpy.abs(psi-(psiMid-psiN_width/2)))
-    psiMaxPedIndex=numpy.argmin(numpy.abs(psi-(psiMid+psiN_width/2+upShift)))
-    psiMinPed=psi[psiMinPedIndex]
-    psiMaxPed=psi[psiMaxPedIndex]
+    #psiMinPedIndex=numpy.argmin(numpy.abs(psi-(psiMid-psiN_width/2.0)))
+    #psiMaxPedIndex=numpy.argmin(numpy.abs(psi-(psiMid+psiN_width/2.0+upShift)))
+    #psiMinPed=psi[psiMinPedIndex]
+    #psiMaxPed=psi[psiMaxPedIndex]
+    psiMinPed=psiMid-psiN_width/2.0
+    psiMaxPed=psiMid+psiN_width/2.0+upShift
     #print "psiMinPed:"
     #print psiMinPed
     #list of psi where our profiles change slope
@@ -151,11 +153,12 @@ def generate_compatible_profiles(simul,**kwargs):
 
 
     #with n_i and T_i generated, we can evaluate logLambda at a suitable point
-    point=numpy.floor((psiMinPedIndex+psiMaxPedIndex)/2) # middle of the pedestal
+    point=numpy.floor((psiMinPed+psiMaxPed)/2.0) # middle of the pedestal
     T=simul.TBar*THats[main_index][point]
     n=simul.nBar*nHats[main_index][point]
     if simul.units=="SI":
         logLambda=coulombLog(T,n)
+        print "logLambda: "+logLambda
         nur=nu_r(simul.RBar,simul.nBar,simul.TBar,logLambda)
         simul.inputs.changevar("physicsParameters","nu_r",nur)
         simul.inputs.read(simul.input_filename)
@@ -165,15 +168,15 @@ def generate_compatible_profiles(simul,**kwargs):
 
     #eta profiles that satisfy the orderings
     #setting eta_i=n_i at the pedestal top makes Phi=0 there
-    etaHats[main_index] = nHats[main_index][psiMinPedIndex]
+    #etaHats[main_index] = nHats[main_index][psiMinPedIndex]
+    etaHats[main_index] = niPed
     detaHatdpsis[main_index] = 0
     #if Phi=0 at top of the pedestal, this gives the top of the n_z pedestal.
     #To make n_z and n_i same at points, those points should satisfy
     # eta_z=n_i (n_i/eta_i)^(-[Zz/Zi] Ti/Tz)
-    #which, for constant eta gives
-    #point=Npsi-1 #point at which n_i=n_z
-    #etaHats[zI] = nHats[main_index][point]* (nHats[main_index][point]/etaHats[main_index][point])**(-(Zz/Zi)*THats[main_index][point]/THats[zI][point])
-    etaHats[imp_index] = 0.01*nHats[main_index][psiMinPedIndex]
+    #etaHats[imp_index] = 0.01*nHats[main_index][psiMinPedIndex]
+    imp_conc=kwargs["imp_conc"]
+    etaHats[imp_index]=imp_conc*niPed
     detaHatdpsis[imp_index] = 0
 
     #solve for Phi to make delta_etai the above value
