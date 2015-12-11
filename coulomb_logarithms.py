@@ -16,7 +16,7 @@ def lambda_ee(ne,Te):
     if m_keV:
         e=scipy.constants.e
         Te=Te/e
-        ne=ne*1e6
+        ne=ne/1e6
         #print "ne:"
         #print ne
         #print "Te:"

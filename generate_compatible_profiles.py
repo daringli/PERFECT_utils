@@ -156,8 +156,10 @@ def generate_compatible_profiles(simul,**kwargs):
     point=numpy.floor((psiMinPed+psiMaxPed)/2.0) # middle of the pedestal
     T=simul.TBar*THats[main_index][point]
     n=simul.nBar*nHats[main_index][point]
+    print "T: "+str(T)
+    print "n: "+str(n)
     if simul.units=="SI":
-        logLambda=coulombLog(T,n)
+        logLambda=coulombLog(n,T)
         print "logLambda: "+str(logLambda)
         nur=nu_r(simul.RBar,simul.nBar,simul.TBar,logLambda)
         simul.inputs.changevar("physicsParameters","nu_r",nur)
