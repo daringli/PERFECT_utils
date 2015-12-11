@@ -51,7 +51,7 @@ cmd="perfect -ksp_type gmres -ksp_gmres_restart 100 -ksp_max_it 1000"
 
 num_simuls=2
 simuls=[0]*num_simuls
-dir="Npsi"
+dir="NthetaScan"
 simul_dir_names=[dir+str(x+1) for x in range(num_simuls)]
 
 #changes to make to the inputfile
