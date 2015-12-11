@@ -16,7 +16,6 @@ output_filename="perfectOutput.h5"
 
 original_simul=normalized_perfect_simulation(input_filename,norm_filename,None)
 original_simul.species=["d","N","e"]
-dxdpsiN=drdpsiN_of_r(a,original_simul) #generate dr/dpsi_N. Returns a function
 
 
 Tped=0.9
@@ -26,6 +25,8 @@ eI=2
 a=0.7 #minor radius in meters
 xwidth=0.03 #pedestal width in r
 imp_conc=0.01 #factor relating impurity and main ion concentration at pedestal top
+dxdpsiN=drdpsiN_of_r(a,original_simul) #generate dr/dpsi_N. Returns a function
+
 
 Tped_e=0.9
 dTCoredx_e=-0.1*Tped_e/xwidth
