@@ -5,8 +5,9 @@ import scipy.constants
 
 def lambda_ee(ne,Te):
     """electron-electron logarithm from NRL page 34 2013
-    ne in m^(-3) = 10^(-6) m^(-3)
-    Te in keV
+    ne in m^(-3)
+    Te in J
+    Note: these are coverted into cm^{-3} and eV, and then inserted into the formula:
     lambda_ee=log(Lambda) = 23.5-log(ne^(1.0/2.0)*Te^(5.0/4.0))-(10^(-5)+(log(Te)-2)^2/16.0)^(1.0/2.0)
 
 """
