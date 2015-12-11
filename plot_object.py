@@ -57,7 +57,7 @@ class plot_object(object):
     def default_plot_func(self,simul):
         print "Cannot plot '"+str(simul)+"', no specific plot function specified!"
             
-    def plot_xy_legend_species_subplots(self,x,y,species,legend='',xlabel='',ylabel=''):
+    def plot_xy_legend_species_subplots(self,x,y,species,legend='',xlabel='',ylabel='',ylimBottom0=False):
         #see if species has a subplot, if not, create one for it
         #print x
         #print y
@@ -76,7 +76,8 @@ class plot_object(object):
             self.ax.legend(loc=1,prop={'size':6})
             self.ax.set_xlabel(xlabel)
             self.ax.set_ylabel(ylabel)
-            self.ax.set_ylim(bottom=0)
+            if ylimBottom0:
+                self.ax.set_ylim(bottom=0)
             i=i+1
         
     def particle_flux_plot_func(self,simul):
@@ -106,7 +107,7 @@ class plot_object(object):
         species=simul.species
         xlabel=r"$\psi_N$"
         ylabel=r"$T/eV$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel)
+        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True)
 
     def n_plot_func(self,simul):
         x=simul.psi
@@ -115,7 +116,7 @@ class plot_object(object):
         species=simul.species
         xlabel=r"$\psi_N$"
         ylabel=r"$n/m^{-3}$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel)
+        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True)
 
 
     @property
