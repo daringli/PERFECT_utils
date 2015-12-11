@@ -158,7 +158,7 @@ def generate_compatible_profiles(simul,**kwargs):
     n=simul.nBar*nHats[main_index][point]
     if simul.units=="SI":
         logLambda=coulombLog(T,n)
-        print "logLambda: "+logLambda
+        print "logLambda: "+str(logLambda)
         nur=nu_r(simul.RBar,simul.nBar,simul.TBar,logLambda)
         simul.inputs.changevar("physicsParameters","nu_r",nur)
         simul.inputs.read(simul.input_filename)
