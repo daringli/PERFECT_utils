@@ -116,9 +116,9 @@ def generate_compatible_profiles(simul,**kwargs):
         Tpeds[i]=kwargs["Tped_"+species[i]]
         TCoreGrads[i]=kwargs["dTCoredx_"+species[i]]*dxdpsiN_at_a
         TpedGrads[i]=kwargs["dTpeddx_"+species[i]]*dxdpsiN_at_a
-        print "-------------------------"
-        print "TpedGrads["+str(i)+"] = " + str(TpedGrads[i])
-        print "-------------------------"
+        #print "-------------------------"
+        #print "TpedGrads["+str(i)+"] = " + str(TpedGrads[i])
+        #print "-------------------------"
         TSOLGrads[i]=kwargs["dTSOLdx_"+species[i]]*dxdpsiN_at_a
     Tpeds=numpy.array(Tpeds)
     TCoreGrads=numpy.array(TCoreGrads)
@@ -174,7 +174,8 @@ def generate_compatible_profiles(simul,**kwargs):
 
     #eta profiles that satisfy the orderings
     #setting eta_i=n_i at the pedestal top makes Phi=0 there
-    etaHats[main_index] = nHats[main_index][psiMinPedIndex]
+    #etaHats[main_index] = nHats[main_index][psiMinPedIndex]
+    etaHats[main_index] =niPed
     detaHatdpsis[main_index] = 0
     #etaHats[main_index] = niPed*(1-0.5*(psi-psi[0]))
     #detaHatdpsis[main_index] = -niPed*0.5
