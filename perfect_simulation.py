@@ -348,16 +348,16 @@ class normalized_perfect_simulation(perfect_simulation):
 
     @property
     def normed_heat_source(self):
-        print self.heat_source
-        print self.masses
-        print self.heat_source/self.masses
+        #print self.heat_source
+        #print self.masses
+        #print self.heat_source/self.masses
         return self.Delta*self.nBar/(self.vBar**2*self.RBar*numpy.sqrt(self.masses))*self.heat_source
 
     @property
     def normed_particle_source(self):
-        print self.particle_source
-        print self.masses
-        print self.particle_source/self.masses
+        #print self.particle_source
+        #print self.masses
+        #print self.particle_source/self.masses
         return self.Delta*self.nBar/(self.vBar**2*self.RBar*numpy.sqrt(self.masses))*self.particle_source
 
     @property
