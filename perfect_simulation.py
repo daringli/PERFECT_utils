@@ -354,6 +354,13 @@ class normalized_perfect_simulation(perfect_simulation):
         return self.Delta*self.nBar/(self.vBar**2*self.RBar*numpy.sqrt(self.masses))*self.heat_sources
 
     @property
+    def normed_particle_source(self):
+        print self.particle_sources
+        print self.masses
+        print self.particle_sources/self.masses
+        return self.Delta*self.nBar/(self.vBar**2*self.RBar*numpy.sqrt(self.masses))*self.particle_sources
+
+    @property
     def normed_conductive_heat_flux(self):
         return self.normed_heat_flux-(5.0/2.0)*self.T*self.normed_particle_flux
 

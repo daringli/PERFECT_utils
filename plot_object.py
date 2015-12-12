@@ -92,7 +92,7 @@ class plot_object(object):
 
     def particle_source_plot_func(self,simul):
         x=simul.psi
-        y=simul.normed_heat_source
+        y=simul.normed_particle_source
         legend=simul.description
         species=simul.species
         xlabel=r"$\psi_N$"
@@ -102,7 +102,7 @@ class plot_object(object):
 
     def conductive_heat_flux_plot_func(self,simul):
         x=simul.psi
-        y=simul.normed_particle_source
+        y=simul.normed_conductive_heat_flux
         legend=simul.description
         species=simul.species
         xlabel=r"$\psi_N$"
