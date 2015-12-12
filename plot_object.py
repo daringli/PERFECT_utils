@@ -21,6 +21,7 @@ class plot_object(object):
             "default": self.default_plot_func,
             "normed_particle_flux": self.particle_flux_plot_func,
             "normed_conductive_heat_flux": self.conductive_heat_flux_plot_func,
+            "normed_heat_source": self.heat_source_plot_func,
             "T": self.T_plot_func,
             "n": self.n_plot_func,
         }
