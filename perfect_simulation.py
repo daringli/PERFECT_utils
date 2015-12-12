@@ -147,7 +147,7 @@ class perfect_simulation(object):
 
     @property
     def masses(self):
-        return self.outputs.inputs.masses
+        return self.inputs.masses
     
     @property
     def THat(self):
