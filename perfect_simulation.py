@@ -56,6 +56,8 @@ class perfect_simulation(object):
         self.THat_name="THat"
         self.nHat_name="nHat"
         self.num_species_name="Nspecies"
+        self.heat_source_name="heatSourceProfile"
+        self.particle_source_name="particleSourceProfile"
 
 
     @property
@@ -135,6 +137,18 @@ class perfect_simulation(object):
     def VPrimeHat(self):
         return self.outputs[self.group_name+self.VPrimeHat_name][()]
 
+    @property
+    def heat_source(self):
+        return self.outputs[self.group_name+self.heat_source_name][()]
+
+    @property
+    def particle_source(self):
+        return self.outputs[self.group_name+self.particle_source_name][()]
+
+    @property
+    def masses(self):
+        return self.outputs.inputs.masses
+    
     @property
     def THat(self):
         try:
@@ -331,6 +345,13 @@ class normalized_perfect_simulation(perfect_simulation):
         VPrimeHat=[self.VPrimeHat]
         VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
         return (self.heat_flux/VPrimeHat)*self.TBar*(numpy.pi*self.Delta**2)*self.RBar*self.BBar*self.nBar*self.vBar
+
+    @property
+    def normed_heat_source(self):
+        print self.heat_sources
+        print self.masses
+        print self.heat_sources/self.masses
+        return self.Delta*self.nBar/(self.vBar**2*self.RBar*numpy.sqrt(self.masses))*self.heat_sources
 
     @property
     def normed_conductive_heat_flux(self):

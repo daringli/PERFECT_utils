@@ -88,15 +88,33 @@ class plot_object(object):
         xlabel=r"$\psi_N$"
         ylabel=r"$\langle \vec{\Gamma}\cdot \psi \rangle$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel)
-        
 
-    def conductive_heat_flux_plot_func(self,simul):
+    def particle_source_plot_func(self,simul):
         x=simul.psi
-        y=simul.normed_conductive_heat_flux
+        y=simul.normed_heat_source
         legend=simul.description
         species=simul.species
         xlabel=r"$\psi_N$"
         ylabel=r"$\langle \vec{q}\cdot \psi \rangle$"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel)
+        
+
+    def conductive_heat_flux_plot_func(self,simul):
+        x=simul.psi
+        y=simul.normed_particle_source
+        legend=simul.description
+        species=simul.species
+        xlabel=r"$\psi_N$"
+        ylabel=r"$\langle \vec{q}\cdot \psi \rangle$"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel)
+
+    def heat_source_plot_func(self,simul):
+        x=simul.psi
+        y=simul.normed_heat_source
+        legend=simul.description
+        species=simul.species
+        xlabel=r"$\psi_N$"
+        ylabel=r"$S_h$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel)
 
     def T_plot_func(self,simul):
