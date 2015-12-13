@@ -108,6 +108,7 @@ def generate_compatible_profiles(simul,**kwargs):
     #for each species from the keyword arguments
     #NOTE: uses the dx/dpsi at minor radius for both core and SOL, which assumes that
     #simulated region is small enough that it doesn't change much.
+    TScale=[0]*Nspecies
     Tpeds=[0]*Nspecies
     TCoreGrads=[0]*Nspecies
     TpedGrads=[0]*Nspecies
