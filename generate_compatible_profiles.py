@@ -79,8 +79,8 @@ def generate_compatible_profiles(simul,**kwargs):
     upShift=-psiN_width/3.0
 
     #determine gridpoints to start and stop pedestal
-    #psiMinPedIndex=numpy.argmin(numpy.abs(psi-(psiMid-psiN_width/2.0)))
-    #psiMaxPedIndex=numpy.argmin(numpy.abs(psi-(psiMid+psiN_width/2.0+upShift)))
+    psiMinPedIndex=numpy.argmin(numpy.abs(psi-(psiMid-psiN_width/2.0)))
+    psiMaxPedIndex=numpy.argmin(numpy.abs(psi-(psiMid+psiN_width/2.0+upShift)))
     #psiMinPed=psi[psiMinPedIndex]
     #psiMaxPed=psi[psiMaxPedIndex]
     psiMinPed=psiMid-psiN_width/2.0
@@ -124,7 +124,6 @@ def generate_compatible_profiles(simul,**kwargs):
     TCoreGrads=numpy.array(TCoreGrads)
     TSOLGrads=numpy.array(TSOLGrads)
     TpedGrads=numpy.array(TpedGrads)
-    print Tpeds
     #TpedGrads=Tpeds/psiN_width
 
     niPed=kwargs["nped_"+species[main_index]]
@@ -147,6 +146,8 @@ def generate_compatible_profiles(simul,**kwargs):
 
         dTHatdpsis[species]=simul.inputs.ddpsi_accurate(THats[species])
 
+    print "THat pedestal heights:" +str(Tpeds)
+    print "THat inner boundary value:" +str(THats[:][0])
     niHatPre =(lambda psiN: niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0]))
     niHatPed =(lambda psiN: niPed +  nipedGrad* (psiN-psiMinPed))
     niHatAft =(lambda psiN: niPed+nipedGrad*(psiMaxPed-psiMinPed) +  niSOLGrad* (psiN-psiMaxPed))
@@ -154,10 +155,12 @@ def generate_compatible_profiles(simul,**kwargs):
     nHats[main_index]=bezier_transition(nilist,psiList,pairList,psi)
     #nHats[mI] = interp1d(psi, nHats[mI], kind='cubic')
     dnHatdpsis[main_index] =simul.inputs.ddpsi_accurate(nHats[main_index])
-
+    print "Ion nHat pedestal heights:" +str(niPed)
+    print "Ion nHat inner boundary value:" +str(nHats[main_index][0])
+   
 
     #with n_i and T_i generated, we can evaluate logLambda at a suitable point
-    point=numpy.floor((psiMinPed+psiMaxPed)/2.0) # middle of the pedestal
+    point=numpy.floor((psiMinPedIndex+psiMaxPedIndex)/2.0) # middle of the pedestal
     T=simul.TBar*THats[main_index][point]
     n=simul.nBar*nHats[main_index][point]
     print "T: "+str(T)
