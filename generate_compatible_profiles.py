@@ -113,6 +113,10 @@ def generate_compatible_profiles(simul,**kwargs):
     TpedGrads=[0]*Nspecies
     TSOLGrads=[0]*Nspecies
     for i in range(Nspecies):
+        if "TScale_"+species[i] in kwargs.keys():
+            TScale[i]=kwargs["TScale_"+species[i]]
+        else:
+            TScale[i]=1.0
         Tpeds[i]=kwargs["Tped_"+species[i]]
         TCoreGrads[i]=kwargs["dTCoredx_"+species[i]]*dxdpsiN_at_a
         TpedGrads[i]=kwargs["dTpeddx_"+species[i]]*dxdpsiN_at_a
@@ -120,12 +124,17 @@ def generate_compatible_profiles(simul,**kwargs):
         #print "TpedGrads["+str(i)+"] = " + str(TpedGrads[i])
         #print "-------------------------"
         TSOLGrads[i]=kwargs["dTSOLdx_"+species[i]]*dxdpsiN_at_a
+    Tscale=numpy.array(Tscale)
     Tpeds=numpy.array(Tpeds)
     TCoreGrads=numpy.array(TCoreGrads)
     TSOLGrads=numpy.array(TSOLGrads)
     TpedGrads=numpy.array(TpedGrads)
     #TpedGrads=Tpeds/psiN_width
 
+    if "nscale_"+species[main_index] in kwargs.keys():
+        niScale=kwargs["nscale_"+species[main_index]]
+    else:
+        niScale=1.0
     niPed=kwargs["nped_"+species[main_index]]
     niCoreGrad=kwargs["dnCoredx_"+species[main_index]]*dxdpsiN_at_a
     nipedGrad=kwargs["dnpeddx_"+species[main_index]]*dxdpsiN_at_a
@@ -134,9 +143,9 @@ def generate_compatible_profiles(simul,**kwargs):
     #generate T profiles
     for species in range(Nspecies):
         #Here we specify temperatures that should satisfy deltaT condition
-        THatPre =(lambda psiN: (Tpeds[species] + TCoreGrads[species]*(psiN-psiMinPed)))
-        THatPed =(lambda psiN: (Tpeds[species] + TpedGrads[species]*(psiN-psiMinPed)))
-        THatAft =(lambda psiN: (Tpeds[species] + TpedGrads[species]*(psiMaxPed-psiMinPed) + TSOLGrads[species]*(psiN-psiMaxPed)))
+        THatPre =(lambda psiN: TScale[species]*(Tpeds[species] + TCoreGrads[species]*(psiN-psiMinPed)))
+        THatPed =(lambda psiN: TScale[species]*(Tpeds[species] + TpedGrads[species]*(psiN-psiMinPed)))
+        THatAft =(lambda psiN: TScale[species]*(Tpeds[species] + TpedGrads[species]*(psiMaxPed-psiMinPed) + TSOLGrads[species]*(psiN-psiMaxPed)))
         Tlist=[THatPre,THatPed,THatAft]
         THats[species]=bezier_transition(Tlist,psiList,pairList,psi)
         #THats[species] = interp1d(psi, THats[species], kind='cubic')
@@ -147,10 +156,10 @@ def generate_compatible_profiles(simul,**kwargs):
         dTHatdpsis[species]=simul.inputs.ddpsi_accurate(THats[species])
 
     print "THat pedestal heights:" +str(Tpeds)
-    print "THat inner boundary value:" +str(THats[:][0])
-    niHatPre =(lambda psiN: niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0]))
-    niHatPed =(lambda psiN: niPed +  nipedGrad* (psiN-psiMinPed))
-    niHatAft =(lambda psiN: niPed+nipedGrad*(psiMaxPed-psiMinPed) +  niSOLGrad* (psiN-psiMaxPed))
+    print "THat inner boundary value:" +str(THats[:,0])
+    niHatPre =(lambda psiN: niScale*(niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
+    niHatPed =(lambda psiN: niScale*(niPed +  nipedGrad* (psiN-psiMinPed)))
+    niHatAft =(lambda psiN: niScale*(niPed+nipedGrad*(psiMaxPed-psiMinPed) +  niSOLGrad* (psiN-psiMaxPed)))
     nilist=[niHatPre,niHatPed,niHatAft]
     nHats[main_index]=bezier_transition(nilist,psiList,pairList,psi)
     #nHats[mI] = interp1d(psi, nHats[mI], kind='cubic')
