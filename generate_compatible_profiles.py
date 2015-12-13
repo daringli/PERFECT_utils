@@ -125,7 +125,7 @@ def generate_compatible_profiles(simul,**kwargs):
         #print "TpedGrads["+str(i)+"] = " + str(TpedGrads[i])
         #print "-------------------------"
         TSOLGrads[i]=kwargs["dTSOLdx_"+species[i]]*dxdpsiN_at_a
-    Tscale=numpy.array(Tscale)
+    TScale=numpy.array(TScale)
     Tpeds=numpy.array(Tpeds)
     TCoreGrads=numpy.array(TCoreGrads)
     TSOLGrads=numpy.array(TSOLGrads)
