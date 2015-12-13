@@ -131,8 +131,8 @@ def generate_compatible_profiles(simul,**kwargs):
     TpedGrads=numpy.array(TpedGrads)
     #TpedGrads=Tpeds/psiN_width
 
-    if "nscale_"+species[main_index] in kwargs.keys():
-        niScale=kwargs["nscale_"+species[main_index]]
+    if "nScale_"+species[main_index] in kwargs.keys():
+        niScale=kwargs["nScale_"+species[main_index]]
     else:
         niScale=1.0
     niPed=kwargs["nped_"+species[main_index]]
