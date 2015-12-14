@@ -81,6 +81,7 @@ class plot_object(object):
             if ylimBottom0:
                 self.ax.set_ylim(bottom=0)
             i=i+1
+        self.fig=plt.gcf()
         
     def particle_flux_plot_func(self,simul):
         x=simul.psi
