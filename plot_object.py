@@ -153,6 +153,6 @@ class plot_object(object):
         self.plot_func(simulation)
 
     def show_figure(self):
-        #self.fig.show()
+        self.fig.savefig(self.title+'.png')
         self.fig.show()
 
