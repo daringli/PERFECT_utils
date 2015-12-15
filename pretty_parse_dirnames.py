@@ -6,11 +6,11 @@ def pretty_parse(dir):
     print line
     match=re.match(r'Z([0-9]+)', line)
     if match:
-        return "$Z="+match.group(1)+"$"
+        return r"$Z="+match.group(1)+"$"
     else:
-        match=re.match(r'ZeffM1-([0-9]+)', line)
+        match=re.match(r'ZeffM1-([0-9]+\.?[0-9]*)', line)
         if match:
-            return "$Z_{\text{eff}}-1="+match.group(1)+"$"
+            return r'$Z_{eff}-1='+match.group(1)+'$'
         else:
             match=re.match(r'n([0-9]+)', line)
             if match:
@@ -34,7 +34,7 @@ def pretty_parse(dir):
                     if match:
                         return match.group(1)
                     else:
-                        match=re.match(r'([0-9][0-9]?\.[0-9][0-9])', line)
+                        match=re.match(r'([0-9]+\.?[0-9]*)', line)
                         if match:
                             return "$dn_d/dr="+match.group(1) +"\,m/s$"
                        

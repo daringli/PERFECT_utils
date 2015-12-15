@@ -1,7 +1,10 @@
 import matplotlib.pyplot as plt
 from matplotlib import rc
+from matplotlib.pyplot import cm
 from perfect_simulation import perfect_simulation
 import scipy.constants
+import numpy
+
 
 sentinel=object()
 rc('text', usetex=True)
@@ -13,7 +16,7 @@ rc('text', usetex=True)
 
 class plot_object(object):
 
-    def __init__(self,plot_func_str=sentinel,numRows=sentinel,numCols=sentinel,title=sentinel):
+    def __init__(self,plot_func_str=sentinel,numRows=sentinel,numCols=sentinel,title=sentinel,numColors=sentinel):
         #defines what to plot with this object
         if plot_func_str==sentinel:
             plot_func_str="default"
@@ -26,6 +29,15 @@ class plot_object(object):
             "T": self.T_plot_func,
             "n": self.n_plot_func,
         }
+
+        self.cm=cm.rainbow
+        self.ls=['-',':','--','-.']
+        self.lsi=0 #picks a linestyle
+        if numColors==sentinel:
+            #uses a setter
+            self.num_colors=10
+        else:
+            self.num_colors=numColors
         
         self.plot_func=plot_funcs[plot_func_str]
         #print self.plot_func
@@ -56,13 +68,31 @@ class plot_object(object):
         if numCols != sentinel:
             self.numCols= numCols
 
-    def default_plot_func(self,simul):
+    @property
+    def num_colors(self):
+        return self.numColors
+    
+    @num_colors.setter
+    def num_colors(self,nc):
+        self.numColors=nc
+        self.color=iter(self.cm(numpy.linspace(0,1,nc)))
+
+    def default_plot_func(self,simul,same_color=False):
         print "Cannot plot '"+str(simul)+"', no specific plot function specified!"
             
-    def plot_xy_legend_species_subplots(self,x,y,species,legend='',xlabel='',ylabel='',ylimBottom0=False):
+    def plot_xy_legend_species_subplots(self,x,y,species,legend='',xlabel='',ylabel='',ylimBottom0=False,same_color=False):
         #see if species has a subplot, if not, create one for it
         #print x
         #print y
+        
+        if same_color==False:
+            self.lsi=0
+            #print self.color
+            self.c=next(self.color)
+        else:
+            self.lsi=self.lsi+1
+        linestyle=self.ls[self.lsi]
+
         i=0
         #print species
         for specy in species:
@@ -72,54 +102,56 @@ class plot_object(object):
                 self.maxPlotNum=self.maxPlotNum+1
             #print specy
             #print self.species_plot_dict[specy]
+            
             self.ax = self.fig.add_subplot(self.numRows, self.numCols, self.species_plot_dict[specy]);
-            self.ax.plot(x, y[:,i], '-',label=legend)
+            self.ax.plot(x, y[:,i], '-',label=legend,ls=linestyle,c=self.c)
             self.ax.set_title(specy)
             self.ax.legend(loc=1,prop={'size':6})
             self.ax.set_xlabel(xlabel)
             self.ax.set_ylabel(ylabel)
+            self.ax.autoscale(True)
             if ylimBottom0:
                 self.ax.set_ylim(bottom=0)
             i=i+1
         
-    def particle_flux_plot_func(self,simul):
+    def particle_flux_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.normed_particle_flux
         legend=simul.description
         species=simul.species
         xlabel=r"$\psi_N$"
         ylabel=r"$\langle \vec{\Gamma}\cdot \psi \rangle$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel)
+        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,same_color=same_color)
 
-    def particle_source_plot_func(self,simul):
+    def particle_source_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.normed_particle_source
         legend=simul.description
         species=simul.species
         xlabel=r"$\psi_N$"
         ylabel=r"$S_p$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel)
+        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,same_color=same_color)
         
 
-    def conductive_heat_flux_plot_func(self,simul):
+    def conductive_heat_flux_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.normed_conductive_heat_flux
         legend=simul.description
         species=simul.species
         xlabel=r"$\psi_N$"
         ylabel=r"$\langle \vec{q}\cdot \psi \rangle$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel)
+        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,same_color=same_color)
 
-    def heat_source_plot_func(self,simul):
+    def heat_source_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.normed_heat_source
         legend=simul.description
         species=simul.species
         xlabel=r"$\psi_N$"
         ylabel=r"$S_h$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel)
+        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,same_color=same_color)
 
-    def T_plot_func(self,simul):
+    def T_plot_func(self,simul,same_color=False):
         e=scipy.constants.e
         x=simul.psi
         y=simul.T/(1000*e)
@@ -127,16 +159,16 @@ class plot_object(object):
         species=simul.species
         xlabel=r"$\psi_N$"
         ylabel=r"$T/eV$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True)
+        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True,same_color=same_color)
 
-    def n_plot_func(self,simul):
+    def n_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.n
         legend=simul.description
         species=simul.species
         xlabel=r"$\psi_N$"
         ylabel=r"$n/m^{-3}$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True)
+        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True,same_color=same_color)
 
 
     @property
@@ -147,10 +179,10 @@ class plot_object(object):
         self.background_color=color
         self.fig.patch.set_facecolor(self.background_color)
     
-    def plot(self,simulation):
+    def plot(self,simulation,same_color=False):
         #print "func to plot:"
         #print self.plot_func
-        self.plot_func(simulation)
+        self.plot_func(simulation,same_color)
 
     #def show_figure(self):
     #    self.fig.show()
