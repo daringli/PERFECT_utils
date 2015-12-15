@@ -33,6 +33,7 @@ class plot_object(object):
         self.cm=cm.rainbow
         self.ls=['-',':','--','-.']
         self.lsi=0 #picks a linestyle
+        self.ci=0
         if numColors==sentinel:
             #uses a setter
             self.num_colors=10
@@ -75,6 +76,7 @@ class plot_object(object):
     @num_colors.setter
     def num_colors(self,nc):
         self.numColors=nc
+        print self.numColors
         self.color=iter(self.cm(numpy.linspace(0,1,nc)))
 
     def default_plot_func(self,simul,same_color=False):
@@ -88,6 +90,8 @@ class plot_object(object):
         if same_color==False:
             self.lsi=0
             #print self.color
+            print "color index:"+str(self.ci)
+            self.ci=self.ci+1
             self.c=next(self.color)
         else:
             self.lsi=self.lsi+1

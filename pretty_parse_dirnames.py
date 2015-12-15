@@ -10,6 +10,7 @@ def pretty_parse(dir):
     else:
         match=re.match(r'ZeffM1-([0-9]+\.?[0-9]*)', line)
         if match:
+            print match.group(1)
             return r'$Z_{eff}-1='+match.group(1)+'$'
         else:
             match=re.match(r'n([0-9]+)', line)
