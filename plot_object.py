@@ -98,7 +98,7 @@ class plot_object(object):
         legend=simul.description
         species=simul.species
         xlabel=r"$\psi_N$"
-        ylabel=r"$S_p$"
+        ylabel=r"$S_p/(s^2/m^6)$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel)
         
 
@@ -117,7 +117,7 @@ class plot_object(object):
         legend=simul.description
         species=simul.species
         xlabel=r"$\psi_N$"
-        ylabel=r"$S_h$"
+        ylabel=r"$S_h/(s^2/m^6)$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel)
 
     def T_plot_func(self,simul):
@@ -127,7 +127,7 @@ class plot_object(object):
         legend=simul.description
         species=simul.species
         xlabel=r"$\psi_N$"
-        ylabel=r"$T/eV$"
+        ylabel=r"$T/keV$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True)
 
     def n_plot_func(self,simul):
