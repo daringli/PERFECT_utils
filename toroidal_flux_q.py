@@ -1,7 +1,8 @@
 import numpy
 import matplotlib.pyplot as plt
 import scipy.optimize
-
+from matplotlib import rc
+rc('text', usetex=True)
 
 
 def func_q(q0,q95,x,qx):
@@ -62,11 +63,18 @@ if __name__=='__main__':
     dkappadr=func_polyfit_derivative(x,y,deg)
     q=func_q(1.0,3.5,0.6,1.6)
     #q=func_q(4.0,4.0,0.6,4.0)
-
+    fig = plt.figure()
+    ax = fig.add_subplot(2,1,1)
     plt.plot(rho,kappa(rho))
     plt.plot(rho,dkappadr(rho))
-    plt.show()
+    
+    ax.set_xlabel("$\rho=r/a$")
+    ax.set_ylabel("$\kappa$, $d\kappa/d\rho$")
+
+    ax = fig.add_subplot(2,1,2)
     plt.plot(rho,q(rho))
+    ax.set_xlabel("r/a")
+    ax.set_ylabel("q")
     print q(rho)
     print q(0.8)
     plt.show()

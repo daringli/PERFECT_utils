@@ -133,13 +133,8 @@ class plot_object(object):
         legend=simul.description
         species=simul.species
         xlabel=r"$\psi_N$"
-<<<<<<< HEAD
         ylabel=r"$S_p/(s^2/m^6)$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel)
-=======
-        ylabel=r"$S_p$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,same_color=same_color)
->>>>>>> origin/master
         
 
     def conductive_heat_flux_plot_func(self,simul,same_color=False):
@@ -157,13 +152,8 @@ class plot_object(object):
         legend=simul.description
         species=simul.species
         xlabel=r"$\psi_N$"
-<<<<<<< HEAD
         ylabel=r"$S_h/(s^2/m^6)$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel)
-=======
-        ylabel=r"$S_h$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,same_color=same_color)
->>>>>>> origin/master
 
     def T_plot_func(self,simul,same_color=False):
         e=scipy.constants.e
@@ -172,13 +162,8 @@ class plot_object(object):
         legend=simul.description
         species=simul.species
         xlabel=r"$\psi_N$"
-<<<<<<< HEAD
         ylabel=r"$T/keV$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True)
-=======
-        ylabel=r"$T/eV$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True,same_color=same_color)
->>>>>>> origin/master
 
     def n_plot_func(self,simul,same_color=False):
         x=simul.psi

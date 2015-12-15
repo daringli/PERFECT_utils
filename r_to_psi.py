@@ -2,6 +2,9 @@ import numpy
 import matplotlib.pyplot as plt
 import scipy.integrate,scipy.misc
 from toroidal_flux_q import func_q,func_polyfit,func_polyfit_derivative,toroidal_flux_derivative
+from matplotlib import rc
+rc('text', usetex=True)
+
 
 def dpsidr(q,dPsiTdr):
     return lambda r: (1/(2*numpy.pi*q(r)))*dPsiTdr(r)
@@ -78,6 +81,8 @@ if __name__=='__main__':
     r=r[N/2:-1]
     oneOverdpsiN_array=1/dpsiN_analarray[N/2:-1]
     plt.plot(r,oneOverdpsiN_array)
-    plt.title("dr/dpsi_N")
+    #plt.title("dr/dpsi_N")
+    plt.xlabel("$r$")
+    plt.ylabel("$dr/d\psi_N$")
     plt.show()
     print drdPsiN_at_psiN_one(q,dPsiTdr,psi,r[-1])
