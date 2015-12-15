@@ -2,12 +2,14 @@ from plot_object import plot_object
 from perfect_simulation import perfect_simulation
 from perfect_simulations_from_dirs import perfect_simulations_from_dirs
 import sys
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 
 
 if __name__=='__main__':
     dirlist=sys.argv[1:]
+    if len(dirlist)==0:
+        sys.exit("Warning: No directories specified, will exit.")
     normlist="norms.namelist"
     species="d,N,e"
     species=species.split(',')
