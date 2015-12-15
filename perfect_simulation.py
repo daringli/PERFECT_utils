@@ -58,6 +58,11 @@ class perfect_simulation(object):
         self.num_species_name="Nspecies"
         self.heat_source_name="heatSourceProfile"
         self.particle_source_name="particleSourceProfile"
+        
+        self.flow_inboard_name="flowInboard"
+        self.flow_outboard_name="flowOutboard"
+        self.kPar_inboard_name="kParInboard"
+        self.kPar_outboard_name="kParOutboard"
 
 
     @property
@@ -144,6 +149,24 @@ class perfect_simulation(object):
     @property
     def particle_source(self):
         return self.outputs[self.group_name+self.particle_source_name][()]
+
+    @property
+    def flow_inboard(self):
+        return self.outputs[self.group_name+self.flow_inboard_name][()]
+
+    @property
+    def flow_outboard(self):
+        return self.outputs[self.group_name+self.flow_outboard_name][()]
+
+    @property
+    def kPar_inboard(self):
+        return self.outputs[self.group_name+self.kPar_inboard_name][()]
+    
+    @property
+    def kPar_outboard(self):
+        return self.outputs[self.group_name+self.kPar_outboard_name][()]
+
+   
 
     @property
     def masses(self):
@@ -360,6 +383,15 @@ class normalized_perfect_simulation(perfect_simulation):
         #print self.particle_source/self.masses
         return self.Delta*self.nBar/(self.vBar**2*self.RBar*numpy.sqrt(self.masses))*self.particle_source
 
+
+    @property
+    def normed_flow_inboard(self):
+        return self.Delta*self.vBar*self.flow_inboard
+
+    @property
+    def normed_flow_outboard(self):
+        return self.Delta*self.vBar*self.flow_outboard
+    
     @property
     def normed_conductive_heat_flux(self):
         return self.normed_heat_flux-(5.0/2.0)*self.T*self.normed_particle_flux

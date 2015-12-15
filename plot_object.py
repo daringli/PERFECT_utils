@@ -26,6 +26,10 @@ class plot_object(object):
             "normed_conductive_heat_flux": self.conductive_heat_flux_plot_func,
             "normed_heat_source": self.heat_source_plot_func,
             "normed_particle_source": self.particle_source_plot_func,
+            "normed_flow_outboard": self.flow_outboard_plot_func,
+            "normed_flow_inboard": self.flow_inboard_plot_func,
+            "kPar_outboard": self.kPar_outboard_plot_func,
+            "kPar_inboard": self.kPar_inboard_plot_func,
             "T": self.T_plot_func,
             "n": self.n_plot_func,
         }
@@ -174,6 +178,41 @@ class plot_object(object):
         ylabel=r"$n/m^{-3}$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True,same_color=same_color)
 
+    def flow_outboard_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        y=simul.normed_flow_outboard
+        legend=simul.description
+        species=simul.species
+        xlabel=r"$\psi_N$"
+        ylabel=r"$V_\parallel/(m/s)$ Outboard"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True,same_color=same_color)
+
+    def flow_inboard_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        y=simul.normed_flow_inboard
+        legend=simul.description
+        species=simul.species
+        xlabel=r"$\psi_N$"
+        ylabel=r"$V_\parallel/(m/s)$ Inboard"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True,same_color=same_color)
+
+    def kPar_inboard_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        y=simul.kPar_inboard
+        legend=simul.description
+        species=simul.species
+        xlabel=r"$\psi_N$"
+        ylabel=r"$k_\parallel$ Inboard"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True,same_color=same_color)
+
+    def kPar_outboard_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        y=simul.kPar_outboard
+        legend=simul.description
+        species=simul.species
+        xlabel=r"$\psi_N$"
+        ylabel=r"$k_\parallel$ Outboard"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True,same_color=same_color)
 
     @property
     def background(self):
