@@ -3,7 +3,7 @@ from perfect_simulation import perfect_simulation
 from perfect_simulations_from_dirs import perfect_simulations_from_dirs
 import sys
 import matplotlib.pyplot as plt
-
+from pretty_parse_dirnames import pretty_parse
 
 
 if __name__=='__main__':
@@ -32,6 +32,13 @@ if __name__=='__main__':
     simulList=perfect_simulations_from_dirs(dirlist,normlist,species)
     #print simulList
 
+
+    gl=[""," local"]
+    i=0
+    for simul in simulList:
+        simul.description=pretty_parse(simul.description)+gl[i%2]
+        i=i+1
+
     plotObjList=[]
     ncolors=len(simulList)/2
     plotObjList.append(plot_object("normed_particle_flux",len(species),1,"particle flux",ncolors))
@@ -41,19 +48,14 @@ if __name__=='__main__':
     plotObjList.append(plot_object("normed_heat_source",len(species),1,"normed heat source",ncolors))
     plotObjList.append(plot_object("normed_particle_source",len(species),1,"normed particle source",ncolors))
 
-    tf=[False,True]
     i=0
-
-    desc=["$Z_{eff}-1=0.02$","$Z_{eff}-1=0.02$ local","$Z_{eff}-1=0.1$","$Z_{eff}-1=0.1$ local"]
 
     for plotObj in plotObjList:
         for simul in simulList:
-            print i
-            simul.description=desc[i%4]
             #print "simul:"
             #print simul
             #print "to call plotObj.plot()"
-            plotObj.plot(simul,tf[i%2])
+            plotObj.plot(simul,i%2) #alternates between holding colors or not
             i=i+1 #not python3 safe
         plotObj.save_figure()
 
