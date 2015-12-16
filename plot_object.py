@@ -24,6 +24,7 @@ class plot_object(object):
             "default": self.default_plot_func,
             "normed_particle_flux": self.particle_flux_plot_func,
             "normed_conductive_heat_flux": self.conductive_heat_flux_plot_func,
+            "normed_conductive_heat_flux_over_n": self.conductive_heat_flux_over_n_plot_func,
             "normed_heat_source": self.heat_source_plot_func,
             "normed_particle_source": self.particle_source_plot_func,
             "normed_flow_outboard": self.flow_outboard_plot_func,
@@ -150,6 +151,15 @@ class plot_object(object):
         species=simul.species
         xlabel=r"$\psi_N$"
         ylabel=r"$\langle \vec{q}\cdot \psi \rangle$"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,same_color=same_color)
+
+    def conductive_heat_flux_over_n_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        y=simul.normed_conductive_heat_flux/simul.n
+        legend=simul.description
+        species=simul.species
+        xlabel=r"$\psi_N$"
+        ylabel=r"$\langle \vec{q}\cdot \psi \rangle/n$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,same_color=same_color)
 
     def heat_source_plot_func(self,simul,same_color=False):

@@ -347,6 +347,7 @@ class normalized_perfect_simulation(perfect_simulation):
         return sim_copy
         
 
+
     @property
     def T(self):
         return self.TBar*self.THat
