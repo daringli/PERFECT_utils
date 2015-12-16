@@ -80,7 +80,7 @@ class plot_object(object):
     @num_colors.setter
     def num_colors(self,nc):
         self.numColors=nc
-        print self.numColors
+        #print self.numColors
         self.color=iter(self.cm(numpy.linspace(0,1,nc)))
 
     def default_plot_func(self,simul,same_color=False):
@@ -94,7 +94,7 @@ class plot_object(object):
         if same_color==False:
             self.lsi=0
             #print self.color
-            print "color index:"+str(self.ci)
+            #print "color index:"+str(self.ci)
             self.ci=self.ci+1
             self.c=next(self.color)
         else:
