@@ -64,7 +64,7 @@ class plot_object(object):
         self.species_plot_dict={}
         self.maxPlotNum=0
         self.fig=plt.figure()
-        self.fig.suptitle(self.title)
+        #self.fig.suptitle(self.title)
 
         self.background="white"
 
@@ -103,6 +103,7 @@ class plot_object(object):
 
         i=0
         #print species
+        self.plots=[]
         for specy in species:
             
             if specy not in self.species_plot_dict.keys():
@@ -114,13 +115,14 @@ class plot_object(object):
             self.ax = self.fig.add_subplot(self.numRows, self.numCols, self.species_plot_dict[specy]);
             self.ax.plot(x, y[:,i], '-',label=legend,ls=linestyle,c=self.c)
             self.ax.set_title(specy)
-            self.ax.legend(loc=1,prop={'size':6})
             self.ax.set_xlabel(xlabel)
             self.ax.set_ylabel(ylabel)
             self.ax.autoscale(True)
             if ylimBottom0:
                 self.ax.set_ylim(bottom=0)
             i=i+1
+        self.ax.legend(bbox_to_anchor=(0.24,0.24,1,1), loc='upper right', borderaxespad=0.,bbox_transform = plt.gcf().transFigure,prop={'size':6})
+
         
     def particle_flux_plot_func(self,simul,same_color=False):
         x=simul.psi
