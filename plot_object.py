@@ -187,7 +187,7 @@ class plot_object(object):
         species=simul.species
         xlabel=r"$\psi_N$"
         ylabel=r"$V_\parallel/(m/s)$ Outboard"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True,same_color=same_color)
+        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,False,same_color=same_color)
 
     def flow_inboard_plot_func(self,simul,same_color=False):
         x=simul.psi
@@ -196,7 +196,7 @@ class plot_object(object):
         species=simul.species
         xlabel=r"$\psi_N$"
         ylabel=r"$V_\parallel/(m/s)$ Inboard"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True,same_color=same_color)
+        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,False,same_color=same_color)
 
     def kPar_inboard_plot_func(self,simul,same_color=False):
         x=simul.psi
@@ -205,7 +205,7 @@ class plot_object(object):
         species=simul.species
         xlabel=r"$\psi_N$"
         ylabel=r"$k_\parallel$ Inboard"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True,same_color=same_color)
+        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,False,same_color=same_color)
 
     def kPar_outboard_plot_func(self,simul,same_color=False):
         x=simul.psi
@@ -214,7 +214,7 @@ class plot_object(object):
         species=simul.species
         xlabel=r"$\psi_N$"
         ylabel=r"$k_\parallel$ Outboard"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True,same_color=same_color)
+        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,False,same_color=same_color)
 
     @property
     def background(self):
