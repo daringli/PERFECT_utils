@@ -45,7 +45,12 @@ def generate_compatible_profiles(simul,**kwargs):
     x_width=kwargs["xwidth"]
     psiN_width=x_width/dxdpsiN_at_a
     #calculate new psiMid and diameter for this profile
-    psiMid=1-psiN_width/2.0
+    if "midShift" not in kwargs.keys():
+        midShift=0
+    else:
+        midShift=kwargs["midShift"]*psiN_width
+    
+    psiMid=1-psiN_width/2.0+midShift
     psiDiameter=3*psiN_width
     #print "psiDiameter"
     #print psiDiameter
@@ -76,7 +81,12 @@ def generate_compatible_profiles(simul,**kwargs):
     if not isinstance(ms, list):
         ms=[ms]
 
-    upShift=-psiN_width/3.0
+    #2015-12-16: -psiN_width/3.0 was the old default.
+    if "upShift_denom" not in kwargs.keys():
+        upShift=-psiN_width/3.0
+    else:
+        upShift=-psiN_width/kwargs["upShift_denom"]
+
 
     #determine gridpoints to start and stop pedestal
     psiMinPedIndex=numpy.argmin(numpy.abs(psi-(psiMid-psiN_width/2.0)))
