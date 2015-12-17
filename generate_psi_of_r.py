@@ -30,7 +30,7 @@ def drdpsiN_of_r(a,simul):
     dkappadrho=func_polyfit_derivative(kappax,kappay,deg) #dkappadrho(rho) 
 
     #generate the integrated B_T as function of minor radius of eliptical cross-section
-    BT_r=lambda x: 1/simul.inputs.RHat(0.0) #should be B_T(r), here taken as constant and at theta=0
+    BT_r=lambda x: simul.BBar*1.0/simul.inputs.RHat(0.0) #should be B_T(r), here taken as constant and at theta=0
     dBTdr=lambda x: 0 #dBTdr(r)
     #calculate radial derivative of toroidal flux Psi_T (assumes small theta dependence in B)
     dPsiTdr=toroidal_flux_derivative(a,kappa_rho,dkappadrho,BT_r,dBTdr)
