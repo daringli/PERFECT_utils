@@ -128,13 +128,13 @@ def generate_compatible_profiles(simul,**kwargs):
             TScale[i]=kwargs["TScale_"+species[i]]
         else:
             TScale[i]=1.0
-        Tpeds[i]=TScale[species]*kwargs["Tped_"+species[i]]
-        TCoreGrads[i]=TScale[species]*kwargs["dTCoredx_"+species[i]]*dxdpsiN_at_a
-        TpedGrads[i]=TScale[species]*kwargs["dTpeddx_"+species[i]]*dxdpsiN_at_a
+        Tpeds[i]=TScale[i]*kwargs["Tped_"+species[i]]
+        TCoreGrads[i]=TScale[i]*kwargs["dTCoredx_"+species[i]]*dxdpsiN_at_a
+        TpedGrads[i]=TScale[i]*kwargs["dTpeddx_"+species[i]]*dxdpsiN_at_a
         #print "-------------------------"
         #print "TpedGrads["+str(i)+"] = " + str(TpedGrads[i])
         #print "-------------------------"
-        TSOLGrads[i]=TScale[species]*kwargs["dTSOLdx_"+species[i]]*dxdpsiN_at_a
+        TSOLGrads[i]=TScale[i]*kwargs["dTSOLdx_"+species[i]]*dxdpsiN_at_a
     TScale=numpy.array(TScale)
     Tpeds=numpy.array(Tpeds)
     TCoreGrads=numpy.array(TCoreGrads)
