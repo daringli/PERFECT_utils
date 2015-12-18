@@ -55,6 +55,7 @@ class perfect_simulation(object):
         self.omega_name="omega"
         self.THat_name="THat"
         self.nHat_name="nHat"
+        self.PhiHat_name="PhiHat"
         self.num_species_name="Nspecies"
         self.heat_source_name="heatSourceProfile"
         self.particle_source_name="particleSourceProfile"
@@ -193,6 +194,17 @@ class perfect_simulation(object):
             return self.outputs[self.group_name+self.nHat_name][()]
         except KeyError:
             print "nHat could not be obtained since no external profiles have been speciied and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate the inputs."
+
+    @property
+    def PhiHat(self):
+        try:
+            return self.input_profiles[self.input_profiles_groupname+"PhiHat"][()]
+        except AttributeError:
+            pass
+        try:
+            return self.outputs[self.group_name+self.PhiHat_name][()]
+        except KeyError:
+            print "PhiHat could not be obtained since no external profiles have been speciied and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate the inputs."
     
     @property
     def Delta(self):
@@ -355,6 +367,11 @@ class normalized_perfect_simulation(perfect_simulation):
     @property
     def n(self):
         return self.nBar*self.nHat
+
+    @property
+    def Phi(self):
+        return self.ePhiBar*self.nHat/self.eBar
+
 
     @property
     def normed_particle_flux(self):

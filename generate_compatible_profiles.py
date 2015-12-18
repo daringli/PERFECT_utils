@@ -142,6 +142,7 @@ def generate_compatible_profiles(simul,**kwargs):
     TpedGrads=numpy.array(TpedGrads)
     #TpedGrads=Tpeds/psiN_width
 
+
     if "nScale_"+species[main_index] in kwargs.keys():
         niScale=kwargs["nScale_"+species[main_index]]
     else:
@@ -198,10 +199,10 @@ def generate_compatible_profiles(simul,**kwargs):
     #eta profiles that satisfy the orderings
     #setting eta_i=n_i at the pedestal top makes Phi=0 there
     #etaHats[main_index] = nHats[main_index][psiMinPedIndex]
-    etaHats[main_index] =niPed
-    detaHatdpsis[main_index] = 0
-    #etaHats[main_index] = niPed*(1-0.5*(psi-psi[0]))
-    #detaHatdpsis[main_index] = -niPed*0.5
+    #etaHats[main_index] =niPed
+    #detaHatdpsis[main_index] = 0
+    etaHats[main_index] =niPed+niCoreGrad*(psiN-psiMinPed)
+    detaHatdpsis[main_index] = niCoreGrad
 
     
     #if Phi=0 at top of the pedestal, this gives the top of the n_z pedestal.

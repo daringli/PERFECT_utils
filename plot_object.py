@@ -33,6 +33,7 @@ class plot_object(object):
             "kPar_inboard": self.kPar_inboard_plot_func,
             "T": self.T_plot_func,
             "n": self.n_plot_func,
+            "Phi": self.Phi_plot_func,
         }
 
         self.cm=cm.rainbow
@@ -188,6 +189,15 @@ class plot_object(object):
         species=simul.species
         xlabel=r"$\psi_N$"
         ylabel=r"$n/m^{-3}$"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True,same_color=same_color)
+
+    def Phi_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        y=simul.Phi/1000
+        legend=simul.description
+        species=simul.species
+        xlabel=r"$\psi_N$"
+        ylabel=r"$\Phi/kV$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True,same_color=same_color)
 
     def flow_outboard_plot_func(self,simul,same_color=False):
