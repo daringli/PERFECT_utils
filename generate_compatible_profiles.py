@@ -167,7 +167,7 @@ def generate_compatible_profiles(simul,**kwargs):
         Tlist=[THatPre[species],THatPed[species],THatAft[species]]
         THats[species]=bezier_transition(Tlist,psiList,pairList,psi)
         #THats[species] = interp1d(psi, THats[species], kind='cubic')
-        print THatAft
+        print THatAft[species](1)
 
         #tck = interpolate.splrep(psi, THats[species], s=3)
         #THats[species] = interpolate.splev(psi, tck, der=0)
