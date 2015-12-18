@@ -198,7 +198,10 @@ class plot_object(object):
         species=simul.species
         xlabel=r"$\psi_N$"
         ylabel=r"$\Phi/kV$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True,same_color=same_color)
+        self.ax = self.fig.add_subplot(1, 1, 1);
+        self.ax.plot(x, y)
+        self.ax.set_xlabel(xlabel)
+        self.ax.set_ylabel(ylabel)
 
     def flow_outboard_plot_func(self,simul,same_color=False):
         x=simul.psi
