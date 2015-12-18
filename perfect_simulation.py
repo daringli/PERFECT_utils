@@ -370,7 +370,7 @@ class normalized_perfect_simulation(perfect_simulation):
 
     @property
     def Phi(self):
-        return self.ePhiBar*self.nHat/self.eBar
+        return self.ePhiBar*self.PhiHat/self.eBar
 
 
     @property
