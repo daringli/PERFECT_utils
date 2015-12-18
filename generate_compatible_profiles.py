@@ -159,20 +159,19 @@ def generate_compatible_profiles(simul,**kwargs):
     niSOLGrad=niScale*kwargs["dnSOLdx_"+species[main_index]]*dxdpsiN_at_a
 
     #generate T profiles
-    for species in range(Nspecies):
+    for i in range(Nspecies):
         #Here we specify temperatures that should satisfy deltaT condition
-        THatPre[species] =(lambda psiN: (Tpeds[species] + TCoreGrads[species]*(psiN-psiMinPed)))
-        THatPed[species] =(lambda psiN: (Tpeds[species] + TpedGrads[species]*(psiN-psiMinPed)))
-        THatAft[species] =(lambda psiN: (Tpeds[species] + TpedGrads[species]*(psiMaxPed-psiMinPed) + TSOLGrads[species]*(psiN-psiMaxPed)))
-        Tlist=[THatPre[species],THatPed[species],THatAft[species]]
-        THats[species]=bezier_transition(Tlist,psiList,pairList,psi)
-        #THats[species] = interp1d(psi, THats[species], kind='cubic')
-        print THatAft[species](1)
+        THatPre[i] =(lambda psiN: (Tpeds[i] + TCoreGrads[i]*(psiN-psiMinPed)))
+        THatPed[i] =(lambda psiN: (Tpeds[i] + TpedGrads[i]*(psiN-psiMinPed)))
+        THatAft[i] =(lambda psiN: (Tpeds[i] + TpedGrads[i]*(psiMaxPed-psiMinPed) + TSOLGrads[i]*(psiN-psiMaxPed)))
+        Tlist=[THatPre[i],THatPed[i],THatAft[i]]
+        THats[i]=bezier_transition(Tlist,psiList,pairList,psi)
+        #THats[i] = interp1d(psi, THats[i], kind='cubic')
+        #tck = interpolate.splrep(psi, THats[i], s=3)
+        #THats[i] = interpolate.splev(psi, tck, der=0)
 
-        #tck = interpolate.splrep(psi, THats[species], s=3)
-        #THats[species] = interpolate.splev(psi, tck, der=0)
+        dTHatdpsis[i]=simul.inputs.ddpsi_accurate(THats[i])
 
-        dTHatdpsis[species]=simul.inputs.ddpsi_accurate(THats[species])
 
     print "THat pedestal heights:" +str(Tpeds)
     print "THat inner boundary value:" +str(THats[:,0])
@@ -213,11 +212,15 @@ def generate_compatible_profiles(simul,**kwargs):
 
     etaiHatPre =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
     etaiHatPed =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
-    PhiTop=0.894
-    for i in [0,1,2]:
-        print "THat aft "+str(i)+" : " +str(THatAft[i](1))
-    print "nHat aft:" +str(niHatAft(1)*simul.nBar)
-    etaiHatAft =(lambda psiN: niHatAft(psiN)*numpy.exp((PhiTop*Zs[main_index]/THatAft[main_index](psiN))*2.0*simul.omega/simul.Delta))
+    PhiTop=THatPed[main_index](psiMaxPed)*numpy.log(etaiHatPed(psiMaxPed)*1.0/niHatPed(psiMaxPed))*2.0*simul.omega/simul.Delta
+    
+    #for i in [0,1,2]:
+    #    print "THat aft "+str(i)+" : " +str(THatAft[i](1))
+    print "main index: "+str(main_index)
+    i=main_index #to get the right lambda functions
+    print "THat aft: " +str(THatAft[main_index](1))
+    print "nHat aft: " +str(niHatAft(1)*simul.nBar)
+    etaiHatAft =(lambda psiN: niHatAft(psiN)*numpy.exp(PhiTop*Zs[main_index]/THatAft[main_index](psiN)))
     etailist=[etaiHatPre,etaiHatPed,etaiHatAft]
     etaHats[main_index]=bezier_transition(etailist,psiList,pairList,psi)
     #nHats[mI] = interp1d(psi, nHats[mI], kind='cubic')
@@ -230,8 +233,8 @@ def generate_compatible_profiles(simul,**kwargs):
     # eta_z=n_i (n_i/eta_i)^(-[Zz/Zi] Ti/Tz)
     #etaHats[imp_index] = 0.01*nHats[main_index][psiMinPedIndex]
     imp_conc=kwargs["imp_conc"]
-    etaHats[imp_index]=imp_conc*niPed
-    detaHatdpsis[imp_index] = 0
+    etaHats[imp_index]=imp_conc*(niPed+niCoreGrad*(psi-psiMinPed))
+    detaHatdpsis[imp_index] = imp_conc*niCoreGrad
 
     #solve for Phi to make delta_etai the above value
     #delta_ni=delta_i_factor*dnHatdpsis[mI]/nHats[mI]
