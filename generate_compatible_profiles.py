@@ -213,7 +213,7 @@ def generate_compatible_profiles(simul,**kwargs):
     etaiHatPre =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
     etaiHatPed =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
     CPhi=0.894
-    etaiHatAft =(lambda psiN: niHatAft(psiN)*numpy.exp(-CPhi/THatAft[species](psiN)))
+    etaiHatAft =(lambda psiN: niHatAft(psiN)*numpy.exp(CPhi*Zs[main_index]/(THatAft[species](psiN)*simul.Delta/(2*simul.omega))))
     etailist=[etaiHatPre,etaiHatPed,etaiHatAft]
     etaHats[main_index]=bezier_transition(etailist,psiList,pairList,psi)
     #nHats[mI] = interp1d(psi, nHats[mI], kind='cubic')
