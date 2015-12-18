@@ -123,6 +123,12 @@ def generate_compatible_profiles(simul,**kwargs):
     TCoreGrads=[0]*Nspecies
     TpedGrads=[0]*Nspecies
     TSOLGrads=[0]*Nspecies
+    #Pre,Ped,Aft will contain functions describe T in core, ped and outwards.
+    THatPre=[0]*Nspecies
+    THatPed=[0]*Nspecies
+    THatAft=[0]*Nspecies
+
+    
     for i in range(Nspecies):
         if "TScale_"+species[i] in kwargs.keys():
             TScale[i]=kwargs["TScale_"+species[i]]
@@ -155,10 +161,10 @@ def generate_compatible_profiles(simul,**kwargs):
     #generate T profiles
     for species in range(Nspecies):
         #Here we specify temperatures that should satisfy deltaT condition
-        THatPre =(lambda psiN: (Tpeds[species] + TCoreGrads[species]*(psiN-psiMinPed)))
-        THatPed =(lambda psiN: (Tpeds[species] + TpedGrads[species]*(psiN-psiMinPed)))
-        THatAft =(lambda psiN: (Tpeds[species] + TpedGrads[species]*(psiMaxPed-psiMinPed) + TSOLGrads[species]*(psiN-psiMaxPed)))
-        Tlist=[THatPre,THatPed,THatAft]
+        THatPre[species] =(lambda psiN: (Tpeds[species] + TCoreGrads[species]*(psiN-psiMinPed)))
+        THatPed[species] =(lambda psiN: (Tpeds[species] + TpedGrads[species]*(psiN-psiMinPed)))
+        THatAft[species] =(lambda psiN: (Tpeds[species] + TpedGrads[species]*(psiMaxPed-psiMinPed) + TSOLGrads[species]*(psiN-psiMaxPed)))
+        Tlist=[THatPre[species],THatPed[species],THatAft[species]]
         THats[species]=bezier_transition(Tlist,psiList,pairList,psi)
         #THats[species] = interp1d(psi, THats[species], kind='cubic')
 
@@ -201,8 +207,18 @@ def generate_compatible_profiles(simul,**kwargs):
     #etaHats[main_index] = nHats[main_index][psiMinPedIndex]
     #etaHats[main_index] =niPed
     #detaHatdpsis[main_index] = 0
-    etaHats[main_index] =niPed+niCoreGrad*(psi-psiMinPed)
-    detaHatdpsis[main_index] = niCoreGrad
+    #etaHats[main_index] =niPed+niCoreGrad*(psi-psiMinPed)
+    #detaHatdpsis[main_index] = niCoreGrad
+
+    etaiHatPre =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
+    etaiHatPed =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
+    CPhi=0.894
+    etaiHatAft =(lambda psiN: niHatAft(psiN)*numpy.exp(-CPhi/THatAft[species](psiN))
+    etailist=[etaiHatPre,etaiHatPed,etaiHatAft]
+    etaHats[main_index]=bezier_transition(etailist,psiList,pairList,psi)
+    #nHats[mI] = interp1d(psi, nHats[mI], kind='cubic')
+    detaHatdpsis[main_index] =simul.inputs.ddpsi_accurate(etaHats[main_index])
+    
 
     
     #if Phi=0 at top of the pedestal, this gives the top of the n_z pedestal.
