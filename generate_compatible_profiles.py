@@ -213,8 +213,8 @@ def generate_compatible_profiles(simul,**kwargs):
     etaiHatPre =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
     etaiHatPed =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
     PhiTop=0.894
-    print "THat aft:" +str(THatAft[main_index](1)*simul.nBar)
-    print "nHat aft:" +str(niHatAft(1)*simul.TBar)
+    print "THat aft:" +str(THatAft[main_index](1))
+    print "nHat aft:" +str(niHatAft(1)*simul.nBar)
     etaiHatAft =(lambda psiN: niHatAft(psiN)*numpy.exp((PhiTop*Zs[main_index]/THatAft[main_index](psiN))*2*simul.omega/simul.Delta))
     etailist=[etaiHatPre,etaiHatPed,etaiHatAft]
     etaHats[main_index]=bezier_transition(etailist,psiList,pairList,psi)
@@ -228,7 +228,6 @@ def generate_compatible_profiles(simul,**kwargs):
     # eta_z=n_i (n_i/eta_i)^(-[Zz/Zi] Ti/Tz)
     #etaHats[imp_index] = 0.01*nHats[main_index][psiMinPedIndex]
     imp_conc=kwargs["imp_conc"]
-    etaHats[imp_index]=imp_conc*niPed
     #etaHats[imp_index]=imp_conc*niPed
     detaHatdpsis[imp_index] = 0
 
