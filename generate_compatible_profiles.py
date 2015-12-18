@@ -216,7 +216,7 @@ def generate_compatible_profiles(simul,**kwargs):
     for i in [0,1,2]:
         print "THat aft "+str(i)+" : " +str(THatAft[i](1))
     print "nHat aft:" +str(niHatAft(1)*simul.nBar)
-    etaiHatAft =(lambda psiN: niHatAft(psiN)*numpy.exp((PhiTop*Zs[main_index]/THatAft[main_index](psiN))*2*simul.omega/simul.Delta))
+    etaiHatAft =(lambda psiN: niHatAft(psiN)*numpy.exp((PhiTop*Zs[main_index]/THatAft[main_index](psiN))*2.0*simul.omega/simul.Delta))
     etailist=[etaiHatPre,etaiHatPed,etaiHatAft]
     etaHats[main_index]=bezier_transition(etailist,psiList,pairList,psi)
     #nHats[mI] = interp1d(psi, nHats[mI], kind='cubic')
@@ -229,7 +229,7 @@ def generate_compatible_profiles(simul,**kwargs):
     # eta_z=n_i (n_i/eta_i)^(-[Zz/Zi] Ti/Tz)
     #etaHats[imp_index] = 0.01*nHats[main_index][psiMinPedIndex]
     imp_conc=kwargs["imp_conc"]
-    #etaHats[imp_index]=imp_conc*niPed
+    etaHats[imp_index]=imp_conc*niPed
     detaHatdpsis[imp_index] = 0
 
     #solve for Phi to make delta_etai the above value
