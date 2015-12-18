@@ -201,7 +201,7 @@ def generate_compatible_profiles(simul,**kwargs):
     #etaHats[main_index] = nHats[main_index][psiMinPedIndex]
     #etaHats[main_index] =niPed
     #detaHatdpsis[main_index] = 0
-    etaHats[main_index] =niPed+niCoreGrad*(psiN-psiMinPed)
+    etaHats[main_index] =niPed+niCoreGrad*(psi-psiMinPed)
     detaHatdpsis[main_index] = niCoreGrad
 
     
