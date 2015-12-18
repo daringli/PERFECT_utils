@@ -33,6 +33,7 @@ class plot_object(object):
             "kPar_inboard": self.kPar_inboard_plot_func,
             "T": self.T_plot_func,
             "n": self.n_plot_func,
+            "eta": self.eta_plot_func,
             "Phi": self.Phi_plot_func,
         }
 
@@ -189,6 +190,15 @@ class plot_object(object):
         species=simul.species
         xlabel=r"$\psi_N$"
         ylabel=r"$n/m^{-3}$"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True,same_color=same_color)
+
+    def eta_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        y=simul.eta
+        legend=simul.description
+        species=simul.species
+        xlabel=r"$\psi_N$"
+        ylabel=r"$eta/m^{-3}$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True,same_color=same_color)
 
     def Phi_plot_func(self,simul,same_color=False):
