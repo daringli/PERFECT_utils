@@ -35,6 +35,7 @@ class plot_object(object):
             "n": self.n_plot_func,
             "eta": self.eta_plot_func,
             "Phi": self.Phi_plot_func,
+            "U": self.U_plot_func,
         }
 
         self.cm=cm.rainbow
@@ -212,6 +213,15 @@ class plot_object(object):
         self.ax.plot(x, y)
         self.ax.set_xlabel(xlabel)
         self.ax.set_ylabel(ylabel)
+
+    def U_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        y=simul.U
+        legend=simul.description
+        species=simul.species
+        xlabel=r"$\psi_N$"
+        ylabel=r"$U$"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,False,same_color=same_color)
 
     def flow_outboard_plot_func(self,simul,same_color=False):
         x=simul.psi

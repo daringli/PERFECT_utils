@@ -68,7 +68,7 @@ if __name__=='__main__':
     plt.plot(rho,kappa(rho))
     #plt.plot(rho,dkappadr(rho))
     
-    ax.set_xlabel("r$\rho=r/a$")
+    ax.set_xlabel(r"$\rho=r/a$")
     ax.set_ylabel("$\kappa$, $q$")
 
     #ax = fig.add_subplot(2,1,2)

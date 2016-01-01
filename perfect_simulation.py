@@ -57,6 +57,7 @@ class perfect_simulation(object):
         self.nHat_name="nHat"
         self.nHat_name="etaHat"
         self.PhiHat_name="PhiHat"
+        self.U_name="U"
         self.num_species_name="Nspecies"
         self.heat_source_name="heatSourceProfile"
         self.particle_source_name="particleSourceProfile"
@@ -167,6 +168,10 @@ class perfect_simulation(object):
     @property
     def kPar_outboard(self):
         return self.outputs[self.group_name+self.kPar_outboard_name][()]
+
+    @property
+    def U(self):
+        return self.outputs[self.group_name+self.U_name][()]
 
    
 
