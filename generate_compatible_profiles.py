@@ -51,7 +51,7 @@ def generate_compatible_profiles(simul,**kwargs):
         midShift=kwargs["midShift"]*psiN_width
     
     psiMid=1-psiN_width/2.0+midShift
-    psiDiameter=3*psiN_width
+    psiDiameter=5*psiN_width
     #print "psiDiameter"
     #print psiDiameter
     #print "prof gen psiDia:"
@@ -212,7 +212,8 @@ def generate_compatible_profiles(simul,**kwargs):
 
     etaiHatPre =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
     etaiHatPed =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
-    PhiTop=THatPed[main_index](psiMaxPed)*numpy.log(etaiHatPed(psiMaxPed)*1.0/niHatPed(psiMaxPed))*2.0*simul.omega/simul.Delta
+    i=main_index
+    PhiTop=THatPed[main_index](psiMaxPed+0.01)*numpy.log(etaiHatPed(psiMaxPed)*1.0/niHatPed(psiMaxPed))*2.0*simul.omega/simul.Delta
     
     #for i in [0,1,2]:
     #    print "THat aft "+str(i)+" : " +str(THatAft[i](1))
