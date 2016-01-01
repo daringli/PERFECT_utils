@@ -58,6 +58,9 @@ class perfect_simulation(object):
         self.nHat_name="etaHat"
         self.PhiHat_name="PhiHat"
         self.U_name="U"
+        self.deltaN_name="deltaN"
+        self.deltaEta_name="deltaEta"
+        self.deltaT_name="deltaT"
         self.num_species_name="Nspecies"
         self.heat_source_name="heatSourceProfile"
         self.particle_source_name="particleSourceProfile"
@@ -172,6 +175,18 @@ class perfect_simulation(object):
     @property
     def U(self):
         return self.outputs[self.group_name+self.U_name][()]
+
+    @property
+    def deltaN(self):
+        return self.outputs[self.group_name+self.deltaN_name][()]
+
+    @property
+    def deltaEta(self):
+        return self.outputs[self.group_name+self.deltaEta_name][()]
+
+    @property
+    def deltaT(self):
+        return self.outputs[self.group_name+self.deltaT_name][()]
 
    
 
