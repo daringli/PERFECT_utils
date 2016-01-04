@@ -201,7 +201,7 @@ def generate_compatible_profiles(simul,**kwargs):
         Tlist=[THatPre[i],THatPed[i],THatAft[i]]
         if allflat==True:
             THatinner[i]=(lambda psiN: (Tpeds[i] + TCoreGrads[i]*(psiMinNotFlat-psiMinPed)) + TinnerGrad[i]*(psiN - psiMinNotFlat))
-            THatouter[i]=(lambda psiN: (Tpeds[i] + TpedGrads[i]*(psiMaxPed-psiMinPed) + TSOLGrads[i]*(psiMaxNotFlat-psiMaxPed)) + TouterGrad[i]*(psiN - psiMaxNotFlat)))
+            THatouter[i]=(lambda psiN: (Tpeds[i] + TpedGrads[i]*(psiMaxPed-psiMinPed) + TSOLGrads[i]*(psiMaxNotFlat-psiMaxPed)) + TouterGrad[i]*(psiN - psiMaxNotFlat))
             Tlist=[THatinner[i],THatPre[i],THatPed[i],THatAft[i],THatouter[i]]
         THats[i]=bezier_transition(Tlist,psiList,pairList,psi)
         #THats[i] = interp1d(psi, THats[i], kind='cubic')
@@ -266,8 +266,8 @@ def generate_compatible_profiles(simul,**kwargs):
     etaiHatAft =(lambda psiN: niHatAft(psiN)*numpy.exp(PhiTop*Zs[main_index]/THatAft[main_index](psiN)))
     etailist=[etaiHatPre,etaiHatPed,etaiHatAft]
     if allflat==True:
-        etaiHatinner =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiMinNotFlat-psi[0])) + niinnerGrad*(psiN - psiMinNotFlat))
-        etaiHatouter = (lambda psiN: niHatouter(psiN)*numpy.exp(PhiTop*Zs[main_index]/THatAft[main_index](psiN)))
+        etaiHatinner =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiMinNotFlat-psi[0]) + niinnerGrad*(psiN - psiMinNotFlat)))
+        etaiHatouter = (lambda psiN: (niHatouter(psiN)*numpy.exp(PhiTop*Zs[main_index]/THatouter[main_index](psiN))))
         etailist=[etaiHatinner,etaiHatPre,etaiHatPed,etaiHatAft,etaiHatouter]
     
     etaHats[main_index]=bezier_transition(etailist,psiList,pairList,psi)
@@ -283,6 +283,13 @@ def generate_compatible_profiles(simul,**kwargs):
     imp_conc=kwargs["imp_conc"]
     etaHats[imp_index]=imp_conc*(niPed+niCoreGrad*(psi-psiMinPed))
     detaHatdpsis[imp_index] = imp_conc*niCoreGrad
+    if allflat==True:
+        etazHatInner=(lambda psiN: imp_conc*(niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiMinNotFlat-psi[0]) + niinnerGrad*(psiN - psiMinNotFlat)))
+        etazHatMiddle=(lambda psiN: imp_conc*(niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
+        etazHatOuter=(lambda psiN: imp_conc*(niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiMaxNotFlat-psi[0])))
+        etailist=[etazHatInner,etazHatMiddle,etazHatOuter]
+        etaHats[imp_index]=bezier_transition(etailist,psiList[:1]+psiList[-1:],pairList[:1]+pairList[-1:],psi)
+        detaHatdpsis[imp_index] =simul.inputs.ddpsi_accurate(etaHats[imp_index])
 
     #solve for Phi to make delta_etai the above value
     #delta_ni=delta_i_factor*dnHatdpsis[mI]/nHats[mI]
