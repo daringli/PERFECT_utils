@@ -28,6 +28,10 @@ def generate_compatible_profiles(simul,**kwargs):
     main_index=kwargs["mI"]
     imp_index=kwargs["zI"]
     e_index=kwargs["eI"]
+    if "allflat" in kwargs.keys():
+        allflat=kwargs["allflat"]
+    else:
+        allflat=False
 
     
 
@@ -52,6 +56,10 @@ def generate_compatible_profiles(simul,**kwargs):
     
     psiMid=1-psiN_width/2.0+midShift
     psiDiameter=5*psiN_width
+    if allflat==True:
+        leftBoundaryShift=-psiN_width
+    else:
+        leftBoundaryShift=0
     #print "psiDiameter"
     #print psiDiameter
     #print "prof gen psiDia:"
@@ -60,6 +68,7 @@ def generate_compatible_profiles(simul,**kwargs):
     #already here, the simulation object changes
     simul.inputs.changevar("resolutionParameters","psiDiameter",psiDiameter)
     simul.inputs.changevar("physicsParameters","psiMid",psiMid)
+    simul.inputs.changevar("physicsParameters","leftBoundaryShift",leftBoundaryShift)
     simul.inputs.read(simul.input_filename)
 
     #print "psiMid:"
@@ -95,13 +104,20 @@ def generate_compatible_profiles(simul,**kwargs):
     #psiMaxPed=psi[psiMaxPedIndex]
     psiMinPed=psiMid-psiN_width/2.0
     psiMaxPed=psiMid+psiN_width/2.0+upShift
+    if allflat==True:
+        psiMinNotFlat=psiMid-2.5*psiN_width
+        psiMaxNotFlat=psiMid+1.5*psiN_width
     #print "psiMinPed:"
     #print psiMinPed
     #list of psi where our profiles change slope
     psiList=[psiMinPed,psiMaxPed]
+    if allflat==True:
+        psiList=[psiMinNotFlat,psiMinPed,psiMaxPed,psiMaxNotFlat]
     #distance in psi until our smooth transition between gradients is finished
     offset=(psiMaxPed-psiMinPed)/5
     pairList=[[offset,offset],[offset,offset]]
+    if allflat==True:
+        pairList=[[offset,offset],[offset,offset],[offset,offset],[offset,offset]]
 
     #allocate arrays
     THats = numpy.zeros((Nspecies,Npsi))
@@ -123,10 +139,18 @@ def generate_compatible_profiles(simul,**kwargs):
     TCoreGrads=[0]*Nspecies
     TpedGrads=[0]*Nspecies
     TSOLGrads=[0]*Nspecies
+    if allflat==True:
+        TinnerGrad=[0]*Nspecies
+        TouterGrad=[0]*Nspecies
     #Pre,Ped,Aft will contain functions describe T in core, ped and outwards.
     THatPre=[0]*Nspecies
     THatPed=[0]*Nspecies
     THatAft=[0]*Nspecies
+    if allflat==True:
+        THatinner=[0]*Nspecies
+        THatouter=[0]*Nspecies
+
+    
 
     
     for i in range(Nspecies):
@@ -141,11 +165,18 @@ def generate_compatible_profiles(simul,**kwargs):
         #print "TpedGrads["+str(i)+"] = " + str(TpedGrads[i])
         #print "-------------------------"
         TSOLGrads[i]=TScale[i]*kwargs["dTSOLdx_"+species[i]]*dxdpsiN_at_a
+        TSOLGrads[i]=TScale[i]*kwargs["dTSOLdx_"+species[i]]*dxdpsiN_at_a
+        if allflat==True:
+            TinnerGrad=[0]*Nspecies
+            TouterGrad=[0]*Nspecies
     TScale=numpy.array(TScale)
     Tpeds=numpy.array(Tpeds)
     TCoreGrads=numpy.array(TCoreGrads)
     TSOLGrads=numpy.array(TSOLGrads)
     TpedGrads=numpy.array(TpedGrads)
+    if allflat==True:
+        TinnerGrad=numpy.array(TinnerGrad)
+        TouterGrad=numpy.array(TouterGrad)
     #TpedGrads=Tpeds/psiN_width
 
 
@@ -157,6 +188,9 @@ def generate_compatible_profiles(simul,**kwargs):
     niCoreGrad=niScale*kwargs["dnCoredx_"+species[main_index]]*dxdpsiN_at_a
     nipedGrad=niScale*kwargs["dnpeddx_"+species[main_index]]*dxdpsiN_at_a
     niSOLGrad=niScale*kwargs["dnSOLdx_"+species[main_index]]*dxdpsiN_at_a
+    if allflat==True:
+        niinnerGrad=niScale*0
+        niouterGrad=niScale*0
 
     #generate T profiles
     for i in range(Nspecies):
@@ -165,6 +199,10 @@ def generate_compatible_profiles(simul,**kwargs):
         THatPed[i] =(lambda psiN: (Tpeds[i] + TpedGrads[i]*(psiN-psiMinPed)))
         THatAft[i] =(lambda psiN: (Tpeds[i] + TpedGrads[i]*(psiMaxPed-psiMinPed) + TSOLGrads[i]*(psiN-psiMaxPed)))
         Tlist=[THatPre[i],THatPed[i],THatAft[i]]
+        if allflat==True:
+            THatinner[i]=(lambda psiN: (Tpeds[i] + TCoreGrads[i]*(psiMinNotFlat-psiMinPed)) + TinnerGrad[i]*(psiN - psiMinNotFlat))
+            THatouter[i]=(lambda psiN: (Tpeds[i] + TpedGrads[i]*(psiMaxPed-psiMinPed) + TSOLGrads[i]*(psiMaxNotFlat-psiMaxPed)) + TouterGrad[i]*(psiN - psiMaxNotFlat)))
+            Tlist=[THatinner[i],THatPre[i],THatPed[i],THatAft[i],THatouter[i]]
         THats[i]=bezier_transition(Tlist,psiList,pairList,psi)
         #THats[i] = interp1d(psi, THats[i], kind='cubic')
         #tck = interpolate.splrep(psi, THats[i], s=3)
@@ -179,6 +217,10 @@ def generate_compatible_profiles(simul,**kwargs):
     niHatPed =(lambda psiN: (niPed +  nipedGrad* (psiN-psiMinPed)))
     niHatAft =(lambda psiN: (niPed+nipedGrad*(psiMaxPed-psiMinPed) +  niSOLGrad* (psiN-psiMaxPed)))
     nilist=[niHatPre,niHatPed,niHatAft]
+    if allflat==True:
+        niHatinner =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiMinNotFlat-psi[0])) + niinnerGrad*(psiN - psiMinNotFlat))
+        niHatouter =(lambda psiN: (niPed+nipedGrad*(psiMaxPed-psiMinPed) +  niSOLGrad* (psiMaxNotFlat-psiMaxPed)) + niouterGrad*(psiN - psiMaxNotFlat))
+        nilist=[niHatinner,niHatPre,niHatPed,niHatAft,niHatouter]
     nHats[main_index]=bezier_transition(nilist,psiList,pairList,psi)
     #nHats[mI] = interp1d(psi, nHats[mI], kind='cubic')
     dnHatdpsis[main_index] =simul.inputs.ddpsi_accurate(nHats[main_index])
@@ -223,6 +265,11 @@ def generate_compatible_profiles(simul,**kwargs):
     print "nHat aft: " +str(niHatAft(1)*simul.nBar)
     etaiHatAft =(lambda psiN: niHatAft(psiN)*numpy.exp(PhiTop*Zs[main_index]/THatAft[main_index](psiN)))
     etailist=[etaiHatPre,etaiHatPed,etaiHatAft]
+    if allflat==True:
+        etaiHatinner =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiMinNotFlat-psi[0])) + niinnerGrad*(psiN - psiMinNotFlat))
+        etaiHatouter = (lambda psiN: niHatouter(psiN)*numpy.exp(PhiTop*Zs[main_index]/THatAft[main_index](psiN)))
+        etailist=[etaiHatinner,etaiHatPre,etaiHatPed,etaiHatAft,etaiHatouter]
+    
     etaHats[main_index]=bezier_transition(etailist,psiList,pairList,psi)
     #nHats[mI] = interp1d(psi, nHats[mI], kind='cubic')
     detaHatdpsis[main_index] =simul.inputs.ddpsi_accurate(etaHats[main_index])
