@@ -33,7 +33,11 @@ def generate_compatible_profiles(simul,**kwargs):
     else:
         allflat=False
 
-    
+    if "sameflux" in kwargs.keys():
+        sameflux=kwargs["sameflux"]
+    else:
+        sameflux=False
+
 
 
     #parse keywords to see how this object should be initialized
@@ -209,8 +213,7 @@ def generate_compatible_profiles(simul,**kwargs):
         #THats[i] = interpolate.splev(psi, tck, der=0)
 
         dTHatdpsis[i]=simul.inputs.ddpsi_accurate(THats[i])
-
-
+        
     print "THat pedestal heights:" +str(Tpeds)
     print "THat inner boundary value:" +str(THats[:,0])
     niHatPre =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
@@ -227,6 +230,16 @@ def generate_compatible_profiles(simul,**kwargs):
     print "Ion nHat pedestal heights:" +str(niPed)
     print "Ion nHat inner boundary value:" +str(nHats[main_index][0])
    
+    if sameflux==True:
+        ntop=nHats[main_index][0]
+        nbot=nHats[main_index][-1]
+        THatPre[main_index] =(lambda psiN: (Tpeds[main_index] + (nbot*1.0/ntop)*TCoreGrads[main_index]*(psiN-psiMinPed)))
+        THatPed[main_index] =(lambda psiN: (Tpeds[main_index] + TCoreGrads[main_index]*(psiN-psiMinPed)))
+        #THatAft[main_index] =(lambda psiN: (Tpeds[main_index] + TpedGrads[main_index]*(psiMaxPed-psiMinPed) + TSOLGrads[main_index]*(psiN-psiMaxPed)))
+        Tlist=[THatPre[main_index],THatPed[main_index]]
+        THats[main_index]=bezier_transition(Tlist,psiList[:-1],pairList[:-1],psi)
+        dTHatdpsis[main_index]=simul.inputs.ddpsi_accurate(THats[main_index])
+    
 
     #with n_i and T_i generated, we can evaluate logLambda at a suitable point
     point=numpy.floor((psiMinPedIndex+psiMaxPedIndex)/2.0) # middle of the pedestal
