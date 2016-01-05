@@ -6,6 +6,7 @@ import h5py #to write profiles
 import numpy #matrix things, etc
 from bezier_transition import bezier_transition #for smooth transition between 2 functions
 import scipy.constants #constants
+import scipy.optimize
 from nu_r import nu_r #nu_r
 from coulomb_logarithms import lambda_ee as coulombLog #lambda=ln(Lambda)
 from perfectProfilesFile import perfectProfiles
@@ -37,6 +38,11 @@ def generate_compatible_profiles(simul,**kwargs):
         sameflux=kwargs["sameflux"]
     else:
         sameflux=False
+
+    if "samefluxshift" in kwargs.keys():
+        samefluxshift=kwargs["samefluxshift"]
+    else:
+        samefluxshift=False
 
 
 
@@ -230,16 +236,50 @@ def generate_compatible_profiles(simul,**kwargs):
     print "Ion nHat pedestal heights:" +str(niPed)
     print "Ion nHat inner boundary value:" +str(nHats[main_index][0])
    
-    if sameflux==True:
-        ntop=nHats[main_index][0]
-        nbot=nHats[main_index][-1]
-        THatPre[main_index] =(lambda psiN: (Tpeds[main_index] + (nbot*1.0/ntop)*TCoreGrads[main_index]*(psiN-psiMinPed)))
-        THatPed[main_index] =(lambda psiN: (Tpeds[main_index] + TCoreGrads[main_index]*(psiN-psiMinPed)))
-        #THatAft[main_index] =(lambda psiN: (Tpeds[main_index] + TpedGrads[main_index]*(psiMaxPed-psiMinPed) + TSOLGrads[main_index]*(psiN-psiMaxPed)))
+    if (sameflux==True) or (samefluxshift==True):
+        nt=nHats[main_index][0]
+        nb=nHats[main_index][-1]
+        Tp=Tpeds[main_index]
+        breakpoint=psiMinPed
+        if samefluxshift==True:
+            breakpoint=psiMinPed*1.10
+            i=main_index
+            Tp=THatPre[i](breakpoint)
+        dTdpsi=TCoreGrads[main_index]
+        Delta0=psiN_width #pedestal width proper
+        
+        print "nt: " + str(nt)
+        print "nb: " + str(nb)
+        print "Tp: " + str(Tp)
+        print "dTdpsi: " + str(dTdpsi)
+        print "Delta0: " + str(Delta0)
+
+        #f=lambda x : x*(Tp-2*Delta0*x)**(3.0/2.0) - (nb*1.0/nt)*(Tp + (5*dTdpsi-2*x)*Delta0)**(3.0/2.0)*((5.0/3.0)*dTdpsi-(2.0/3.0)*x)
+        #dTdpsiTop=scipy.optimize.fsolve(f,0)
+        #dTdpsiTop=scipy.optimize.fsolve(f,0)
+        
+        f=lambda x : x*(Tp-2*Delta0*x)**(3.0/2.0) - (nb*1.0/nt)*(Tp + 3*dTdpsi*Delta0)**(3.0/2.0)*dTdpsi
+        dTdpsiTop=scipy.optimize.fsolve(f,0)
+        dTdpsiBot=dTdpsi
+        
+        #f=lambda x : (dTdpsi+x)*(Tp-2*Delta0*(dTdpsi+x))**(3.0/2.0) - (nb*1.0/nt)*(Tp + 3*(dTdpsi-x)*Delta0)**(3.0/2.0)*(dTdpsi-x)
+        #diff=scipy.optimize.fsolve(f,0)
+        #print "diff: " + str(diff)
+        #dTdpsiTop=dTdpsi+diff
+        #dTdpsiBot=dTdpsi-diff
+        
+        #print "dTdpsiTop: " + str(dTdpsiTop)
+        #dTdpsiBot=(5.0/3.0)*dTdpsi-(2.0/3.0)*dTdpsiTop
+        
+        THatPre[main_index] =(lambda psiN: (Tpeds[main_index] + dTdpsiTop*(psiN-breakpoint)))
+        THatPed[main_index] =(lambda psiN: (Tpeds[main_index] + dTdpsiBot*(psiN-breakpoint)))
+        #THatAft[main_index] =(lambda psiN: (Tpeds[main_index] + TpedGrads[main_index]*(psiMaxPed-breakpoint) + TSOLGrads[main_index]*(psiN-psiMaxPed)))
         Tlist=[THatPre[main_index],THatPed[main_index]]
-        THats[main_index]=bezier_transition(Tlist,psiList[:-1],pairList[:-1],psi)
+        THats[main_index]=bezier_transition(Tlist,[breakpoint],pairList[:-1],psi)
         dTHatdpsis[main_index]=simul.inputs.ddpsi_accurate(THats[main_index])
-    
+
+        THats[imp_index]=THats[main_index]
+        dTHatdpsis[imp_index]=dTHatdpsis[main_index]
 
     #with n_i and T_i generated, we can evaluate logLambda at a suitable point
     point=numpy.floor((psiMinPedIndex+psiMaxPedIndex)/2.0) # middle of the pedestal
