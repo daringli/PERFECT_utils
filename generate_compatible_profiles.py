@@ -242,7 +242,7 @@ def generate_compatible_profiles(simul,**kwargs):
         Tp=Tpeds[main_index]
         breakpoint=psiMinPed
         if samefluxshift==True:
-            breakpoint=psiMinPed*1.10
+            breakpoint=psiMinPed-0.045
             i=main_index
             Tp=THatPre[i](breakpoint)
         dTdpsi=TCoreGrads[main_index]
@@ -273,7 +273,7 @@ def generate_compatible_profiles(simul,**kwargs):
         
         THatPre[main_index] =(lambda psiN: (Tpeds[main_index] + dTdpsiTop*(psiN-breakpoint)))
         THatPed[main_index] =(lambda psiN: (Tpeds[main_index] + dTdpsiBot*(psiN-breakpoint)))
-        #THatAft[main_index] =(lambda psiN: (Tpeds[main_index] + TpedGrads[main_index]*(psiMaxPed-breakpoint) + TSOLGrads[main_index]*(psiN-psiMaxPed)))
+        THatAft[main_index] =(lambda psiN: (Tpeds[main_index] + dTdpsiBot*(psiN-breakpoint)))
         Tlist=[THatPre[main_index],THatPed[main_index]]
         THats[main_index]=bezier_transition(Tlist,[breakpoint],pairList[:-1],psi)
         dTHatdpsis[main_index]=simul.inputs.ddpsi_accurate(THats[main_index])
@@ -308,14 +308,20 @@ def generate_compatible_profiles(simul,**kwargs):
     etaiHatPre =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
     etaiHatPed =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
     i=main_index
-    PhiTop=THatPed[main_index](psiMaxPed+0.01)*numpy.log(etaiHatPed(psiMaxPed)*1.0/niHatPed(psiMaxPed))*2.0*simul.omega/simul.Delta
+    PhiTopPoint=psiMaxPed
+    #if samefluxshift==True:
+    #     prefactor=0.6
+    #else:
+    #    prefactor=1.0
+    prefactor=1.0
+    PhiTop=prefactor*THatPed[main_index](PhiTopPoint)*numpy.log(etaiHatPed(PhiTopPoint)*1.0/niHatPed(PhiTopPoint))*2.0*simul.omega/simul.Delta
     
     #for i in [0,1,2]:
     #    print "THat aft "+str(i)+" : " +str(THatAft[i](1))
-    print "main index: "+str(main_index)
+    #print "main index: "+str(main_index)
     i=main_index #to get the right lambda functions
-    print "THat aft: " +str(THatAft[main_index](1))
-    print "nHat aft: " +str(niHatAft(1)*simul.nBar)
+    #print "THat aft: " +str(THatAft[main_index](1))
+    #print "nHat aft: " +str(niHatAft(1)*simul.nBar)
     etaiHatAft =(lambda psiN: niHatAft(psiN)*numpy.exp(PhiTop*Zs[main_index]/THatAft[main_index](psiN)))
     etailist=[etaiHatPre,etaiHatPed,etaiHatAft]
     if allflat==True:
