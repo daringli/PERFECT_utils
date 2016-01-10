@@ -69,6 +69,8 @@ class perfect_simulation(object):
         self.flow_outboard_name="flowOutboard"
         self.kPar_inboard_name="kParInboard"
         self.kPar_outboard_name="kParOutboard"
+        self.collisionality_name="nuPrimeProfile"
+        self.FSABFlow_name="FSABFlow"
 
 
     @property
@@ -138,11 +140,23 @@ class perfect_simulation(object):
 
     @property
     def particle_flux(self):
-        return self.outputs[self.group_name+self.particle_flux_name][()]
+        VPrimeHat=[self.VPrimeHat]
+        VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
+        signOfVPrimeHat=numpy.sign(VPrimeHat)
+        return self.outputs[self.group_name+self.particle_flux_name][()]*signOfVPrimeHat
 
     @property
     def heat_flux(self):
-        return self.outputs[self.group_name+self.heat_flux_name][()]
+        VPrimeHat=[self.VPrimeHat]
+        VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
+        signOfVPrimeHat=numpy.sign(VPrimeHat)
+        return self.outputs[self.group_name+self.heat_flux_name][()]*signOfVPrimeHat
+
+    @property
+    def conductive_heat_flux(self):        
+        return self.heat_flux-(5.0/2.0)*self.THat*self.particle_flux
+
+
 
     @property
     def VPrimeHat(self):
@@ -172,6 +186,14 @@ class perfect_simulation(object):
     def kPar_outboard(self):
         return self.outputs[self.group_name+self.kPar_outboard_name][()]
 
+    @property
+    def FSABFlow(self):
+        return self.outputs[self.group_name+self.FSABFlow_name][()]
+    
+    @property
+    def FSABJPar(self):
+        return numpy.sum(self.inputs.charges*(self.nHat*self.FSABFlow),axis=1)
+    
     @property
     def U(self):
         return self.outputs[self.group_name+self.U_name][()]
@@ -258,6 +280,10 @@ class perfect_simulation(object):
     @property
     def num_species(self):
         return self.outputs[self.group_name+self.num_species_name][()]
+
+    @property
+    def collisionality(self):
+        return self.outputs[self.group_name+self.collisionality_name][()]
 
     
     def copy_simulation_to_dir(self,dir):
@@ -414,14 +440,23 @@ class normalized_perfect_simulation(perfect_simulation):
         #to make appropriate size to divide the particle flux with
         VPrimeHat=[self.VPrimeHat]
         VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
-        return (self.particle_flux/VPrimeHat)*(numpy.pi*self.Delta**2)*self.RBar*self.BBar*self.nBar*self.vBar
+        signOfVPrimeHat=numpy.sign(VPrimeHat)
+        return (self.particle_flux/VPrimeHat)*signOfVPrimeHat*(numpy.pi*self.Delta**2)*self.RBar*self.BBar*self.nBar*self.vBar
 
     @property
     def normed_heat_flux(self):
         #to make appropriate size to divide the particle flux with
         VPrimeHat=[self.VPrimeHat]
         VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
-        return (self.heat_flux/VPrimeHat)*self.TBar*(numpy.pi*self.Delta**2)*self.RBar*self.BBar*self.nBar*self.vBar
+        signOfVPrimeHat=numpy.sign(VPrimeHat)
+        return (self.heat_flux/VPrimeHat)*signOfVPrimeHat*self.TBar*(numpy.pi*self.Delta**2)*self.RBar*self.BBar*self.nBar*self.vBar
+
+    @property
+    def normed_conductive_heat_flux(self):
+        VPrimeHat=[self.VPrimeHat]
+        VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
+        return (self.conductive_heat_flux/VPrimeHat)*self.TBar*(numpy.pi*self.Delta**2)*self.RBar*self.BBar*self.nBar*self.vBar
+    #self.normed_heat_flux-(5.0/2.0)*self.T*self.normed_particle_flux
 
     @property
     def normed_heat_source(self):
@@ -437,7 +472,14 @@ class normalized_perfect_simulation(perfect_simulation):
         #print self.particle_source/self.masses
         return self.Delta*self.nBar/(self.vBar**2*self.RBar*numpy.sqrt(self.masses))*self.particle_source
 
-
+    @property
+    def normed_FSABFlow(self):
+        return self.BBar*self.vBar*self.Delta*self.FSABFlow
+    
+    @property
+    def normed_FSABJPar(self):
+        return self.nBar*self.BBar*self.eBar*self.vBar*self.Delta*self.FSABJPar
+    
     @property
     def normed_flow_inboard(self):
         return self.Delta*self.vBar*self.flow_inboard
@@ -446,9 +488,6 @@ class normalized_perfect_simulation(perfect_simulation):
     def normed_flow_outboard(self):
         return self.Delta*self.vBar*self.flow_outboard
     
-    @property
-    def normed_conductive_heat_flux(self):
-        return self.normed_heat_flux-(5.0/2.0)*self.T*self.normed_particle_flux
 
 
     
