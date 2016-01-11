@@ -286,10 +286,7 @@ def generate_compatible_profiles(simul,**kwargs):
         THats[main_index]=bezier_transition(Tlist,[breakpoint],pairList[:-1],psi)
         dTHatdpsis[main_index]=simul.inputs.ddpsi_accurate(THats[main_index])
 
-        if twoSpecies:
-           THats[imp_index]=0
-           dTHatdpsis[imp_index]=0
-        else:
+        if twoSpecies==False:
             THats[imp_index]=THats[main_index]
             dTHatdpsis[imp_index]=dTHatdpsis[main_index]
 
@@ -351,10 +348,7 @@ def generate_compatible_profiles(simul,**kwargs):
     #To make n_z and n_i same at points, those points should satisfy
     # eta_z=n_i (n_i/eta_i)^(-[Zz/Zi] Ti/Tz)
     #etaHats[imp_index] = 0.01*nHats[main_index][psiMinPedIndex]
-    if twoSpecies:
-        etaHats[imp_index]=0
-        detaHatdpsis[imp_index]=0
-    else:
+     if twoSpecies==False:
         imp_conc=kwargs["imp_conc"]
         etaHats[imp_index]=imp_conc*(niPed+niCoreGrad*(psi-psiMinPed))
         detaHatdpsis[imp_index] = imp_conc*niCoreGrad
@@ -374,17 +368,14 @@ def generate_compatible_profiles(simul,**kwargs):
     PhiHat=numpy.log(etaHats[main_index]/nHats[main_index])*THats[main_index]/Zs[main_index]*simul.Delta/(2*simul.omega)
     dPhiHatdpsi=(-etaHats[main_index]*dnHatdpsis[main_index]/nHats[main_index]**2 + detaHatdpsis[main_index]/nHats[main_index])*THats[main_index]*nHats[main_index]/etaHats[main_index] + numpy.log(etaHats[main_index]/nHats[main_index])*dTHatdpsis[main_index]
 
-    if twoSpecies:
-        nHats[imp_index]=0
-    else:
+    if twoSpecies==False:
         nHats[imp_index] = etaHats[imp_index] *(nHats[main_index]/etaHats[main_index])**((Zs[imp_index]/Zs[main_index])*(THats[main_index]/THats[imp_index]))
         #derivative calculate from sympy
         dnHatdpsis[imp_index]=(nHats[main_index]/etaHats[main_index])**(Zs[imp_index]*THats[main_index]/(Zs[main_index]*THats[imp_index]))*((-Zs[imp_index]*THats[main_index]*dTHatdpsis[imp_index]/(Zs[main_index]*THats[imp_index]**2) + Zs[imp_index]*dTHatdpsis[main_index]/(Zs[main_index]*THats[imp_index]))*numpy.log(nHats[main_index]/etaHats[main_index]) + Zs[imp_index]*(dnHatdpsis[main_index]/etaHats[main_index] - nHats[main_index]*detaHatdpsis[main_index]/etaHats[main_index]**2)*THats[main_index]*etaHats[main_index]/(Zs[main_index]*THats[imp_index]*nHats[main_index]))*etaHats[imp_index] + (nHats[main_index]/etaHats[main_index])**(Zs[imp_index]*THats[main_index]/(Zs[main_index]*THats[imp_index]))*detaHatdpsis[imp_index]
     
-    if twoSpecies:
+    if twoSpecies==True:
         nHats[e_index]=Zs[main_index]*nHats[main_index]
         dnHatdpsis[e_index]=Zs[main_index]*dnHatdpsis[main_index]
-        
     else:
         nHats[e_index]=Zs[imp_index]*nHats[imp_index] + Zs[main_index]*nHats[main_index]
         dnHatdpsis[e_index]=Zs[imp_index]*dnHatdpsis[imp_index]+ Zs[main_index]*dnHatdpsis[main_index]
@@ -410,7 +401,7 @@ def generate_compatible_profiles(simul,**kwargs):
         print simul.input_dir+"/"+simul.inputs.profilesFilename + " already exists, cannot generate input profiles hdf5 file."
         print "#######################################################"
     else:
-        if twoSpecies:
+        if twoSpecies==True:
             outputfile.create_profiles_for_Npsi(Npsi,2,PhiHat,dPhiHatdpsi,THats[:,[main_index,e_index]],dTHatdpsis[:,[main_index,e_index]],nHats[:,[main_index,e_index]],dnHatdpsis[:,[main_index,e_index]],etaHats[:,[main_index,e_index]],detaHatdpsis[:,[main_index,e_index]])
         else:
             outputfile.create_profiles_for_Npsi(Npsi,Nspecies,PhiHat,dPhiHatdpsi,THats,dTHatdpsis,nHats,dnHatdpsis,etaHats,detaHatdpsis)
