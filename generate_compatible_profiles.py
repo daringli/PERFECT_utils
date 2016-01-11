@@ -348,7 +348,7 @@ def generate_compatible_profiles(simul,**kwargs):
     #To make n_z and n_i same at points, those points should satisfy
     # eta_z=n_i (n_i/eta_i)^(-[Zz/Zi] Ti/Tz)
     #etaHats[imp_index] = 0.01*nHats[main_index][psiMinPedIndex]
-     if twoSpecies==False:
+    if twoSpecies==False:
         imp_conc=kwargs["imp_conc"]
         etaHats[imp_index]=imp_conc*(niPed+niCoreGrad*(psi-psiMinPed))
         detaHatdpsis[imp_index] = imp_conc*niCoreGrad
