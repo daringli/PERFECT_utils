@@ -411,6 +411,6 @@ def generate_compatible_profiles(simul,**kwargs):
         print "#######################################################"
     else:
         if twoSpecies:
-            outputfile.create_profiles_for_Npsi(Npsi,2,PhiHat,dPhiHatdpsi,THats[:,[0,2]],dTHatdpsis[:,[0,2]],nHats[:,[0,2]],dnHatdpsis[:,[0,2]],etaHats[:,[0,2]],detaHatdpsis[:,[0,2]])
+            outputfile.create_profiles_for_Npsi(Npsi,2,PhiHat,dPhiHatdpsi,THats[:,[main_index,e_index]],dTHatdpsis[:,[main_index,e_index]],nHats[:,[main_index,e_index]],dnHatdpsis[:,[main_index,e_index]],etaHats[:,[main_index,e_index]],detaHatdpsis[:,[main_index,e_index]])
         else:
             outputfile.create_profiles_for_Npsi(Npsi,Nspecies,PhiHat,dPhiHatdpsi,THats,dTHatdpsis,nHats,dnHatdpsis,etaHats,detaHatdpsis)
