@@ -331,7 +331,7 @@ class normalized_perfect_simulation(perfect_simulation):
 
         self.norm=norm_filename
 
-        tolerance=0.001
+        tolerance=0.005
         #in the future, it might be convenient to change the quantities in the simulation to match those derived from the normfile
         if not self.verify_Delta(tolerance):
             print "Warning: Delta in simulation does not match Delta due to normalized quantities to relative precision " + str(tolerance)

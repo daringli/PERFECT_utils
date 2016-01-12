@@ -258,7 +258,7 @@ class plot_object(object):
         legend=simul.description
         species=simul.species
         xlabel=r"$\psi_N$"
-        ylabel=r"$\langle \hat{\vec{q}} \cdot \nabla\psi_N \rangle$"
+        ylabel=r"$\hat{V'}\langle \hat{\vec{q}} \cdot \nabla\psi_N \rangle$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,same_color=same_color)
 
     def normed_conductive_heat_flux_over_n_plot_func(self,simul,same_color=False):
@@ -276,7 +276,7 @@ class plot_object(object):
         legend=simul.description
         species=simul.species
         xlabel=r"$\psi_N$"
-        ylabel=r"$\langle \hat{\vec{q}}\cdot \nabla\psi_N \rangle/\hat{n}$"
+        ylabel=r"$\hat{V'}\langle \hat{\vec{q}}\cdot \nabla\psi_N \rangle/\hat{n}$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,same_color=same_color)
 
     def normed_heat_source_plot_func(self,simul,same_color=False):
