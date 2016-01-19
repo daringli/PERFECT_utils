@@ -1,22 +1,120 @@
 import matplotlib.pyplot as plt
-from matplotlib import rc
+import matplotlib
 from matplotlib.pyplot import cm
 from perfect_simulation import perfect_simulation
 import scipy.constants
 import numpy
+from latexify import latexify
+from get_index_range import get_index_range
+from matplotlib.ticker import MaxNLocator
+from matplotlib import ticker
 
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib.ticker import ScalarFormatter, FormatStrFormatter
+
+from truncate_colormap import truncate_colormap
+from shiftedColorMap import shiftedColorMap
+
+
+
+#needed to place the offset text (the 10^x text by the axis) at arbitrary position: https://github.com/matplotlib/matplotlib/issues/4476
+import types
+import matplotlib.transforms as mtransforms
+
+def monkey_patch(axis, func):
+    axis._update_offset_text_position = types.MethodType(func, axis)
+
+def x_update_offset_text_position(self, bboxes, bboxes2):
+    x, y = self.offsetText.get_position()
+
+    if self.offset_text_position == 'bottom':
+        if bboxes:
+            bbox = mtransforms.Bbox.union(bboxes)
+        else:
+            bbox = self.axes.bbox
+        y = bbox.ymin - self.OFFSETTEXTPAD * self.figure.dpi / 72.0
+        self.offsetText.set(va='top', ha='right')
+
+    if self.offset_text_position == 'there':
+        # y in axes coords, x i0n display coords
+        self.offsetText.set_transform(mtransforms.blended_transform_factory(
+                self.axes.transAxes, mtransforms.IdentityTransform()))
+
+        top = self.axes.bbox.ymax
+        right=self.axes.bbox.xmin
+        #print x
+        #print y
+        y = top+15# - 2*self.OFFSETTEXTPAD * self.figure.dpi / 72.0
+        x = 1.03# + 0.1*self.OFFSETTEXTPAD * self.figure.dpi / 72.0
+
+    if self.offset_text_position == 'there2':
+        # y in axes coords, x i0n display coords
+        self.offsetText.set_transform(mtransforms.blended_transform_factory(
+                self.axes.transAxes, mtransforms.IdentityTransform()))
+
+        top = self.axes.bbox.ymax
+        right=self.axes.bbox.xmin
+        #print x
+        #print y
+        y = top+15# - 2*self.OFFSETTEXTPAD * self.figure.dpi / 72.0
+        x = 0.97# + 0.1*self.OFFSETTEXTPAD * self.figure.dpi / 72.0
+
+    else:
+        if bboxes2:
+            bbox = mtransforms.Bbox.union(bboxes2)
+        else:
+            bbox = self.axes.bbox
+        y = bbox.ymax + self.OFFSETTEXTPAD * self.figure.dpi / 72.0
+        self.offsetText.set(va='bottom', ha='left')
+
+    self.offsetText.set_position((x, y))
+
+def y_update_offset_text_position(self, bboxes, bboxes2):
+    x, y = self.offsetText.get_position()
+
+    if self.offset_text_position == 'left':
+        # y in axes coords, x in display coords
+        self.offsetText.set_transform(mtransforms.blended_transform_factory(
+                self.axes.transAxes, mtransforms.IdentityTransform()))
+
+        top = self.axes.bbox.ymax
+        y = top + self.OFFSETTEXTPAD * self.figure.dpi / 72.0
+
+    if self.offset_text_position == 'there':
+        # y in axes coords, x in display coords
+        self.offsetText.set_transform(mtransforms.blended_transform_factory(
+                self.axes.transAxes, mtransforms.IdentityTransform()))
+
+        top = self.axes.bbox.ymax
+        right=self.axes.bbox.xmin
+        #print x
+        #print y
+        y = top-10# - 2*self.OFFSETTEXTPAD * self.figure.dpi / 72.0
+        x = 0.03# + 0.1*self.OFFSETTEXTPAD * self.figure.dpi / 72.0
+
+    else:
+        # x & y in display coords
+        self.offsetText.set_transform(mtransforms.IdentityTransform())
+
+        # Northwest of upper-right corner of right-hand extent of tick labels
+        if bboxes2:
+            bbox = mtransforms.Bbox.union(bboxes2)
+        else:
+            bbox = self.axes.bbox
+        top, right = bbox.ymax, bbox.xmax
+        x = right + self.OFFSETTEXTPAD * self.figure.dpi / 72.0
+        y = top + self.OFFSETTEXTPAD * self.figure.dpi / 72.0
+
+    self.offsetText.set_position((x, y))
 
 sentinel=object()
-rc('text', usetex=True)
-
-#object handles look of plots
-
-#... could probably just be a function that takes a figure object and plotnumber
-
 
 class plot_object(object):
 
-    def __init__(self,plot_func_str=sentinel,numRows=sentinel,numCols=sentinel,title=sentinel,numColors=sentinel,xlim=sentinel):
+    def __init__(self,plot_func_str=sentinel,numRows=sentinel,numCols=sentinel,title=sentinel,numColors=sentinel,xlim=sentinel,ylim=sentinel):
+
+        #self.set_style_counter=0
+        
         #defines what to plot with this object
         if plot_func_str==sentinel:
             plot_func_str="default"
@@ -53,13 +151,24 @@ class plot_object(object):
             "deltaN": self.deltaN_plot_func,
             "deltaEta": self.deltaEta_plot_func,
             "deltaT": self.deltaT_plot_func,
+            "density_perturbation": self.density_perturbation_plot_func,
+            "potential_perturbation": self.potential_perturbation_plot_func,
+            "total_density_perturbation": self.total_density_perturbation_plot_func,
+            "baseline_inputs": self.baseline_inputs_plot_func,
         }
 
         self.xlim=xlim
+        self.ylim=ylim
+
+
+        #self.cm=truncate_colormap(cm.nipy_spectral,0,0.95)
+        #self.cm=truncate_colormap(cm.gnuplot2,0.1,0.75)
         self.cm=cm.rainbow
-        self.ls=['-','--','-.',':']
+        
+        self.ls=['solid','dashed','dashdot','dotted']
         self.lsi=0 #picks a linestyle
-        self.ci=0
+        self.ci=0 #picks a color
+        self.current_row=-1 #picks a column in xyz plots
         if numColors==sentinel:
             #uses a setter
             self.num_colors=10
@@ -84,16 +193,41 @@ class plot_object(object):
             self.title=title
         
         self.species_plot_dict={}
+        self.species_data_minmax={}
+        if self.ylim==sentinel:
+            self.manual_scale=True #uses above minmax to set plotted datarange
+        else:
+            self.manual_scale=False
         self.maxPlotNum=0
-        self.fig=plt.figure()
-        #self.fig.suptitle(self.title)
 
-        self.background="white"
 
         if numRows != sentinel:
             self.numRows= numRows
         if numCols != sentinel:
             self.numCols= numCols
+
+        self.postproc=self.no_post_proc
+        self.ylimBottom0=False
+
+        self.set_size()
+        #print self.height
+        latexify(fig_height=self.height) #call this before plt.figure??
+        
+        self.fig=plt.figure()
+        #self.fig.suptitle(self.title)
+
+        self.background="white"
+
+
+
+    
+    @property
+    def background(self):
+        return self.background_color
+    @background.setter
+    def background(self,color):
+        self.background_color=color
+        self.fig.patch.set_facecolor(self.background_color)
 
     @property
     def num_colors(self):
@@ -105,10 +239,170 @@ class plot_object(object):
         #print self.numColors
         self.color=iter(self.cm(numpy.linspace(0,1,nc)))
 
+    def set_size(self):
+        twoD_plots=[self.density_perturbation_plot_func,self.potential_perturbation_plot_func,self.total_density_perturbation_plot_func]
+        #sets the margins of the figure to accomodate common labels
+
+        if self.plot_func in twoD_plots:
+            self.adjust_bottom=0.15
+            self.adjust_left=0.09
+            self.adjust_top=0.85
+            self.adjust_right=0.99
+            base_rows=2.0
+        else:
+            self.adjust_left=0.17
+            self.adjust_bottom=0.15
+            self.adjust_top=0.97
+            self.adjust_right=0.95
+            base_rows=3.0
+            
+        base_topbot_adjust=self.adjust_bottom+(1-self.adjust_top)
+        def row_to_height(rows):
+            return (rows/base_rows)*3.39*(1-base_topbot_adjust)*(numpy.sqrt(5)-1.0)/2.0 +3.39*base_topbot_adjust*(numpy.sqrt(5)-1.0)/2.0
+        
+        self.height=row_to_height(self.numRows)
+        self.base_height=row_to_height(base_rows)
+        self.adjust_bottom=self.adjust_bottom*self.base_height/self.height
+        self.adjust_top=1-(1-self.adjust_top)*self.base_height/self.height
+
+    def update_min_max(self,data,species_plot_index):
+        if len(data)==0:
+            print "update_min_max: warning, input data is empty."
+        newmax=numpy.max(data)
+        if newmax>self.species_data_minmax[species_plot_index][1]:
+            self.species_data_minmax[species_plot_index][1]=newmax
+        newmin=numpy.min(data)
+        if newmin<self.species_data_minmax[species_plot_index][0]:
+            self.species_data_minmax[species_plot_index][0]=newmin
+
+    def set_y_scale(self):
+            for specy in self.species_plot_dict.keys():
+                if self.manual_scale==True:
+
+                    if self.ylimBottom0==False:
+                        lower=self.species_data_minmax[specy][0]-0.1*numpy.fabs(self.species_data_minmax[specy][0])
+                        upper=self.species_data_minmax[specy][1]+0.1*numpy.fabs(self.species_data_minmax[specy][1])
+                    else:
+                        lower=0
+                        upper=self.species_data_minmax[specy][1]+0.1*numpy.fabs(self.species_data_minmax[specy][1])                    
+                    
+                else:
+                    for specy in self.species_plot_dict.keys():
+                        if self.ylimBottom0==False:
+                            lower=self.ylim[0]-0.1*numpy.fabs(self.ylim[0])
+                            upper=self.ylim[1]-0.1*numpy.fabs(self.ylim[1])
+                        else:
+                            lower=0
+                            upper=self.ylim[1]-0.1*numpy.fabs(self.ylim[1])               
+                self.fig.axes[self.species_plot_dict[specy]-1].set_ylim(lower,upper)
+
+
     def default_plot_func(self,simul,same_color=False):
         print "Cannot plot '"+str(simul)+"', no specific plot function specified!"
+
+
+    def plot_xy_species_sameplot_data_multiplot(self,x,ys,species,ylabels=None,ylimBottom0s=None,ylogscales=None,mark_zeros=None,share_x=True):
+
+
+        if ylabels==None:
+            ylabels=['']*len(ys)
+
+        if ylimBottom0s==None:
+            ylimBottom0s=[False]*len(ys)
+
+        if ylogscales==None:
+            ylogscales=[False]*len(ys)
+
+        if mark_zeros==None:
+            mark_zeros=[False]*len(ys)
+        
+        if len(ys) != self.numRows:
+            print "Warning: number of rows in plot_object not equal to number of datasets to plot!"
+        if 1 != self.numCols:
+            print "Warning: number of columns in plot_object not equal to 1!"
+        
+        if len(ylabels) != len(ys):
+            print "Warning: number of ylabels not equal to number of ys!"
             
-    def plot_xy_legend_species_subplots(self,x,y,species,legend='',xlabel='',ylabel='',ylimBottom0=False,same_color=False):
+        if len(ylimBottom0s) != len(ys):
+            print "Warning: number of ylimBottom0s not equal to number of ys!"
+
+        if len(ylogscales) != len(ys):
+            print "Warning: number of ylogscales not equal to number of ys!"
+
+        if len(mark_zeros) != len(ys):
+            print "Warning: number of markzeros not equal to number of ys!"
+
+        if share_x==True:
+            self.fig.subplots_adjust(hspace=0.01)
+            xticklabels=[]
+        
+        i=0
+        for y in ys:
+            if i==0:
+                self.ax = self.fig.add_subplot(len(ys), self.numCols, 1);
+                first_ax=self.ax
+            else:
+                self.ax = self.fig.add_subplot(self.numRows, self.numCols, i+1,sharex=first_ax);
+
+
+
+
+            #self.ax.autoscale(True)
+            if self.xlim!=sentinel:
+                self.ax.set_xlim(self.xlim)
+                
+            monkey_patch(self.ax.yaxis, y_update_offset_text_position)
+            self.ax.yaxis.offset_text_position="there"
+
+            colors=['b','r','g']
+            for i_s in range(len(ys[i][0])):
+                self.ax.plot(x, ys[i][:,i_s], ls=self.ls[i_s],c=colors[i_s])
+
+            if ylogscales[i]:
+                self.ax.set_yscale('log', nonposy='clip',subsy=[10])
+                self.ax.yaxis.set_major_locator(ticker.LogLocator(numticks=4))
+                for ticklabel in self.ax.get_yticklabels()[0:2:-1]:
+                    ticklabel.set_visible(False)
+                    #ticklabel.set_verticalalignment('bottom')
+                    pass
+                self.ax.get_yticklabels()[0].set_visible(False)
+                self.ax.get_yticklabels()[-1].set_visible(False)
+                self.ax.get_yticklabels()[1].set_visible(False)
+                self.ax.get_yticklabels()[-2].set_visible(False)
+                #self.ax.get_yticklabels()[2].set_visible(False)
+                #self.ax.get_yticklabels()[-3].set_visible(False)
+            else:
+                self.ax.ticklabel_format(axis='y', style='sci', scilimits=(-0,1))
+                self.ax.yaxis.set_major_locator(MaxNLocator(5))
+                self.ax.get_yticklabels()[0].set_visible(False)
+                self.ax.get_yticklabels()[-1].set_visible(False)
+
+            self.ax.set_ylabel(ylabels[i])
+            labelx=-0.15
+            self.ax.yaxis.set_label_coords(labelx, 0.5)
+            
+            if ylimBottom0s[i]:
+                if ylogscales[i]:
+                    self.ax.set_ylim(bottom=0.00001) #works for baseline n_z
+                else:
+                    self.ax.set_ylim(bottom=0)
+
+            else:
+                if mark_zeros[i]:
+                    self.ax.axhline(y=0,color='k',linestyle=':')
+                
+            if share_x==True:
+                if i !=len(ys)-1:
+                    xticklabels=xticklabels+self.ax.get_xticklabels()
+
+            i=i+1
+        if share_x==True:
+            plt.setp(xticklabels, visible=False)
+        self.postproc=self.xy_species_postproc
+        
+        
+    def plot_xy_legend_species_subplots(self,x,y,species,legend='',xlabel='',ylabel='',ylimBottom0=False,same_color=False,share_x=True):
         #see if species has a subplot, if not, create one for it
         #print x
         #print y
@@ -123,33 +417,103 @@ class plot_object(object):
             self.lsi=self.lsi+1
         linestyle=self.ls[self.lsi]
 
+        
+
+        
+        if share_x==True:
+            self.fig.subplots_adjust(hspace=0.01)
+            xticklabels=[]
+
         i=0
-        #print species
-        #self.plots=[]
         for specy in species:
             
             if specy not in self.species_plot_dict.keys():
                 self.species_plot_dict[specy]=self.maxPlotNum+1
                 self.maxPlotNum=self.maxPlotNum+1
+                self.species_data_minmax[specy]=[float("inf"),float("-inf")]
             #print specy
             #print self.species_plot_dict[specy]
-            
-            self.ax = self.fig.add_subplot(self.numRows, self.numCols, self.species_plot_dict[specy]);
+
+            if share_x==True:
+                if i==0:
+                    self.ax = self.fig.add_subplot(self.numRows, self.numCols, self.species_plot_dict[specy]);
+                    first_ax=self.ax
+                else:
+                    self.ax = self.fig.add_subplot(self.numRows, self.numCols, self.species_plot_dict[specy],sharex=first_ax);
+            else:
+                self.ax = self.fig.add_subplot(self.numRows, self.numCols, self.species_plot_dict[specy])
+            self.ax.ticklabel_format(axis='y', style='sci', scilimits=(-0,1))
+            #self.ax.yaxis.set_offset_position('left') #can only do left or right.
+            #self.ax.yaxis.offset_text_position="right" #does not work
+
+            #dynamically modifies object to allow offset_text to be changed
+            monkey_patch(self.ax.yaxis, y_update_offset_text_position)
+            self.ax.yaxis.offset_text_position="there"
+                
+            self.ax.set_title(specy,y=0.40,x=1.04,fontsize=40)
+            #self.ax.text(s=specy,y=0.1,x=0.1,fontsize=8)
+
+
+            #self.ax.tick_params(axis='y', which='both', labelleft='off', labelright='on')
+
             self.ax.plot(x, y[:,i], '-',label=legend,ls=linestyle,c=self.c)
+
+
+            
             self.ax.set_title(specy)
             self.ax.set_xlabel(xlabel)
             self.ax.set_ylabel(ylabel)
+            self.ax.yaxis.set_major_locator(MaxNLocator(5))
             self.ax.autoscale(True)
             if ylimBottom0:
                 self.ax.set_ylim(bottom=0)
             else:
                 self.ax.axhline(y=0,color='k',linestyle=':')
+                
             if self.xlim!=sentinel:
                 self.ax.set_xlim(self.xlim)
-            i=i+1
-        self.ax.legend(bbox_to_anchor=(0.24,0.24,1,1), loc='upper right', borderaxespad=0.,bbox_transform = plt.gcf().transFigure,prop={'size':6})
+                xlim_indices= get_index_range(x,self.xlim)
+            else:
+                xlim_indices=[0,len(x)-1]
+                
+            if self.ylim!=sentinel:
+                self.ax.set_ylim(self.ylim)
+                ylim_indices= get_index_range(y,self.ylim)
+            else:
+                ylim_indices=[0,len(y)-1]
 
-    def plot_xy_legend(self,x,y,legend='',xlabel='',ylabel='',ylimBottom0=False,same_color=False,two_axis=False): 
+            #gets min/max values in xrange
+            self.update_min_max(y[xlim_indices[0]:xlim_indices[1],i],specy)
+            
+            i=i+1
+            
+            if share_x==True:
+                if specy!=species[-1]:
+                    xticklabels=xticklabels+self.ax.get_xticklabels()
+                #plt.setp(self.ax.get_yticklabels()[1::2], visible=False)
+                plt.setp(self.ax.get_yticklabels()[0], visible=False)
+                plt.setp(self.ax.get_yticklabels()[-1], visible=False)
+        if share_x==True:
+            plt.setp(xticklabels, visible=False)
+        self.postproc=self.xy_species_postproc
+
+
+    def plot_xy_legend(self,x,y,legend='',xlabel='',ylabel='',ylimBottom0=False,same_color=False):
+        #here we do not keep track of species
+        self.numRows=1
+        self.plot_xy_legend_species_subplots(x,y[:,numpy.newaxis],species=[""],legend='',xlabel=xlabel,ylabel=ylabel,ylimBottom0=ylimBottom0,same_color=same_color)
+        
+        self.postproc=self.xy_postproc
+
+
+    def plot_colormap_xyz_species_subplots(self,x,y,z,species,legend='',xlabel='',ylabel='',zlabel='',zlimBottom0=False,same_color=False,share_x=True,share_y=True):
+
+        #print "in plot_colormap_xyz_species"
+        
+        X,Y=numpy.meshgrid(x,y)
+        
+        self.current_row=self.current_row+1
+        
         if same_color==False:
             self.lsi=0
             #print self.color
@@ -160,208 +524,381 @@ class plot_object(object):
             self.lsi=self.lsi+1
         linestyle=self.ls[self.lsi]
 
-        #self.plots=[]
-        self.ax = self.fig.add_subplot(1, 1, 1);
-        self.ax.plot(x, y, '-',label=legend,ls=linestyle,c=self.c)
-        self.ax.set_xlabel(xlabel)
-        self.ax.set_ylabel(ylabel)
-        self.ax.autoscale(True)
-        if ylimBottom0:
-            self.ax.set_ylim(bottom=0)
-        if self.xlim!=sentinel:
-            self.ax.set_xlim(self.xlim)
-            
-        if two_axis is not False:
-            self.ax2 = self.fig.add_subplot(1, 1, 1);
-            self.ax2.plot(x, y, '-',label=legend,ls=linestyle,c=self.c)
-            self.ax2.set_xlabel(xlabel)
-            self.ax2.set_ylabel(two_axis[1])
-            self.ax2.tick_params(axis='y', which='both', labelleft='off', labelright='on')
-            self.ax2.yaxis.set_label_position("right")
-            self.ax2.autoscale(True)
-            newticklabels=[float("{0:.2f}".format(x)) for x in self.ax2.get_yticks()*two_axis[0]]
-            self.ax2.set_yticklabels(newticklabels)
-            if ylimBottom0:
-                self.ax2.set_ylim(bottom=0)
-            if self.xlim!=sentinel:
-                self.ax2.set_xlim(self.xlim)
+
         
-        self.ax.legend(bbox_to_anchor=(0.24,0.24,1,1), loc='upper right', borderaxespad=0.,bbox_transform = plt.gcf().transFigure,prop={'size':6})
+
+        
+        if share_x==True:
+            self.fig.subplots_adjust(hspace=0.01)
+            yticklabels=[]
+
+        if share_y==True:
+            self.fig.subplots_adjust(wspace=0.01)
+            yticklabels=[]
+            
+        i=0
+        for specy in species:
+            if specy not in self.species_plot_dict.keys():
+                #here, PlotNum refers to the plots column number
+                self.species_plot_dict[specy]=self.maxPlotNum+1
+                self.maxPlotNum=self.maxPlotNum+1
+                self.species_data_minmax[specy]=[float("inf"),float("-inf")]
+            if share_x==True:
+                if i==0:
+                    self.ax = self.fig.add_subplot(self.numRows, self.numCols, self.species_plot_dict[specy]+self.current_row*self.numCols);
+                    first_ax=self.ax
+                else:
+                    self.ax = self.fig.add_subplot(self.numRows, self.numCols, self.species_plot_dict[specy]+self.current_row*self.numCols,sharey=first_ax);
+                self.ax.ticklabel_format(axis='y', style='sci', scilimits=(-1,2))
+                #dynamically modifies object to allow offset_text to be changed
+                monkey_patch(self.ax.yaxis, y_update_offset_text_position)
+                self.ax.yaxis.offset_text_position="there"
+                
+                #self.ax.set_title(specy,y=1.14,x=0.5,fontsize=40)
+                #self.ax.text(s=specy,y=0.1,x=0.1,fontsize=8)
+            else:
+                self.ax = self.fig.add_subplot(self.numRows, self.numCols, self.species_plot_dict[specy]+self.current_row*self.numCols)
+            #print self.species_plot_dict[specy]+self.current_row*self.numCols
+            self.ax.pcolormesh(X, Y, numpy.transpose(z[:,:,i]),label=legend)
+            self.ax.spines['bottom'].set_color(self.c)
+            self.ax.spines['top'].set_color(self.c)
+            self.ax.spines['left'].set_color(self.c)
+            self.ax.spines['right'].set_color(self.c)
+            self.ax.spines['bottom'].set_linestyle(linestyle)
+            self.ax.spines['top'].set_linestyle(linestyle)
+            self.ax.spines['left'].set_linestyle(linestyle)
+            self.ax.spines['right'].set_linestyle(linestyle)
+ 
+            
+            #,ls=linestyle,c=self.c
+            #self.ax.set_title(specy)
+            self.ax.set_xlabel(xlabel)
+            self.ax.set_ylabel(ylabel)
+            #self.ax.yaxis.set_major_locator(MaxNLocator(5))
+            #self.ax.autoscale(True)
+            # unimplemented special treatment for positive data
+            #if zlimBottom0:
+            #    self.ax.set_zlim(bottom=0)
+            #else:
+            #    self.ax.axhline(y=0,color='k',linestyle=':')
+            
+            if self.xlim!=sentinel:
+                self.ax.set_xlim(self.xlim)
+                xlim_indices= get_index_range(x,self.xlim)
+            else:
+                xlim_indices=[0,len(x)-1]
+                
+            if self.ylim!=sentinel:
+                self.ax.set_ylim(self.ylim)
+                ylim_indices= get_index_range(y,self.ylim)
+            else:
+                ylim_indices=[0,len(y)-1]
+                
+            self.update_min_max(z[xlim_indices[0]:xlim_indices[1],ylim_indices[0]:ylim_indices[1],i],specy)
+            
+            i=i+1
+            if share_x==True:
+                if specy!=species[0]:
+                    yticklabels=yticklabels+self.ax.get_yticklabels()
+                #plt.setp(self.ax.get_yticklabels()[1::2], visible=False)
+                plt.setp(self.ax.get_yticklabels()[0], visible=False)
+                plt.setp(self.ax.get_yticklabels()[-1], visible=False)
+        if share_x==True:
+            plt.setp(yticklabels, visible=False)
+        self.postproc=self.xyz_species_postproc
+        self.old_data=z
+
+    def plot_colormap_xyz(self,x,y,z,legend='',xlabel='',ylabel='',zlabel='',zlimBottom0=False,same_color=False,share_x=True,share_y=True):
+        self.numCols=1
+        self.plot_colormap_xyz_species_subplots(x,y,z[:,:,numpy.newaxis],species=[""],legend=legend,xlabel=xlabel,ylabel=ylabel,zlabel=zlabel,zlimBottom0=zlimBottom0,same_color=same_color,share_x=share_x,share_y=share_y)
+        self.postproc=self.xyz_postproc
         
     def normed_particle_flux_plot_func(self,simul,same_color=False):
+        
         x=simul.psi
         y=simul.normed_particle_flux
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$\langle \vec{\Gamma}\cdot \nabla \psi \rangle$/(T m^{-1} s^{-1})"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\langle \vec{\Gamma}\cdot \nabla \psi \rangle$/(T m^{-1} s^{-1})"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
     def particle_flux_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.particle_flux
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$\hat{V'}\langle \hat{\vec{\Gamma}}\cdot \nabla \psi_N \rangle$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\hat{\Gamma}$"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
+
 
     def normed_particle_flux_over_n_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.normed_particle_flux/simul.n
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$(\langle \vec{\Gamma}\cdot \nabla \psi \rangle$/n)/(T m^{2} s^{-1})"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$(\langle \vec{\Gamma}\cdot \nabla \psi \rangle$/n)/(T m^{2} s^{-1})"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
     def particle_flux_over_n_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.particle_flux/simul.nHat
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$\hat{V'}\langle \hat{\vec{\Gamma}}\cdot \nabla \psi_N \rangle/\hat{n}$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\hat{\Gamma} \hat{n}^{-1}$"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
     def normed_particle_source_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.normed_particle_source
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$S_p/(s^2/m^6)$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$S_p/(s^2/m^6)$"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
     def particle_source_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.particle_source
-        legend=simul.description
-        species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$\hat{S}_p$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,same_color=same_color)
         
+        species=simul.species
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\hat{S}_p$"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
     def normed_conductive_heat_flux_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.normed_conductive_heat_flux
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$\langle \vec{q}\cdot \nabla \psi \rangle$/(J T m^{-1} s^{-1})"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\langle \vec{q}\cdot \nabla \psi \rangle$/(J T m^{-1} s^{-1})"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
     def conductive_heat_flux_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.conductive_heat_flux
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$\hat{V'}\langle \hat{\vec{q}} \cdot \nabla\psi_N \rangle$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\hat{q}$"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
     def normed_conductive_heat_flux_over_n_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.normed_conductive_heat_flux/simul.n
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$(\langle \vec{q}\cdot \nabla\psi \rangle/n )/(J T m^{2} s^{-1})$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$(\langle \vec{q}\cdot \nabla\psi \rangle/n )/(J T m^{2} s^{-1})$"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
     def conductive_heat_flux_over_n_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.conductive_heat_flux/simul.nHat
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$\hat{V'}\langle \hat{\vec{q}}\cdot \nabla\psi_N \rangle/\hat{n}$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\hat{q}\hat{n}^{-1}$"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
     def normed_heat_source_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.normed_heat_source
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$S_h/(s^2/m^6)$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$S_h/(s^2/m^6)$"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
     def heat_source_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.heat_source
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$\hat{S}_h$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\hat{S}_h$"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
+
+    def normed_momentum_flux_plot_func(self):
+        x=simul.psi
+        y=simul.normed_momentum_flux
+        
+        species=simul.species
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\langle \vec{\Pi}\cdot \nabla \psi \rangle$/(T m^{1} s^{-2})"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
+
+    def momentum_flux_plot_func(self):
+        x=simul.psi
+        y=simul.normed_momentum_flux
+        
+        species=simul.species
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\hat{\psi}_a \Delta^{-2} \pi^{-1} |\hat{V'}|\bar{R} \langle \hat{\vec{\Pi}}\cdot \nabla \psi_N \rangle$"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
+
+    def normed_momentum_flux_plot_func(self):
+        x=simul.psi
+        y=simul.normed_momentum_flux
+        
+        species=simul.species
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\langle \vec{\Pi}\cdot \nabla \psi \rangle$/(T m^{1} s^{-2})"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
+
+    def momentum_flux_over_nplot_func(self):
+        x=simul.psi
+        y=simul.normed_momentum_flux/simul.n
+        
+        species=simul.species
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\hat{\psi}_a \Delta^{-2} \pi^{-1} |\hat{V'}|\bar{R} \langle \hat{\vec{\Pi}}\cdot \nabla \psi_N \rangle/$"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
     def T_plot_func(self,simul,same_color=False):
         e=scipy.constants.e
         x=simul.psi
         y=simul.T/(1000*e)
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$T/keV$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$T/keV$"
+        self.ylimBottom0=True
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color,ylimBottom0=self.ylimBottom0)
 
     def n_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.n*10**(-20)
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$n/(10^{20} m^{-3})$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$n/(10^{20} m^{-3})$"
+        self.ylimBottom0=True
+        self.plot_xy_legend_species_subplots(x,y,species,legend,ylimBottom0=self.ylimBottom0,same_color=same_color)
 
     def eta_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.eta*10**(-20)
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$\eta/(10^{20} m^{-3})$$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,True,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\eta/(10^{20} m^{-3})$"
+        self.ylimBottom0=True
+        self.plot_xy_legend_species_subplots(x,y,species,legend,ylimBottom0=self.ylimBottom0,same_color=same_color)
 
     def Phi_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.Phi/1000
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$\Phi/kV$"
-        self.plot_xy_legend(x,y,legend,xlabel,ylabel,True,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\Phi/kV$"
+        self.ylimBottom0=True
+        self.plot_xy_legend(x,y,legend,ylimBottom0=self.ylimBottom0,same_color=same_color)
 
     def normed_FSABJPar_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.normed_FSABJPar
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$\langle B j_\parallel \rangle$/(AT m^{-2})"
-        self.plot_xy_legend(x,y,legend,xlabel,ylabel,True,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\langle B j_\parallel \rangle$/(AT m^{-2})"
+        self.ylimBottom0=True
+        self.plot_xy_legend(x,y,legend,ylimBottom0=self.ylimBottom0,same_color=same_color)
 
     def FSABJPar_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.FSABJPar
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$\langle \hat{B} \hat{j}_\parallel \rangle$"
-        self.plot_xy_legend(x,y,legend,xlabel,ylabel,True,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\langle \hat{B} \hat{j}_\parallel \rangle$"
+        self.ylimBottom0=True
+        self.plot_xy_legend(x,y,legend,ylimBottom0=self.ylimBottom0,same_color=same_color)
         
     def x_x_collisionality_plot_func(self,simul,species_index,same_color=False):
         x=simul.psi
         y=simul.collisionality[:,species_index]
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$\hat{\nu}$"
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\hat{\nu}$"
         ylabel2=r"$\nu^*$"
         #,two_axis=[simul.inputs.epsil**(-3.0/2.0),ylabel2]
-        self.plot_xy_legend(x,y,legend,xlabel,ylabel,True,same_color=same_color)
+        self.plot_xy_legend(x,y,legend,True,same_color=same_color)
 
         
     def main_main_collisionality_plot_func(self,simul,same_color=False):
@@ -371,128 +908,324 @@ class plot_object(object):
     def U_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.U
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$U$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,False,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$U$"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
     def deltaN_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.deltaN
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$\delta_n$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,False,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\delta_n$"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
     def deltaT_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.deltaT
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$\delta_T$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,False,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\delta_T$"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
     def deltaEta_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.deltaEta
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$\delta_{\eta}$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,False,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\delta_{\eta}$"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
     def normed_flow_outboard_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.normed_flow_outboard
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$V_\parallel/(m/s)$ Outboard"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,False,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$V_\parallel/(m/s)$ Outboard"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
     def flow_outboard_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.flow_outboard
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$\hat{V}_\parallel$ Outboard"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,False,same_color=same_color) 
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\hat{V}_\parallel$ Outboard"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color) 
 
     def normed_flow_inboard_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.normed_flow_inboard
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$V_\parallel/(m/s)$ Inboard"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,False,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$V_\parallel/(m/s)$ Inboard"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
     def flow_inboard_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.flow_inboard
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$\hat{V}_\parallel$ Inboard"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,False,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\hat{V}_\parallel$ Inboard"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
     def normed_FSABFlow_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.normed_FSABFlow
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$\langle B V_\parallel \rangle/(Tm/s)$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,False,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\langle B V_\parallel \rangle/(Tm/s)$"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
     def FSABFlow_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.FSABFlow
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$\langle \hat{B} \hat{V}_\parallel \rangle$"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,False,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\langle \hat{B} \hat{V}_\parallel \rangle$"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
     def kPar_inboard_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.kPar_inboard
-        legend=simul.description
+        
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$k_\parallel$ Inboard"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,False,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$k_\parallel$ Inboard"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
     def kPar_outboard_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.kPar_outboard
-        legend=simul.description
         species=simul.species
-        xlabel=r"$\psi_N$"
-        ylabel=r"$k_\parallel$ Outboard"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,xlabel,ylabel,False,same_color=same_color)
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$k_\parallel$ Outboard"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
-    @property
-    def background(self):
-        return self.background_color
-    @background.setter
-    def background(self,color):
-        self.background_color=color
-        self.fig.patch.set_facecolor(self.background_color)
-    
+    def density_perturbation_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        y=simul.theta
+        z=simul.density_perturbation
+        species=simul.species
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$100\,\psi_N$"
+        self.ylabel=r"$\theta$"
+        self.zlabel=r""
+        self.plot_colormap_xyz_species_subplots(x,y,z,species,legend,same_color=same_color)
+
+    def total_density_perturbation_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        y=simul.theta
+        z=simul.total_density_perturbation
+        species=simul.species
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$100\,\psi_N$"
+        self.ylabel=r"$\theta$"
+        self.zlabel=r""
+        self.plot_colormap_xyz_species_subplots(x,y,z,species,legend,same_color=same_color)
+
+    def potential_perturbation_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        y=simul.theta
+        z=simul.potential_perturbation
+        species=simul.species
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$100\,\psi_N$"
+        self.ylabel=r"$\theta$"
+        self.zlabel=r""
+        self.plot_colormap_xyz(x,y,z,species,legend,same_color=same_color)
+
+    def baseline_inputs_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r""
+        self.share_x_label=True
+        self.share_y_label=False
+
+        main_index=0
+        ys=[simul.n*10**(-20),simul.T/(1000*scipy.constants.e),numpy.expand_dims(simul.Phi/1000,axis=1),simul.U,simul.deltaN,simul.deltaT,numpy.expand_dims(simul.collisionality[:,main_index],axis=1)]
+        ylabels=[r"$n/(10^{20} m^{-3})$",r"$T/keV$",r"$\Phi/kV$",r"$U$",r"$\delta_n$",r"$\delta_T$",r"$\hat{\nu}$"]
+        ylimBottom0s=[True,True,True,True,True,True,False]
+        ylogscales=[True,False,False,True,True,True,False]
+        mark_zeros=[False,False,False,False,False,False,False]
+        self.plot_xy_species_sameplot_data_multiplot(x,ys,simul.species,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros)
+
+        
     def plot(self,simulation,same_color=False):
         #print "func to plot:"
         #print self.plot_func
-        self.plot_func(simulation,same_color)
+        self.plot_func(simulation,same_color=same_color)
 
-    #def show_figure(self):
-    #    self.fig.show()
+    def no_post_proc(self):
+        #for when no post processing of the figure is needed
+        pass
+
+
+    def xy_postproc(self):
+        if self.share_y_label==True:
+            self.fig.text(0.01, 0.5, self.ylabel, va='center', rotation='vertical')
+
+        if self.share_x_label==True:
+            self.fig.text(0.5+self.adjust_left/4, 0.01, self.xlabel, ha='center')
+
+        self.fig.subplots_adjust(left=self.adjust_left)
+        self.fig.subplots_adjust(top=self.adjust_top)
+        self.fig.subplots_adjust(bottom=self.adjust_bottom)
+        self.fig.subplots_adjust(right=self.adjust_right)
+
+        self.set_y_scale()
+
+    def xy_species_postproc(self):
+        self.xy_postproc()
+        #if self.share_y_label==True:
+        #    self.fig.text(0.01, 0.5, self.ylabel, va='center', rotation='vertical')
+        #    adjust_left=0.17
+        #    self.fig.subplots_adjust(left=0.17)
+        #else:
+        #    adjust_left=0
+
+        #if self.share_x_label==True:
+        #    self.fig.subplots_adjust(bottom=0.15)
+        #    self.fig.subplots_adjust(top=0.97)
+        #    self.fig.subplots_adjust(right=0.95)
+        #    self.fig.text(0.5+adjust_left/4, 0.01, self.xlabel, ha='center')
+        #self.set_y_scale()
+
+
+    def xyz_species_postproc(self):
+        if self.share_y_label==True:
+            self.fig.text(0.01, 0.5+self.adjust_bottom/4.0, self.ylabel, va='center', rotation='vertical')
+
+        if self.share_x_label==True:
+            self.fig.text(0.5+self.adjust_left/4, 0.01*self.base_height/self.height, self.xlabel, ha='center')
+        self.fig.subplots_adjust(bottom=self.adjust_bottom)
+        self.fig.subplots_adjust(top=self.adjust_top)
+        self.fig.subplots_adjust(right=self.adjust_right)
+        self.fig.subplots_adjust(left=self.adjust_left)
+
+        if self.manual_scale==True:
+            for specy in self.species_plot_dict.keys():
+                i_s=self.species_plot_dict[specy]
+                for j in range(self.numRows):
+                    if self.ylimBottom0:
+                        vmin=0
+                    else:
+                        vmin=self.species_data_minmax[specy][0]
+                        vmax=self.species_data_minmax[specy][1]
+                    self.fig.axes[self.numCols*j+i_s-1].collections[0].set_clim(vmin,vmax)
+                    #shift cmap to have 0 in the middle
+                    shift=1 - vmax/(vmax + abs(vmin))
+                    print "colormap shift: " + str(shift)
+                    my_cm=shiftedColorMap(cm.RdBu,midpoint=shift,name="mymap")
+                    self.fig.axes[self.numCols*j+i_s-1].collections[0].set_clim(vmin,vmax)
+                    self.fig.axes[self.numCols*j+i_s-1].collections[0].set_cmap(my_cm)
+                    
+                    if j == self.numRows-1:
+                        #self.fig.axes[self.numCols*j+i_s-1].ticklabel_format(axis='x', style='sci', scilimits=(0,0))
+                        scale_pow = 2
+                        def my_formatter_fun(x, p):
+                            return "%.1f"%(x * (10 ** scale_pow))
+
+                        self.fig.axes[self.numCols*j+i_s-1].get_xaxis().set_major_formatter(ticker.FuncFormatter(my_formatter_fun))
+                        self.fig.axes[self.numCols*j+i_s-1].xaxis.set_major_locator(MaxNLocator(4))
+                        plt.setp(self.fig.axes[self.numCols*j+i_s-1].get_xticklabels()[-1], visible=False)
+                        plt.setp(self.fig.axes[self.numCols*j+i_s-1].get_xticklabels()[0], visible=False)
+                        #self.fig.axes[self.numCols*j+i_s-1].ticklabel_format(axis='x', style='sci', scilimits=(0,0))
+                        #self.fig.axes[self.numCols*j+i_s-1].xaxis.set_powerlimits((0, 0))
+
+                        #self.fig.axes[self.numCols*j+i_s-1].update_ticks()
+                        
+                        #cb=self.fig.colorbar(self.fig.axes[self.numCols*j+i_s-1].collections[0],ax=self.fig.axes[self.numCols*j+i_s-1],orientation="horizontal",use_gridspec=False,anchor=[0.5,1.0])#,anchor=[0.5,0.0]
+                    elif j == 0:
+                        self.fig.axes[self.numCols*j+i_s-1].xaxis.set_major_locator(MaxNLocator(4))
+
+                        self.fig.axes[self.numCols*j+i_s-1].set_xticklabels([])
+                        #self.fig.axes[self.numCols*j+i_s-1]
+
+                        #to make coloraxis derive position from yaxis
+                        divider = make_axes_locatable(self.fig.axes[self.numCols*j+i_s-1])
+                        cax = divider.append_axes("top", "-10%", pad="10%")
+                        cb=self.fig.colorbar(self.fig.axes[self.numCols*j+i_s-1].collections[0],cax=cax,orientation="horizontal")
+                        tick_locator = ticker.MaxNLocator(nbins=4)
+                        cb.locator=tick_locator
+                        cb.ax.xaxis.set_ticks_position('top')
+                        cb.ax.xaxis.set_label_position('top')
+                        cb.ax.tick_params(direction='out', pad=1)
+                        #cb.format=ticker.FuncFormatter(fmt)
+                        cb.formatter.set_powerlimits((0, 0))
+                        cb.update_ticks()
+                        #cb.ax.xaxis.get_offset_text().set_position((1,-0.5)) #this only works for x position! ;-;
+                        self.fig.axes[self.numCols*j+i_s-1].set_title(specy,y=1.19,x=0.5,fontsize=8)
+                        #cb.ax.xaxis.set_offset_position("top")
+                        #cb.ax.text(-0.25, 1, r'$\times$10$^{-1}$', va='bottom', ha='left')
+                        monkey_patch(cb.ax.xaxis, x_update_offset_text_position)
+                        cb.ax.xaxis.offset_text_position="there2"
+                        #ax=self.fig.axes[self.numCols*j+i_s-1]
+                    else:
+                        self.fig.axes[self.numCols*j+i_s-1].set_xticklabels([])
+                        self.fig.axes[self.numCols*j+i_s-1].xaxis.set_major_locator(MaxNLocator(4))
+                        self.fig.axes[self.numCols*j+i_s-1].set_title("",y=1.12,x=0.5,fontsize=8)
+
+
+                            
+                            
+    def xyz_postproc(self):
+        self.xyz_species_postproc()
 
     def save_figure(self):
-        #could probably take some arguments for name or file extension.
-        self.fig.savefig(self.title+'.png')
+        self.postproc()
+        #print self.fig.axes
+        self.fig.savefig(self.title+'.pdf')
 

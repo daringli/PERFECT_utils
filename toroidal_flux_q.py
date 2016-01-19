@@ -1,8 +1,7 @@
 import numpy
 import matplotlib.pyplot as plt
 import scipy.optimize
-from matplotlib import rc
-rc('text', usetex=True)
+from latexify import latexify
 
 
 def func_q(q0,q95,x,qx):
@@ -55,6 +54,7 @@ def toroidal_flux_derivative(a,kappa,dkappadrho,BT,dBTdr):
 
 
 if __name__=='__main__':
+    latexify()
     y=numpy.array([1.23,1.37,1.6])
     x=numpy.array([0,0.5,0.9])
     rho=numpy.linspace(0,0.95)
@@ -65,11 +65,13 @@ if __name__=='__main__':
     #q=func_q(4.0,4.0,0.6,4.0)
     fig = plt.figure()
     ax = fig.add_subplot(1,1,1)
-    plt.plot(rho,kappa(rho))
+    ax.set_ylim([0,4])
+    plt.plot(rho,kappa(rho),'--')
     #plt.plot(rho,dkappadr(rho))
     
     ax.set_xlabel(r"$\rho=r/a$")
     ax.set_ylabel("$\kappa$, $q$")
+    fig.subplots_adjust(bottom=0.20)
 
     #ax = fig.add_subplot(2,1,2)
     plt.plot(rho,q(rho))
@@ -77,4 +79,4 @@ if __name__=='__main__':
     #ax.set_ylabel("q")
     #print q(rho)
     #print q(0.8)
-    plt.show()
+    plt.savefig("q_kappa.pdf")

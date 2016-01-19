@@ -48,8 +48,10 @@ class perfect_simulation(object):
 
         #hiding implementation details
         self.psi_name="psi"
+        self.theta_name="theta"
         self.particle_flux_name="particleFlux"
         self.heat_flux_name="heatFlux"
+        self.momentum_flux_name="momentumFlux"
         self.VPrimeHat_name="VPrimeHat"
         self.Delta_name="Delta"
         self.omega_name="omega"
@@ -71,6 +73,8 @@ class perfect_simulation(object):
         self.kPar_outboard_name="kParOutboard"
         self.collisionality_name="nuPrimeProfile"
         self.FSABFlow_name="FSABFlow"
+
+        self.density_perturbation_name="densityPerturbation"
 
 
     @property
@@ -136,7 +140,9 @@ class perfect_simulation(object):
                 self.always_run_simulation(cmdline)
 
     
-    
+    @property
+    def Z(self):
+        return numpy.array(self.inputs.charges)
 
     @property
     def particle_flux(self):
@@ -146,11 +152,19 @@ class perfect_simulation(object):
         return self.outputs[self.group_name+self.particle_flux_name][()]*signOfVPrimeHat
 
     @property
+    def momentum_flux(self):
+        VPrimeHat=[self.VPrimeHat]
+        VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
+        signOfVPrimeHat=numpy.sign(VPrimeHat)
+        return self.outputs[self.group_name+self.momentum_flux_name][()]*signOfVPrimeHat
+    
+    @property
     def heat_flux(self):
         VPrimeHat=[self.VPrimeHat]
         VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
         signOfVPrimeHat=numpy.sign(VPrimeHat)
         return self.outputs[self.group_name+self.heat_flux_name][()]*signOfVPrimeHat
+
 
     @property
     def conductive_heat_flux(self):        
@@ -192,7 +206,18 @@ class perfect_simulation(object):
     
     @property
     def FSABJPar(self):
-        return numpy.sum(self.inputs.charges*(self.nHat*self.FSABFlow),axis=1)
+        return numpy.sum(self.Z*(self.nHat*self.FSABFlow),axis=1)
+
+    @property
+    def potential_perturbation(self):
+        prefactor=numpy.sum((self.Z**2)*(self.nHat/self.THat),axis=1)**(-1)*self.Delta/(2*self.omega)
+        prefactor=prefactor[:,numpy.newaxis]
+        Zn=numpy.expand_dims(self.Z*self.nHat, axis=1)
+        #print Zn.shape
+        #print self.density_perturbation.shape
+        #print prefactor.shape
+        #print (prefactor*numpy.sum(Zn*self.density_perturbation,axis=2)).shape
+        return prefactor*numpy.sum(Zn*self.density_perturbation,axis=2)
     
     @property
     def U(self):
@@ -278,6 +303,10 @@ class perfect_simulation(object):
         #self.inputs.psi
 
     @property
+    def theta(self):
+        return self.outputs[self.group_name+self.theta_name][()]
+
+    @property
     def num_species(self):
         return self.outputs[self.group_name+self.num_species_name][()]
 
@@ -285,6 +314,17 @@ class perfect_simulation(object):
     def collisionality(self):
         return self.outputs[self.group_name+self.collisionality_name][()]
 
+    @property
+    def density_perturbation(self):
+        #non-adiabatic part
+        return self.outputs[self.group_name+self.density_perturbation_name][()]
+
+    @property
+    def total_density_perturbation(self):
+        #non-adiabatic part
+        ZoT=numpy.expand_dims(self.Z/self.THat, axis=1)
+        ret=self.density_perturbation - (2*self.omega/self.Delta)*ZoT*self.potential_perturbation[:,:,numpy.newaxis]
+        return ret
     
     def copy_simulation_to_dir(self,dir):
         #try to make the new directory or don't if it exists
@@ -444,6 +484,14 @@ class normalized_perfect_simulation(perfect_simulation):
         return (self.particle_flux/VPrimeHat)*signOfVPrimeHat*(numpy.pi*self.Delta**2)*self.RBar*self.BBar*self.nBar*self.vBar
 
     @property
+    def normed_momentum_flux(self):
+        #to make appropriate size to divide the particle flux with
+        VPrimeHat=[self.VPrimeHat]
+        VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
+        signOfVPrimeHat=numpy.sign(VPrimeHat)
+        return (self.momentum_flux/VPrimeHat)*signOfVPrimeHat*(numpy.pi*self.Delta**2)*(self.RBar**2)*self.BBar*self.nBar*self.vBar**2
+
+    @property
     def normed_heat_flux(self):
         #to make appropriate size to divide the particle flux with
         VPrimeHat=[self.VPrimeHat]
@@ -488,7 +536,9 @@ class normalized_perfect_simulation(perfect_simulation):
     def normed_flow_outboard(self):
         return self.Delta*self.vBar*self.flow_outboard
     
-
+    @property
+    def normed_potential_perturbation(self):
+        return self.PhiBar*self.potential_perturbation
 
     
 

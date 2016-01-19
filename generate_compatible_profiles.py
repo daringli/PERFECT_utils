@@ -13,8 +13,6 @@ from perfectProfilesFile import perfectProfiles
 
 
 
-
-
 #print things
 verbose=False
 
