@@ -381,7 +381,7 @@ class normalized_perfect_simulation(perfect_simulation):
 
     @property
     def norm(self):
-        return self.norm_filename + "bajs"
+        return self.norm_filename
 
     @norm.setter
     def norm(self,norm_filename):

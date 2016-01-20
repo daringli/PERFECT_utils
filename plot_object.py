@@ -155,6 +155,9 @@ class plot_object(object):
             "potential_perturbation": self.potential_perturbation_plot_func,
             "total_density_perturbation": self.total_density_perturbation_plot_func,
             "baseline_inputs": self.baseline_inputs_plot_func,
+            "baseline_outputs": self.baseline_outputs_plot_func,
+            "baseline_sources": self.baseline_sources_plot_func,
+            "baseline_kPar": self.baseline_kPar_plot_func,
         }
 
         self.xlim=xlim
@@ -166,6 +169,8 @@ class plot_object(object):
         self.cm=cm.rainbow
         
         self.ls=['solid','dashed','dashdot','dotted']
+        self.marker=["","o"]
+        self.markerlocal=["","s"]
         self.lsi=0 #picks a linestyle
         self.ci=0 #picks a color
         self.current_row=-1 #picks a column in xyz plots
@@ -300,8 +305,132 @@ class plot_object(object):
     def default_plot_func(self,simul,same_color=False):
         print "Cannot plot '"+str(simul)+"', no specific plot function specified!"
 
+    def plot_xy_data_sameplot_species_multiplot(self,x,ys,species,ylabels=None,ylimBottom0s=None,ylogscales=None,mark_zeros=None,share_x=True,same_color=False):
+        #should have the same number of species for all the datasets!!
 
-    def plot_xy_species_sameplot_data_multiplot(self,x,ys,species,ylabels=None,ylimBottom0s=None,ylogscales=None,mark_zeros=None,share_x=True):
+        if ylabels==None:
+            ylabels=['']*len(ys)
+
+        if ylimBottom0s==None:
+            ylimBottom0s=[False]*len(ys)
+
+        if ylogscales==None:
+            ylogscales=["lin"]*len(ys)
+
+        if mark_zeros==None:
+            mark_zeros=[False]*len(ys)
+        
+        if len(ys[0][0,:]) != self.numRows:
+            print "Warning: number of rows in plot_object not equal to number of species to plot!"
+        if 1 != self.numCols:
+            print "Warning: number of columns in plot_object not equal to 1!"
+        
+        if len(ylabels) != len(ys):
+            print "Warning: number of ylabels not equal to number of ys!"
+            
+        if len(ylimBottom0s) != len(ys):
+            print "Warning: number of ylimBottom0s not equal to number of ys!"
+
+        if len(ylogscales) != len(ys):
+            print "Warning: number of ylogscales not equal to number of ys!"
+
+        if len(mark_zeros) != len(ys):
+            print "Warning: number of markzeros not equal to number of ys!"
+
+        if share_x==True:
+            self.fig.subplots_adjust(hspace=0.01)
+            xticklabels=[]
+        
+        i=0 #data index
+        colors=['b','r','g']
+        for y in ys:
+            for i_s in range(len(ys[i][0,:])):
+                if i_s==0:
+                    self.ax = self.fig.add_subplot(self.numRows, self.numCols, 1);
+                    first_ax=self.ax
+                else:
+                    self.ax = self.fig.add_subplot(self.numRows, self.numCols, i_s+1,sharex=first_ax);
+
+
+
+
+                #self.ax.autoscale(True)
+                if self.xlim!=sentinel:
+                    self.ax.set_xlim(self.xlim)
+                
+                monkey_patch(self.ax.yaxis, y_update_offset_text_position)
+                self.ax.yaxis.offset_text_position="there"
+
+            
+                if same_color:
+                    #local
+                    linestyle="dashed"
+                    linewidth=1
+                    marker=self.markerlocal[i]
+                    markevery=10
+                    markersize=3
+                else:
+                    #global
+                    linestyle="solid"
+                    linewidth=1
+                    marker=self.marker[i]
+                    markevery=10
+                    markersize=3
+                self.ax.plot(x, ys[i][:,i_s], ls=linestyle,c=colors[i_s],marker=marker,markevery=markevery,linewidth=linewidth,markersize=markersize)
+
+                if ylogscales[i_s]=='log':
+                    self.ax.set_yscale('log', nonposy='clip',subsy=[10])
+                    self.ax.yaxis.set_major_locator(ticker.LogLocator(numticks=4))
+                    for ticklabel in self.ax.get_yticklabels()[0:2:-1]:
+                        ticklabel.set_visible(False)
+                    self.ax.get_yticklabels()[0].set_visible(False)
+                    self.ax.get_yticklabels()[-1].set_visible(False)
+                    self.ax.get_yticklabels()[1].set_visible(False)
+                    self.ax.get_yticklabels()[-2].set_visible(False)
+                    #self.ax.get_yticklabels()[2].set_visible(False)
+                    #self.ax.get_yticklabels()[-3].set_visible(False)
+                elif ylogscales[i_s]=='lin':
+                    self.ax.ticklabel_format(axis='y', style='sci', scilimits=(-0,1))
+                    self.ax.yaxis.set_major_locator(MaxNLocator(5))
+                    self.ax.get_yticklabels()[0].set_visible(False)
+                    self.ax.get_yticklabels()[-1].set_visible(False)
+                elif ylogscales[i_s]=='symlog':
+                    #self.ax.set_yscale('symlog',subsy=[10])
+                    self.ax.set_yscale('symlog')
+                    #self.ax.yaxis.set_major_locator(ticker.LogLocator(numticks=4))
+                    #for ticklabel in self.ax.get_yticklabels()[0:2:-1]:
+                    #    ticklabel.set_visible(False)
+                    #self.ax.get_yticklabels()[0].set_visible(False)
+                    #self.ax.get_yticklabels()[-1].set_visible(False)
+                    #self.ax.get_yticklabels()[1].set_visible(False)
+                    #self.ax.get_yticklabels()[-2].set_visible(False)
+                else:
+                    print "Warning: unrecognized log-scale!"
+
+                self.ax.set_ylabel(ylabels[i])
+                labelx=-0.15
+                self.ax.yaxis.set_label_coords(labelx, 0.5)
+
+                if ylimBottom0s[i_s]:
+                    if ylogscales[i_s]:
+                        self.ax.set_ylim(bottom=0.00001) #works for baseline n_z
+                    else:
+                        self.ax.set_ylim(bottom=0)
+
+                else:
+                    if mark_zeros[i_s]:
+                        self.ax.axhline(y=0,color='k',linestyle=':')
+
+                if share_x==True:
+                    if i_s !=len(ys[i][0,:])-1:
+                        xticklabels=xticklabels+self.ax.get_xticklabels()
+                self.ax.set_title(species[i_s],y=0.40,x=1.04,fontsize=8)
+            i=i+1
+        if share_x==True:
+            plt.setp(xticklabels, visible=False)
+        self.postproc=self.xy_species_postproc
+        
+    def plot_xy_species_sameplot_data_multiplot(self,x,ys,species,ylabels=None,ylimBottom0s=None,ylogscales=None,mark_zeros=None,share_x=True,same_color=False):
 
 
         if ylabels==None:
@@ -311,7 +440,7 @@ class plot_object(object):
             ylimBottom0s=[False]*len(ys)
 
         if ylogscales==None:
-            ylogscales=[False]*len(ys)
+            ylogscales=["lin"]*len(ys)
 
         if mark_zeros==None:
             mark_zeros=[False]*len(ys)
@@ -356,27 +485,46 @@ class plot_object(object):
             self.ax.yaxis.offset_text_position="there"
 
             colors=['b','r','g']
+            
             for i_s in range(len(ys[i][0])):
-                self.ax.plot(x, ys[i][:,i_s], ls=self.ls[i_s],c=colors[i_s])
+                if same_color:
+                    linestyle=self.ls[i_s]
+                    linewidth=0.5
+                    marker=''
+                else:
+                    linestyle=self.ls[i_s]
+                    linewidth=1
+                    marker=''
+                self.ax.plot(x, ys[i][:,i_s], ls=linestyle,c=colors[i_s],marker=marker,linewidth=linewidth)
 
-            if ylogscales[i]:
+            if ylogscales[i]=='log':
                 self.ax.set_yscale('log', nonposy='clip',subsy=[10])
                 self.ax.yaxis.set_major_locator(ticker.LogLocator(numticks=4))
                 for ticklabel in self.ax.get_yticklabels()[0:2:-1]:
                     ticklabel.set_visible(False)
-                    #ticklabel.set_verticalalignment('bottom')
-                    pass
                 self.ax.get_yticklabels()[0].set_visible(False)
                 self.ax.get_yticklabels()[-1].set_visible(False)
                 self.ax.get_yticklabels()[1].set_visible(False)
                 self.ax.get_yticklabels()[-2].set_visible(False)
                 #self.ax.get_yticklabels()[2].set_visible(False)
                 #self.ax.get_yticklabels()[-3].set_visible(False)
-            else:
+            elif ylogscales[i]=='lin':
                 self.ax.ticklabel_format(axis='y', style='sci', scilimits=(-0,1))
                 self.ax.yaxis.set_major_locator(MaxNLocator(5))
                 self.ax.get_yticklabels()[0].set_visible(False)
                 self.ax.get_yticklabels()[-1].set_visible(False)
+            elif ylogscales[i]=='symlog':
+                #self.ax.set_yscale('symlog',subsy=[10])
+                self.ax.set_yscale('symlog')
+                #self.ax.yaxis.set_major_locator(ticker.LogLocator(numticks=4))
+                #for ticklabel in self.ax.get_yticklabels()[0:2:-1]:
+                #    ticklabel.set_visible(False)
+                #self.ax.get_yticklabels()[0].set_visible(False)
+                #self.ax.get_yticklabels()[-1].set_visible(False)
+                #self.ax.get_yticklabels()[1].set_visible(False)
+                #self.ax.get_yticklabels()[-2].set_visible(False)
+            else:
+                print "Warning: unrecognized log-scale!"
 
             self.ax.set_ylabel(ylabels[i])
             labelx=-0.15
@@ -395,7 +543,7 @@ class plot_object(object):
             if share_x==True:
                 if i !=len(ys)-1:
                     xticklabels=xticklabels+self.ax.get_xticklabels()
-
+                    
             i=i+1
         if share_x==True:
             plt.setp(xticklabels, visible=False)
@@ -660,7 +808,7 @@ class plot_object(object):
         self.share_y_label=True
         self.share_x_label=True
         self.xlabel=r"$\psi_N$"
-        self.ylabel=r"$\hat{\Gamma} \hat{n}^{-1}$"
+        self.ylabel=r"$\hat{\Gamma}/\hat{n}$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
     def normed_particle_source_plot_func(self,simul,same_color=False):
@@ -732,7 +880,7 @@ class plot_object(object):
         self.share_y_label=True
         self.share_x_label=True
         self.xlabel=r"$\psi_N$"
-        self.ylabel=r"$\hat{q}\hat{n}^{-1}$"
+        self.ylabel=r"$\hat{q}/\hat{n}$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
     def normed_heat_source_plot_func(self,simul,same_color=False):
@@ -1088,6 +1236,7 @@ class plot_object(object):
         self.plot_colormap_xyz(x,y,z,species,legend,same_color=same_color)
 
     def baseline_inputs_plot_func(self,simul,same_color=False):
+        #NOTE: same color is ignored since local and global assumed to be the same.
         x=simul.psi
         self.xlabel=r"$\psi_N$"
         self.ylabel=r""
@@ -1098,10 +1247,54 @@ class plot_object(object):
         ys=[simul.n*10**(-20),simul.T/(1000*scipy.constants.e),numpy.expand_dims(simul.Phi/1000,axis=1),simul.U,simul.deltaN,simul.deltaT,numpy.expand_dims(simul.collisionality[:,main_index],axis=1)]
         ylabels=[r"$n/(10^{20} m^{-3})$",r"$T/keV$",r"$\Phi/kV$",r"$U$",r"$\delta_n$",r"$\delta_T$",r"$\hat{\nu}$"]
         ylimBottom0s=[True,True,True,True,True,True,False]
-        ylogscales=[True,False,False,True,True,True,False]
+        ylogscales=['log','lin','lin','log','log','log','lin']
         mark_zeros=[False,False,False,False,False,False,False]
-        self.plot_xy_species_sameplot_data_multiplot(x,ys,simul.species,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros)
+        self.plot_xy_species_sameplot_data_multiplot(x,ys,simul.species,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=False)
 
+    def baseline_outputs_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r""
+        self.share_x_label=True
+        self.share_y_label=False
+
+        main_index=0
+        ys=[simul.particle_flux,simul.conductive_heat_flux,simul.particle_source,simul.heat_source,simul.kPar_inboard,simul.kPar_outboard]
+        ylabels=[r"$\hat{\Gamma}/\hat{n}$",r"$\hat{q}/\hat{n}$",r"$\hat{S}_p$",r"$\hat{S}_h$",r"$k_\parallel$ I",r"$k_\parallel$ O"]
+        ylimBottom0s=[False,False,False,False,False,False]
+        ylogscales=['lin','lin','lin','lin','lin','lin']
+        #ylogscales=['symlog','symlog','symlog','symlog','lin','lin']
+        mark_zeros=[True,True,True,True,True,True]
+        self.plot_xy_species_sameplot_data_multiplot(x,ys,simul.species,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
+
+    def baseline_sources_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$S_p, S_h$"
+        self.share_x_label=True
+        self.share_y_label=True
+        species=[0,1]
+        species_list=[simul.species[s] for s in species]
+        ys=[simul.particle_source[:,species],simul.heat_source[:,species]]
+        ylabels=[r"",r""]
+        ylimBottom0s=[False,False]
+        ylogscales=['lin','lin']
+        mark_zeros=[True,True]
+        self.plot_xy_data_sameplot_species_multiplot(x,ys,species_list,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
+
+    def baseline_kPar_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$k_\parallel$"
+        self.share_x_label=True
+        self.share_y_label=True
+        ys=[simul.kPar_outboard,simul.kPar_inboard]
+        ylabels=[r"",r"",r""]
+        ylimBottom0s=[False,False,False]
+        ylogscales=['lin','lin','lin']
+        mark_zeros=[True,True,True]
+        self.plot_xy_data_sameplot_species_multiplot(x,ys,simul.species,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)   
+    
         
     def plot(self,simulation,same_color=False):
         #print "func to plot:"

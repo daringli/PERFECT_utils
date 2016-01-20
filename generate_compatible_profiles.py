@@ -82,6 +82,8 @@ def generate_compatible_profiles(simul,**kwargs):
     simul.inputs.changevar("resolutionParameters","psiDiameter",psiDiameter)
     simul.inputs.changevar("physicsParameters","psiMid",psiMid)
     simul.inputs.changevar("physicsParameters","leftBoundaryShift",leftBoundaryShift)
+
+    
     simul.inputs.read(simul.input_filename)
 
     #print "psiMid:"
@@ -294,14 +296,20 @@ def generate_compatible_profiles(simul,**kwargs):
     n=simul.nBar*nHats[main_index][point]
     print "T: "+str(T)
     print "n: "+str(n)
+
+    
+    print "Delta before:" + str(simul.Delta)
     if simul.units=="SI":
         logLambda=coulombLog(n,T)
         print "logLambda: "+str(logLambda)
         nur=nu_r(simul.RBar,simul.nBar,simul.TBar,logLambda)
         simul.inputs.changevar("physicsParameters","nu_r",nur)
+        simul.inputs.changevar("physicsParameters","Delta",simul.mBar*simul.vBar/(simul.eBar*simul.BBar*simul.RBar))
+        simul.inputs.changevar("physicsParameters","omega",simul.ePhiBar/(simul.eBar*simul.BBar*simul.RBar*simul.vBar))
         simul.inputs.read(simul.input_filename)
     else:
         print "Only SI units are currently supported"
+    print "Delta after:" + str(simul.Delta)
 
 
     #eta profiles that satisfy the orderings
