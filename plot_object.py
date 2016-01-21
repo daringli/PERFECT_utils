@@ -124,6 +124,11 @@ class plot_object(object):
             "particle_flux": self.particle_flux_plot_func,
             "normed_particle_flux_over_n": self.normed_particle_flux_over_n_plot_func,
             "particle_flux_over_n": self.particle_flux_over_n_plot_func,
+            "normed_momentum_flux": self.normed_momentum_flux_plot_func,
+            "momentum_flux": self.momentum_flux_plot_func,
+            "normed_momentum_flux_over_n": self.normed_momentum_flux_over_n_plot_func,
+            "momentum_flux_over_n": self.momentum_flux_over_n_plot_func,
+            
             "normed_conductive_heat_flux": self.normed_conductive_heat_flux_plot_func,
             "conductive_heat_flux": self.conductive_heat_flux_plot_func,
             "normed_conductive_heat_flux_over_n": self.normed_conductive_heat_flux_over_n_plot_func,
@@ -132,6 +137,8 @@ class plot_object(object):
             "particle_source": self.particle_source_plot_func,
             "normed_heat_source": self.normed_heat_source_plot_func,
             "heat_source": self.heat_source_plot_func,
+            "normed_ambipolarity": self.normed_ambipolarity_plot_func,
+            "ambipolarity": self.ambipolarity_plot_func,
             "normed_flow_outboard": self.normed_flow_outboard_plot_func,
             "flow_outboard": self.flow_outboard_plot_func,
             "normed_flow_inboard": self.normed_flow_inboard_plot_func,
@@ -158,6 +165,11 @@ class plot_object(object):
             "baseline_outputs": self.baseline_outputs_plot_func,
             "baseline_sources": self.baseline_sources_plot_func,
             "baseline_kPar": self.baseline_kPar_plot_func,
+            "baseline_flows": self.baseline_flows_plot_func,
+            "baseline_fluxes": self.baseline_fluxes_plot_func,
+            "n_i_z": self.n_i_z_plot_func,
+            "particle_source_i_z": self.particle_source_i_z_plot_func,
+            "heat_source_i_z": self.heat_source_i_z_plot_func,
         }
 
         self.xlim=xlim
@@ -169,8 +181,7 @@ class plot_object(object):
         self.cm=cm.rainbow
         
         self.ls=['solid','dashed','dashdot','dotted']
-        self.marker=["","o"]
-        self.markerlocal=["","s"]
+        self.species_colors=[[r'#08519c',r'#a50f15',r'#006d2c'],[r'#6baed6',r'#fb6a4a',r'#74c476']]
         self.lsi=0 #picks a linestyle
         self.ci=0 #picks a color
         self.current_row=-1 #picks a column in xyz plots
@@ -223,9 +234,6 @@ class plot_object(object):
 
         self.background="white"
 
-
-
-    
     @property
     def background(self):
         return self.background_color
@@ -250,7 +258,7 @@ class plot_object(object):
 
         if self.plot_func in twoD_plots:
             self.adjust_bottom=0.15
-            self.adjust_left=0.09
+            self.adjust_left=0.12
             self.adjust_top=0.85
             self.adjust_right=0.99
             base_rows=2.0
@@ -342,7 +350,6 @@ class plot_object(object):
             xticklabels=[]
         
         i=0 #data index
-        colors=['b','r','g']
         for y in ys:
             for i_s in range(len(ys[i][0,:])):
                 if i_s==0:
@@ -366,16 +373,17 @@ class plot_object(object):
                     #local
                     linestyle="dashed"
                     linewidth=1
-                    marker=self.markerlocal[i]
+                    marker=''
                     markevery=10
                     markersize=3
                 else:
                     #global
                     linestyle="solid"
                     linewidth=1
-                    marker=self.marker[i]
+                    marker=''
                     markevery=10
                     markersize=3
+                colors=self.species_colors[i]
                 self.ax.plot(x, ys[i][:,i_s], ls=linestyle,c=colors[i_s],marker=marker,markevery=markevery,linewidth=linewidth,markersize=markersize)
 
                 if ylogscales[i_s]=='log':
@@ -429,6 +437,135 @@ class plot_object(object):
         if share_x==True:
             plt.setp(xticklabels, visible=False)
         self.postproc=self.xy_species_postproc
+
+
+    
+    def plot_xy_species_multiplot_data_multiplot(self,x,ys,titles,ylabels=None,ylimBottom0s=None,ylogscales=None,mark_zeros=None,share_x=True,same_color=False):
+    
+        length=0
+        for y in ys:
+            length+=len(y[0,:])
+        
+        if ylabels==None:
+            ylabels=['']*length
+
+        if ylimBottom0s==None:
+            ylimBottom0s=[False]*length
+
+        if ylogscales==None:
+            ylogscales=["lin"]*length
+
+        if mark_zeros==None:
+            mark_zeros=[False]*length
+        
+        if length != self.numRows:
+            print "Warning: number of rows in plot_object not equal to number of species + data to plot!"
+        if 1 != self.numCols:
+            print "Warning: number of columns in plot_object not equal to 1!"
+        
+        if len(ylabels) != length:
+            print "Warning: number of ylabels not equal to number of species-data!"
+            
+        if len(ylimBottom0s) != length:
+            print "Warning: number of ylimBottom0s not equal to number of species-data!"
+
+        if len(ylogscales) != length:
+            print "Warning: number of ylogscales not equal to number of species-data!"
+
+        if len(mark_zeros) != length:
+            print "Warning: number of markzeros not equal to number of species-data!"
+
+        if share_x==True:
+            self.fig.subplots_adjust(hspace=0.01)
+            xticklabels=[]
+        
+        i=0 #data index
+        i_t=0 #total index (data + species
+        colors=self.species_colors[0]
+        for y in ys:
+            for i_s in range(len(ys[i][0,:])):
+                if i_t==0:
+                    self.ax = self.fig.add_subplot(self.numRows, self.numCols, 1);
+                    first_ax=self.ax
+                else:
+                    self.ax = self.fig.add_subplot(self.numRows, self.numCols, i_t+1,sharex=first_ax);
+
+                #self.ax.autoscale(True)
+                if self.xlim!=sentinel:
+                    self.ax.set_xlim(self.xlim)
+                
+                monkey_patch(self.ax.yaxis, y_update_offset_text_position)
+                self.ax.yaxis.offset_text_position="there"
+            
+                if same_color:
+                    #local
+                    linestyle="dashed"
+                    linewidth=1
+                    marker=''
+                    markevery=10
+                    markersize=3
+                else:
+                    #global
+                    linestyle="solid"
+                    linewidth=1
+                    marker=''
+                    markevery=10
+                    markersize=3
+                self.ax.plot(x, ys[i][:,i_s], ls=linestyle,c=colors[i_s],marker=marker,markevery=markevery,linewidth=linewidth,markersize=markersize)
+
+                if ylogscales[i_s]=='log':
+                    self.ax.set_yscale('log', nonposy='clip',subsy=[10])
+                    self.ax.yaxis.set_major_locator(ticker.LogLocator(numticks=4))
+                    for ticklabel in self.ax.get_yticklabels()[0:2:-1]:
+                        ticklabel.set_visible(False)
+                    self.ax.get_yticklabels()[0].set_visible(False)
+                    self.ax.get_yticklabels()[-1].set_visible(False)
+                    self.ax.get_yticklabels()[1].set_visible(False)
+                    self.ax.get_yticklabels()[-2].set_visible(False)
+                    #self.ax.get_yticklabels()[2].set_visible(False)
+                    #self.ax.get_yticklabels()[-3].set_visible(False)
+                elif ylogscales[i_s]=='lin':
+                    self.ax.ticklabel_format(axis='y', style='sci', scilimits=(-0,1))
+                    self.ax.yaxis.set_major_locator(MaxNLocator(5))
+                    self.ax.get_yticklabels()[0].set_visible(False)
+                    self.ax.get_yticklabels()[-1].set_visible(False)
+                elif ylogscales[i_s]=='symlog':
+                    #self.ax.set_yscale('symlog',subsy=[10])
+                    self.ax.set_yscale('symlog')
+                    #self.ax.yaxis.set_major_locator(ticker.LogLocator(numticks=4))
+                    #for ticklabel in self.ax.get_yticklabels()[0:2:-1]:
+                    #    ticklabel.set_visible(False)
+                    #self.ax.get_yticklabels()[0].set_visible(False)
+                    #self.ax.get_yticklabels()[-1].set_visible(False)
+                    #self.ax.get_yticklabels()[1].set_visible(False)
+                    #self.ax.get_yticklabels()[-2].set_visible(False)
+                else:
+                    print "Warning: unrecognized log-scale!"
+
+                self.ax.set_ylabel(ylabels[i])
+                labelx=-0.15
+                self.ax.yaxis.set_label_coords(labelx, 0.5)
+
+                if ylimBottom0s[i_t]:
+                    if ylogscales[i_t]:
+                        self.ax.set_ylim(bottom=0.00001) #works for baseline n_z
+                    else:
+                        self.ax.set_ylim(bottom=0)
+
+                else:
+                    if mark_zeros[i_t]:
+                        self.ax.axhline(y=0,color='k',linestyle=':')
+
+                if share_x==True:
+                    if i_t !=length-1:
+                        xticklabels=xticklabels+self.ax.get_xticklabels()
+                self.ax.set_title(titles[i_t],y=0.40,x=1.04,fontsize=8)
+                i_t+=1
+            i=i+1
+        if share_x==True:
+            plt.setp(xticklabels, visible=False)
+        self.postproc=self.xy_species_postproc
+
         
     def plot_xy_species_sameplot_data_multiplot(self,x,ys,species,ylabels=None,ylimBottom0s=None,ylogscales=None,mark_zeros=None,share_x=True,same_color=False):
 
@@ -484,18 +621,18 @@ class plot_object(object):
             monkey_patch(self.ax.yaxis, y_update_offset_text_position)
             self.ax.yaxis.offset_text_position="there"
 
-            colors=['b','r','g']
+            
             
             for i_s in range(len(ys[i][0])):
                 if same_color:
                     linestyle=self.ls[i_s]
-                    linewidth=0.5
+                    colors=self.species_colors[1]
                     marker=''
                 else:
                     linestyle=self.ls[i_s]
-                    linewidth=1
+                    colors=self.species_colors[0]
                     marker=''
-                self.ax.plot(x, ys[i][:,i_s], ls=linestyle,c=colors[i_s],marker=marker,linewidth=linewidth)
+                self.ax.plot(x, ys[i][:,i_s], ls=linestyle,c=colors[i_s],marker=marker)
 
             if ylogscales[i]=='log':
                 self.ax.set_yscale('log', nonposy='clip',subsy=[10])
@@ -835,6 +972,20 @@ class plot_object(object):
         self.ylabel=r"$\hat{S}_p$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
+    def particle_source_i_z_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        species=[0,1]
+        y=simul.particle_source[:,species]
+        species_list=[simul.species[s] for s in species]
+        
+        species=simul.species
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\hat{S}_p$"
+        self.plot_xy_legend_species_subplots(x,y,species_list,legend,same_color=same_color)
+
     def normed_conductive_heat_flux_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.normed_conductive_heat_flux
@@ -907,7 +1058,21 @@ class plot_object(object):
         self.ylabel=r"$\hat{S}_h$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
-    def normed_momentum_flux_plot_func(self):
+    def heat_source_i_z_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        species=[0,1]
+        y=simul.heat_source[:,species]
+        species_list=[simul.species[s] for s in species]
+        
+        species=simul.species
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\hat{S}_h$"
+        self.plot_xy_legend_species_subplots(x,y,species_list,legend,same_color=same_color)
+
+    def normed_momentum_flux_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.normed_momentum_flux
         
@@ -916,34 +1081,22 @@ class plot_object(object):
         self.share_y_label=True
         self.share_x_label=True
         self.xlabel=r"$\psi_N$"
-        self.ylabel=r"$\langle \vec{\Pi}\cdot \nabla \psi \rangle$/(T m^{1} s^{-2})"
+        self.ylabel=r"$\langle \vec{\Pi}\cdot \nabla \psi \rangle/(T m^{1} s^{-2})$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
-    def momentum_flux_plot_func(self):
+    def momentum_flux_plot_func(self,simul,same_color=False):
         x=simul.psi
-        y=simul.normed_momentum_flux
+        y=simul.momentum_flux
         
         species=simul.species
         legend=simul.description
         self.share_y_label=True
         self.share_x_label=True
         self.xlabel=r"$\psi_N$"
-        self.ylabel=r"$\hat{\psi}_a \Delta^{-2} \pi^{-1} |\hat{V'}|\bar{R} \langle \hat{\vec{\Pi}}\cdot \nabla \psi_N \rangle$"
+        self.ylabel=r"$\hat{\Pi}$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
-    def normed_momentum_flux_plot_func(self):
-        x=simul.psi
-        y=simul.normed_momentum_flux
-        
-        species=simul.species
-        legend=simul.description
-        self.share_y_label=True
-        self.share_x_label=True
-        self.xlabel=r"$\psi_N$"
-        self.ylabel=r"$\langle \vec{\Pi}\cdot \nabla \psi \rangle$/(T m^{1} s^{-2})"
-        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
-
-    def momentum_flux_over_nplot_func(self):
+    def normed_momentum_flux_over_n_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.normed_momentum_flux/simul.n
         
@@ -952,8 +1105,48 @@ class plot_object(object):
         self.share_y_label=True
         self.share_x_label=True
         self.xlabel=r"$\psi_N$"
-        self.ylabel=r"$\hat{\psi}_a \Delta^{-2} \pi^{-1} |\hat{V'}|\bar{R} \langle \hat{\vec{\Pi}}\cdot \nabla \psi_N \rangle/$"
+        self.ylabel=r"$n^{-1}\langle \vec{\Pi}\cdot \nabla \psi \rangle /(T m^{4} s^{-2})$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
+
+    def momentum_flux_over_n_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        y=simul.momentum_flux/simul.nHat
+        
+        species=simul.species
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\hat{\Pi}/\hat{n}$"
+        self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
+
+
+    def normed_ambipolarity_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        y=simul.normed_ambipolarity
+        
+        species=simul.species
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\sum_a Z_a \hat{\Gamma}_a/(CT m^{2} s^{-1})$"
+        self.plot_xy_legend(x,y,legend,same_color=same_color)
+        
+    def ambipolarity_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        y=simul.ambipolarity
+        
+        species=simul.species
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\sum_a Z_a \hat{\Gamma}_a$"
+        self.plot_xy_legend(x,y,species,legend,same_color=same_color)
+
+
+
 
     def T_plot_func(self,simul,same_color=False):
         e=scipy.constants.e
@@ -981,6 +1174,22 @@ class plot_object(object):
         self.ylabel=r"$n/(10^{20} m^{-3})$"
         self.ylimBottom0=True
         self.plot_xy_legend_species_subplots(x,y,species,legend,ylimBottom0=self.ylimBottom0,same_color=same_color)
+
+    def n_i_z_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        species=[0,1]
+        y=simul.n[:,species]*10**(-20)
+
+        species_list=[simul.species[s] for s in species]
+        
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$n/(10^{20} m^{-3})$"
+        self.ylimBottom0=True
+        self.plot_xy_legend_species_subplots(x,y,species_list,legend,ylimBottom0=self.ylimBottom0,same_color=same_color)
+
 
     def eta_plot_func(self,simul,same_color=False):
         x=simul.psi
@@ -1046,7 +1255,7 @@ class plot_object(object):
         self.ylabel=r"$\hat{\nu}$"
         ylabel2=r"$\nu^*$"
         #,two_axis=[simul.inputs.epsil**(-3.0/2.0),ylabel2]
-        self.plot_xy_legend(x,y,legend,True,same_color=same_color)
+        self.plot_xy_legend(x,y,legend,same_color=same_color)
 
         
     def main_main_collisionality_plot_func(self,simul,same_color=False):
@@ -1198,40 +1407,46 @@ class plot_object(object):
 
     def density_perturbation_plot_func(self,simul,same_color=False):
         x=simul.psi
-        y=simul.theta
+        y=simul.theta/numpy.pi
+        y=numpy.append(y,[2])
         z=simul.density_perturbation
+        z=numpy.append(z,numpy.expand_dims(z[:,0,:],axis=1),axis=1)
         species=simul.species
         legend=simul.description
         self.share_y_label=True
         self.share_x_label=True
         self.xlabel=r"$100\,\psi_N$"
-        self.ylabel=r"$\theta$"
+        self.ylabel=r"$\theta/\pi$"
         self.zlabel=r""
         self.plot_colormap_xyz_species_subplots(x,y,z,species,legend,same_color=same_color)
 
     def total_density_perturbation_plot_func(self,simul,same_color=False):
         x=simul.psi
-        y=simul.theta
+        y=simul.theta/numpy.pi
+        y=numpy.append(y,[2])
         z=simul.total_density_perturbation
+        z=numpy.append(z,numpy.expand_dims(z[:,0,:],axis=1),axis=1)
         species=simul.species
         legend=simul.description
         self.share_y_label=True
         self.share_x_label=True
         self.xlabel=r"$100\,\psi_N$"
-        self.ylabel=r"$\theta$"
+        self.ylabel=r"$\theta/\pi$"
         self.zlabel=r""
         self.plot_colormap_xyz_species_subplots(x,y,z,species,legend,same_color=same_color)
 
     def potential_perturbation_plot_func(self,simul,same_color=False):
         x=simul.psi
-        y=simul.theta
+        y=simul.theta/numpy.pi
+        y=numpy.append(y,[2])
         z=simul.potential_perturbation
+        z=numpy.append(z,numpy.expand_dims(z[:,0],axis=1),axis=1)
         species=simul.species
         legend=simul.description
         self.share_y_label=True
         self.share_x_label=True
         self.xlabel=r"$100\,\psi_N$"
-        self.ylabel=r"$\theta$"
+        self.ylabel=r"$\theta/\pi$"
         self.zlabel=r""
         self.plot_colormap_xyz(x,y,z,species,legend,same_color=same_color)
 
@@ -1267,6 +1482,23 @@ class plot_object(object):
         mark_zeros=[True,True,True,True,True,True]
         self.plot_xy_species_sameplot_data_multiplot(x,ys,simul.species,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
 
+    
+    def baseline_flows_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r""
+        self.share_x_label=True
+        self.share_y_label=False
+        ys=[numpy.expand_dims(simul.FSABJPar,axis=1),simul.FSABFlow]
+        ylabels=[r"$\langle \hat{B} \hat{j}_\parallel \rangle$",r"$\langle \hat{B} \hat{V}_\parallel \rangle$"]
+        ylimBottom0s=[False,False,False,False]
+        titles=['']+simul.species
+        ylogscales=['lin','lin','lin','lin']
+        #ylogscales=['symlog','symlog','symlog','symlog','lin','lin']
+        mark_zeros=[False,False,False,False]
+        self.plot_xy_species_multiplot_data_multiplot(x,ys,titles,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
+
+        
     def baseline_sources_plot_func(self,simul,same_color=False):
         x=simul.psi
         self.xlabel=r"$\psi_N$"
@@ -1293,7 +1525,21 @@ class plot_object(object):
         ylimBottom0s=[False,False,False]
         ylogscales=['lin','lin','lin']
         mark_zeros=[True,True,True]
-        self.plot_xy_data_sameplot_species_multiplot(x,ys,simul.species,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)   
+        self.plot_xy_data_sameplot_species_multiplot(x,ys,simul.species,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
+
+    def baseline_fluxes_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$k_\parallel$"
+        self.share_x_label=True
+        self.share_y_label=False
+        titles=simul.species+simul.species
+        ys=[simul.particle_flux/simul.nHat,simul.conductive_heat_flux/simul.nHat]
+        ylabels=[r"$\hat{\Gamma}/\hat{n}$",r"$\hat{q}/\hat{n}$"]
+        ylimBottom0s=[False,False,False,False,False,False]
+        ylogscales=['lin','lin','lin','lin','lin','lin']
+        mark_zeros=[True,True,True,True,True,True]
+        self.plot_xy_species_multiplot_data_multiplot(x,ys,titles,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color) 
     
         
     def plot(self,simulation,same_color=False):
@@ -1308,7 +1554,7 @@ class plot_object(object):
 
     def xy_postproc(self):
         if self.share_y_label==True:
-            self.fig.text(0.01, 0.5, self.ylabel, va='center', rotation='vertical')
+            self.fig.text(0.01, 0.5+self.adjust_bottom/4, self.ylabel, va='center', rotation='vertical')
 
         if self.share_x_label==True:
             self.fig.text(0.5+self.adjust_left/4, 0.01, self.xlabel, ha='center')

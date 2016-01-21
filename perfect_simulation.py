@@ -170,7 +170,9 @@ class perfect_simulation(object):
     def conductive_heat_flux(self):        
         return self.heat_flux-(5.0/2.0)*self.THat*self.particle_flux
 
-
+    @property
+    def ambipolarity(self):
+        return numpy.sum(self.Z*self.particle_flux,axis=1)
 
     @property
     def VPrimeHat(self):
@@ -505,6 +507,10 @@ class normalized_perfect_simulation(perfect_simulation):
         VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
         return (self.conductive_heat_flux/VPrimeHat)*self.TBar*(numpy.pi*self.Delta**2)*self.RBar*self.BBar*self.nBar*self.vBar
     #self.normed_heat_flux-(5.0/2.0)*self.T*self.normed_particle_flux
+
+    @property
+    def normed_ambipolariy(self):
+        return (self.ambipolarity/VPrimeHat)*signOfVPrimeHat*(numpy.pi*self.Delta**2)*self.RBar*self.BBar*self.nBar*self.vBar*self.eBar
 
     @property
     def normed_heat_source(self):
