@@ -667,13 +667,13 @@ class plot_object(object):
             labelx=-0.15
             self.ax.yaxis.set_label_coords(labelx, 0.5)
             
-            if ylimBottom0s[i]:
+            if ylimBottom0s[i] == True:
                 if ylogscales[i]:
                     self.ax.set_ylim(bottom=0.00001) #works for baseline n_z
                 else:
                     self.ax.set_ylim(bottom=0)
-
-            else:
+            elif ylimBottom0s[i] != False:
+                self.ax.set_ylim(bottom=ylimBottom0s[i])
                 if mark_zeros[i]:
                     self.ax.axhline(y=0,color='k',linestyle=':')
                 
@@ -1459,11 +1459,12 @@ class plot_object(object):
         self.share_y_label=False
 
         main_index=0
-        ys=[simul.n*10**(-20),simul.T/(1000*scipy.constants.e),numpy.expand_dims(simul.Phi/1000,axis=1),simul.U,simul.deltaN,simul.deltaT,numpy.expand_dims(simul.collisionality[:,main_index],axis=1)]
-        ylabels=[r"$n/(10^{20} m^{-3})$",r"$T/keV$",r"$\Phi/kV$",r"$U$",r"$\delta_n$",r"$\delta_T$",r"$\hat{\nu}$"]
-        ylimBottom0s=[True,True,True,True,True,True,False]
-        ylogscales=['log','lin','lin','log','log','log','lin']
-        mark_zeros=[False,False,False,False,False,False,False]
+        imp_n=numpy.append(0*simul.n[:,[1]],simul.n[:,[1]]*10**(-20),axis=1)
+        ys=[simul.n*10**(-20),imp_n,simul.T/(1000*scipy.constants.e),numpy.expand_dims(simul.Phi/1000,axis=1),simul.U,simul.deltaN,simul.deltaT,numpy.expand_dims(simul.collisionality[:,main_index],axis=1)]
+        ylabels=[r"$n/(10^{20} m^{-3})$",r"",r"$T/keV$",r"$\Phi/kV$",r"$U$",r"$\delta_n$",r"$\delta_T$",r"$\hat{\nu}$"]
+        ylimBottom0s=[True,True,True,-0.1,True,True,True,False]
+        ylogscales=['lin','lin','lin','lin','log','log','log','lin']
+        mark_zeros=[False,False,False,False,False,False,False,False]
         self.plot_xy_species_sameplot_data_multiplot(x,ys,simul.species,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=False)
 
     def baseline_outputs_plot_func(self,simul,same_color=False):
