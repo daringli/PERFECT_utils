@@ -164,12 +164,17 @@ class plot_object(object):
             "baseline_inputs": self.baseline_inputs_plot_func,
             "baseline_outputs": self.baseline_outputs_plot_func,
             "baseline_sources": self.baseline_sources_plot_func,
+            "baseline_sources_over_conc": self.baseline_sources_over_conc_plot_func,
             "baseline_kPar": self.baseline_kPar_plot_func,
+            "baseline_kPar_inboard": self.baseline_kPar_inboard_plot_func,
             "baseline_flows": self.baseline_flows_plot_func,
             "baseline_fluxes": self.baseline_fluxes_plot_func,
+            "baseline_all_fluxes": self.baseline_all_fluxes_plot_func,
+            "baseline_momentum_flux": self.baseline_momentum_flux_plot_func,
             "n_i_z": self.n_i_z_plot_func,
             "particle_source_i_z": self.particle_source_i_z_plot_func,
             "heat_source_i_z": self.heat_source_i_z_plot_func,
+            "baseline_flows_i_z_noJ": self.baseline_flows_i_z_noJ_plot_func,
         }
 
         self.xlim=xlim
@@ -182,8 +187,13 @@ class plot_object(object):
         
         self.ls=['solid','dashed','dashdot','dotted']
         self.species_colors=[[r'#08519c',r'#a50f15',r'#006d2c'],[r'#6baed6',r'#fb6a4a',r'#74c476']]
+        self.lw=[1.0,0.5]
+        
         self.lsi=0 #picks a linestyle
         self.ci=0 #picks a color
+        self.lwi=-1
+        
+        
         self.current_row=-1 #picks a column in xyz plots
         if numColors==sentinel:
             #uses a setter
@@ -316,6 +326,9 @@ class plot_object(object):
     def plot_xy_data_sameplot_species_multiplot(self,x,ys,species,ylabels=None,ylimBottom0s=None,ylogscales=None,mark_zeros=None,share_x=True,same_color=False):
         #should have the same number of species for all the datasets!!
 
+        if same_color==False:
+            self.lwi+=1
+
         if ylabels==None:
             ylabels=['']*len(ys)
 
@@ -384,6 +397,7 @@ class plot_object(object):
                     markevery=10
                     markersize=3
                 colors=self.species_colors[i]
+                linewidth=self.lw[self.lwi]
                 self.ax.plot(x, ys[i][:,i_s], ls=linestyle,c=colors[i_s],marker=marker,markevery=markevery,linewidth=linewidth,markersize=markersize)
 
                 if ylogscales[i_s]=='log':
@@ -439,9 +453,13 @@ class plot_object(object):
         self.postproc=self.xy_species_postproc
 
 
+
     
     def plot_xy_species_multiplot_data_multiplot(self,x,ys,titles,ylabels=None,ylimBottom0s=None,ylogscales=None,mark_zeros=None,share_x=True,same_color=False):
-    
+
+        if same_color==False:
+            self.lwi+=1
+        
         length=0
         for y in ys:
             length+=len(y[0,:])
@@ -511,6 +529,7 @@ class plot_object(object):
                     marker=''
                     markevery=10
                     markersize=3
+                linewidth=self.lw[self.lwi]
                 self.ax.plot(x, ys[i][:,i_s], ls=linestyle,c=colors[i_s],marker=marker,markevery=markevery,linewidth=linewidth,markersize=markersize)
 
                 if ylogscales[i_s]=='log':
@@ -781,6 +800,7 @@ class plot_object(object):
         if share_x==True:
             plt.setp(xticklabels, visible=False)
         self.postproc=self.xy_species_postproc
+        
 
 
     def plot_xy_legend(self,x,y,legend='',xlabel='',ylabel='',ylimBottom0=False,same_color=False):
@@ -1499,6 +1519,21 @@ class plot_object(object):
         mark_zeros=[False,False,False,False]
         self.plot_xy_species_multiplot_data_multiplot(x,ys,titles,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
 
+    def baseline_flows_i_z_noJ_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r""
+        self.share_x_label=True
+        self.share_y_label=False
+        species=[0,1]
+        ys=[simul.FSABFlow[:,species]]
+        ylabels=[r"$\langle \hat{B} \hat{V}_\parallel \rangle$"]
+        ylimBottom0s=[False,False]
+        titles=[simul.species[s] for s in species]
+        ylogscales=['lin','lin']
+        mark_zeros=[False,False]
+        self.plot_xy_species_multiplot_data_multiplot(x,ys,titles,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
+
         
     def baseline_sources_plot_func(self,simul,same_color=False):
         x=simul.psi
@@ -1515,13 +1550,46 @@ class plot_object(object):
         mark_zeros=[True,True]
         self.plot_xy_data_sameplot_species_multiplot(x,ys,species_list,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
 
+    def baseline_sources_over_conc_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\{S_p,\, S_h\} (n_i/n_a)_{\mathrm{core}}$"
+        self.share_x_label=True
+        self.share_y_label=True
+        species=[0,1]
+        species_list=[simul.species[s] for s in species]
+
+        conc=simul.nHat[0,[species]]/simul.nHat[0,0]
+        print conc
+        
+        ys=[simul.particle_source[:,species]/conc,simul.heat_source[:,species]/conc]
+        
+        ylabels=[r"",r""]
+        ylimBottom0s=[False,False]
+        ylogscales=['lin','lin']
+        mark_zeros=[True,True]
+        self.plot_xy_data_sameplot_species_multiplot(x,ys,species_list,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
+
     def baseline_kPar_plot_func(self,simul,same_color=False):
         x=simul.psi
         self.xlabel=r"$\psi_N$"
         self.ylabel=r"$k_\parallel$"
         self.share_x_label=True
         self.share_y_label=True
-        ys=[simul.kPar_outboard,simul.kPar_inboard]
+        ys=[simul.kPar_inboard,simul.kPar_outboard]
+        ylabels=[r"",r"",r""]
+        ylimBottom0s=[False,False,False]
+        ylogscales=['lin','lin','lin']
+        mark_zeros=[True,True,True]
+        self.plot_xy_data_sameplot_species_multiplot(x,ys,simul.species,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
+
+    def baseline_kPar_inboard_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$k_\parallel$"
+        self.share_x_label=True
+        self.share_y_label=True
+        ys=[simul.kPar_inboard]
         ylabels=[r"",r"",r""]
         ylimBottom0s=[False,False,False]
         ylogscales=['lin','lin','lin']
@@ -1531,7 +1599,7 @@ class plot_object(object):
     def baseline_fluxes_plot_func(self,simul,same_color=False):
         x=simul.psi
         self.xlabel=r"$\psi_N$"
-        self.ylabel=r"$k_\parallel$"
+        self.ylabel=r""
         self.share_x_label=True
         self.share_y_label=False
         titles=simul.species+simul.species
@@ -1540,6 +1608,34 @@ class plot_object(object):
         ylimBottom0s=[False,False,False,False,False,False]
         ylogscales=['lin','lin','lin','lin','lin','lin']
         mark_zeros=[True,True,True,True,True,True]
+        self.plot_xy_species_multiplot_data_multiplot(x,ys,titles,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
+
+    def baseline_momentum_flux_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r""
+        self.share_x_label=True
+        self.share_y_label=False
+        titles=simul.species
+        ys=[simul.momentum_flux/simul.nHat]
+        ylabels=[r"$\hat{\Pi}/\hat{n}$"]
+        ylimBottom0s=[False,False,False]
+        ylogscales=['lin','lin','lin']
+        mark_zeros=[True,True,True]
+        self.plot_xy_species_multiplot_data_multiplot(x,ys,titles,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color) 
+
+    def baseline_all_fluxes_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r""
+        self.share_x_label=True
+        self.share_y_label=False
+        titles=simul.species+simul.species+simul.species
+        ys=[simul.particle_flux/simul.nHat,simul.conductive_heat_flux/simul.nHat,simul.momentum_flux/simul.nHat]
+        ylabels=[r"$\hat{\Gamma}/\hat{n}$",r"$\hat{q}/\hat{n}$",r"$\hat{\Pi}/\hat{n}$"]
+        ylimBottom0s=[False,False,False,False,False,False,False,False,False]
+        ylogscales=['lin','lin','lin','lin','lin','lin','lin','lin','lin']
+        mark_zeros=[True,True,True,True,True,True,True,True,True]
         self.plot_xy_species_multiplot_data_multiplot(x,ys,titles,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color) 
     
         
@@ -1608,7 +1704,7 @@ class plot_object(object):
                     #shift cmap to have 0 in the middle
                     shift=1 - vmax/(vmax + abs(vmin))
                     print "colormap shift: " + str(shift)
-                    my_cm=shiftedColorMap(cm.RdBu,midpoint=shift,name="mymap")
+                    my_cm=shiftedColorMap(cm.coolwarm,midpoint=shift,name="mymap")
                     self.fig.axes[self.numCols*j+i_s-1].collections[0].set_clim(vmin,vmax)
                     self.fig.axes[self.numCols*j+i_s-1].collections[0].set_cmap(my_cm)
                     
