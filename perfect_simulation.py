@@ -20,7 +20,7 @@ sentinel=object() #to detect default inputs
 
 class perfect_simulation(object):
 
-    def __init__(self,input_filename,output_filename=sentinel,group_name=sentinel):
+    def __init__(self,input_filename,output_filename=sentinel,group_name=sentinel,pedestal_points=[]):
         
         #description of simulation, for usage as legend in plots, etc.
         self.description=""
@@ -36,6 +36,9 @@ class perfect_simulation(object):
         #it just means that simulation has yet to be run
         self.output=output_filename
 
+        #where the pedestal starts and stops
+        self.pedestal_points=pedestal_points
+
         #Output intepretation and group specification
         #Different group in the same output can in principle
         #be handled by different simulation objects
@@ -48,6 +51,7 @@ class perfect_simulation(object):
 
         #hiding implementation details
         self.psi_name="psi"
+        self.psiAHat_name="psiAHat"
         self.theta_name="theta"
         self.particle_flux_name="particleFlux"
         self.heat_flux_name="heatFlux"
@@ -57,7 +61,7 @@ class perfect_simulation(object):
         self.omega_name="omega"
         self.THat_name="THat"
         self.nHat_name="nHat"
-        self.nHat_name="etaHat"
+        self.etaHat_name="etaHat"
         self.PhiHat_name="PhiHat"
         self.U_name="U"
         self.deltaN_name="deltaN"
@@ -175,6 +179,10 @@ class perfect_simulation(object):
         return numpy.sum(self.Z*self.particle_flux,axis=1)
 
     @property
+    def momentum_flux_sum(self):
+        return numpy.sum(self.masses*self.momentum_flux,axis=1)
+
+    @property
     def VPrimeHat(self):
         return self.outputs[self.group_name+self.VPrimeHat_name][()]
 
@@ -185,6 +193,22 @@ class perfect_simulation(object):
     @property
     def particle_source(self):
         return self.outputs[self.group_name+self.particle_source_name][()]
+
+    @property
+    def THat32_new_massfac_particle_source(self):
+        #for comparrison with dGammaHat/dPsiN
+        VPrimeHat=[self.VPrimeHat]
+        VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
+        VPrimeHat=numpy.fabs(VPrimeHat)
+        return self.THat**(3./2.)*(numpy.pi/8)*self.psiAHat*VPrimeHat/(self.Delta**2)*self.particle_source
+
+    @property
+    def THat32_particle_source(self):
+        #for comparrison with dGammaHat/dPsiN
+        VPrimeHat=[self.VPrimeHat]
+        VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
+        VPrimeHat=numpy.fabs(VPrimeHat)
+        return self.THat**(3./2.)*(numpy.pi/8)*self.psiAHat*VPrimeHat/(self.Delta**2)*self.particle_source/(self.masses**2)
 
     @property
     def flow_inboard(self):
@@ -241,7 +265,7 @@ class perfect_simulation(object):
 
     @property
     def masses(self):
-        return self.inputs.masses
+        return numpy.array(self.inputs.masses)
     
     @property
     def THat(self):
@@ -305,6 +329,11 @@ class perfect_simulation(object):
         #self.inputs.psi
 
     @property
+    def psiAHat(self):
+        return self.outputs[self.group_name+self.psiAHat_name][()]
+        #self.inputs.psi
+
+    @property
     def theta(self):
         return self.outputs[self.group_name+self.theta_name][()]
 
@@ -327,6 +356,20 @@ class perfect_simulation(object):
         ZoT=numpy.expand_dims(self.Z/self.THat, axis=1)
         ret=self.density_perturbation - (2*self.omega/self.Delta)*ZoT*self.potential_perturbation[:,:,numpy.newaxis]
         return ret
+
+    @property
+    def dGammaHat_dpsiN(self):
+        #non-adiabatic part
+        psiN=self.psi
+        GammaHat=self.particle_flux
+        ret=numpy.zeros([len(psiN)-1,3])
+        for i in range(1,len(psiN)):
+            dpsiN=psiN[i]-psiN[i-1]
+            dGammaHat=GammaHat[i]-GammaHat[i-1]
+            #print dGammaHat/dpsiN
+            ret[i-1]=dGammaHat/dpsiN
+        return ret
+
     
     def copy_simulation_to_dir(self,dir):
         #try to make the new directory or don't if it exists
@@ -368,8 +411,8 @@ class perfect_simulation(object):
 #####################################
 
 class normalized_perfect_simulation(perfect_simulation):
-    def __init__(self,input_filename,norm_filename,output_filename=sentinel,group_name=sentinel):
-        perfect_simulation.__init__(self,input_filename,output_filename,group_name)
+    def __init__(self,input_filename,norm_filename,output_filename=sentinel,group_name=sentinel,pedestal_points=[]):
+        perfect_simulation.__init__(self,input_filename,output_filename,group_name,pedestal_points)
 
         self.norm=norm_filename
 
@@ -512,6 +555,14 @@ class normalized_perfect_simulation(perfect_simulation):
     def normed_ambipolariy(self):
         return (self.ambipolarity/VPrimeHat)*signOfVPrimeHat*(numpy.pi*self.Delta**2)*self.RBar*self.BBar*self.nBar*self.vBar*self.eBar
 
+    @property
+    def normed_momentum_flux_sum(self):
+        #to make appropriate size to divide the particle flux with
+        VPrimeHat=[self.VPrimeHat]
+        VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
+        signOfVPrimeHat=numpy.sign(VPrimeHat)
+        return (self.momentum_flux_sum/VPrimeHat)*signOfVPrimeHat*(numpy.pi*self.Delta**2)*(self.RBar**2)*self.BBar*self.nBar*self.vBar**2
+    
     @property
     def normed_heat_source(self):
         #print self.heat_source

@@ -111,7 +111,7 @@ sentinel=object()
 
 class plot_object(object):
 
-    def __init__(self,plot_func_str=sentinel,numRows=sentinel,numCols=sentinel,title=sentinel,numColors=sentinel,xlim=sentinel,ylim=sentinel):
+    def __init__(self,plot_func_str=sentinel,numRows=sentinel,numCols=sentinel,title=sentinel,numColors=sentinel,xlim=sentinel,ylim=sentinel,show_xpoints=False,plc="silver"):
 
         #self.set_style_counter=0
         
@@ -175,10 +175,17 @@ class plot_object(object):
             "particle_source_i_z": self.particle_source_i_z_plot_func,
             "heat_source_i_z": self.heat_source_i_z_plot_func,
             "baseline_flows_i_z_noJ": self.baseline_flows_i_z_noJ_plot_func,
+            "ambipolarity_momentum_sum": self.ambipolarity_momentum_sum_plot_func,
+            "ambipolarity_main_momentum": self.ambipolarity_main_momentum_plot_func,
+            "dGammaHat_dpsiN_over_particle_source": self.dGammaHat_dpsiN_over_particle_source_plot_func,
+            "dGammaHat_dpsiN_new_massfac" : self.dGammaHat_dpsiN_new_massfac_plot_func,
+            "dGammaHat_dpsiN" : self.dGammaHat_dpsiN_plot_func,
         }
 
         self.xlim=xlim
         self.ylim=ylim
+
+        self.show_xpoints=show_xpoints
 
 
         #self.cm=truncate_colormap(cm.nipy_spectral,0,0.95)
@@ -188,6 +195,8 @@ class plot_object(object):
         self.ls=['solid','dashed','dashdot','dotted']
         self.species_colors=[[r'#08519c',r'#a50f15',r'#006d2c'],[r'#6baed6',r'#fb6a4a',r'#74c476']]
         self.lw=[1.0,0.5]
+
+        self.plc=plc
         
         self.lsi=0 #picks a linestyle
         self.ci=0 #picks a color
@@ -398,7 +407,11 @@ class plot_object(object):
                     markersize=3
                 colors=self.species_colors[i]
                 linewidth=self.lw[self.lwi]
+                if self.show_xpoints:
+                    for p in self.pedestal_points:
+                        self.ax.axvline(x=p,color=self.plc,linestyle=':')
                 self.ax.plot(x, ys[i][:,i_s], ls=linestyle,c=colors[i_s],marker=marker,markevery=markevery,linewidth=linewidth,markersize=markersize)
+
 
                 if ylogscales[i_s]=='log':
                     self.ax.set_yscale('log', nonposy='clip',subsy=[10])
@@ -530,7 +543,12 @@ class plot_object(object):
                     markevery=10
                     markersize=3
                 linewidth=self.lw[self.lwi]
+                if self.show_xpoints:
+                    for p in self.pedestal_points:
+                        self.ax.axvline(x=p,color=self.plc,linestyle=':')
+                
                 self.ax.plot(x, ys[i][:,i_s], ls=linestyle,c=colors[i_s],marker=marker,markevery=markevery,linewidth=linewidth,markersize=markersize)
+
 
                 if ylogscales[i_s]=='log':
                     self.ax.set_yscale('log', nonposy='clip',subsy=[10])
@@ -641,7 +659,9 @@ class plot_object(object):
             self.ax.yaxis.offset_text_position="there"
 
             
-            
+            if self.show_xpoints:
+                for p in self.pedestal_points:
+                    self.ax.axvline(x=p,color=self.plc,linestyle=':')
             for i_s in range(len(ys[i][0])):
                 if same_color:
                     linestyle=self.ls[i_s]
@@ -652,6 +672,7 @@ class plot_object(object):
                     colors=self.species_colors[0]
                     marker=''
                 self.ax.plot(x, ys[i][:,i_s], ls=linestyle,c=colors[i_s],marker=marker)
+
 
             if ylogscales[i]=='log':
                 self.ax.set_yscale('log', nonposy='clip',subsy=[10])
@@ -759,7 +780,9 @@ class plot_object(object):
 
 
             #self.ax.tick_params(axis='y', which='both', labelleft='off', labelright='on')
-
+            if self.show_xpoints:
+                for p in self.pedestal_points:
+                    self.ax.axvline(x=p,color=self.plc,linestyle=':')
             self.ax.plot(x, y[:,i], '-',label=legend,ls=linestyle,c=self.c)
 
 
@@ -773,6 +796,7 @@ class plot_object(object):
                 self.ax.set_ylim(bottom=0)
             else:
                 self.ax.axhline(y=0,color='k',linestyle=':')
+            
                 
             if self.xlim!=sentinel:
                 self.ax.set_xlim(self.xlim)
@@ -865,6 +889,9 @@ class plot_object(object):
                 self.ax = self.fig.add_subplot(self.numRows, self.numCols, self.species_plot_dict[specy]+self.current_row*self.numCols)
             #print self.species_plot_dict[specy]+self.current_row*self.numCols
             self.ax.pcolormesh(X, Y, numpy.transpose(z[:,:,i]),label=legend)
+            if self.show_xpoints:
+                for p in self.pedestal_points:
+                    self.ax.axvline(x=p,color=self.plc,linestyle=':')
             self.ax.spines['bottom'].set_color(self.c)
             self.ax.spines['top'].set_color(self.c)
             self.ax.spines['left'].set_color(self.c)
@@ -1519,6 +1546,38 @@ class plot_object(object):
         mark_zeros=[False,False,False,False]
         self.plot_xy_species_multiplot_data_multiplot(x,ys,titles,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
 
+    def ambipolarity_momentum_sum_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r""
+        self.share_x_label=True
+        self.share_y_label=False
+        ys=[numpy.expand_dims(simul.momentum_flux_sum,axis=1),numpy.expand_dims(simul.ambipolarity,axis=1),numpy.expand_dims(numpy.sum((simul.nHat*simul.masses)*simul.FSABFlow,axis=1),axis=1)]
+        #ylabels=[r"$\sum_a \hat{m}_a \hat{\Pi}_a$",r"$\sum_a Z_a \hat{\Gamma}_a$"]
+        ylabels=[r"$\Pi$",r"$\hat{j}$",r"$u$"]
+        ylimBottom0s=[False,False,False]
+        titles=['']+simul.species
+        ylogscales=['lin','lin','lin']
+        #ylogscales=['symlog','symlog','symlog','symlog','lin','lin']
+        mark_zeros=[True,True,True]
+        self.plot_xy_species_multiplot_data_multiplot(x,ys,titles,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
+
+    def ambipolarity_main_momentum_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r""
+        self.share_x_label=True
+        self.share_y_label=False
+        ys=[numpy.expand_dims(simul.masses[0]*simul.momentum_flux[:,0],axis=1)]
+        #ylabels=[r"$\sum_a \hat{m}_a \hat{\Pi}_a$",r"$\sum_a Z_a \hat{\Gamma}_a$"]
+        ylabels=[r"$\Pi_i$"]
+        ylimBottom0s=[False]
+        titles=['']+simul.species
+        ylogscales=['lin']
+        #ylogscales=['symlog','symlog','symlog','symlog','lin','lin']
+        mark_zeros=[True]
+        self.plot_xy_species_multiplot_data_multiplot(x,ys,titles,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
+
     def baseline_flows_i_z_noJ_plot_func(self,simul,same_color=False):
         x=simul.psi
         self.xlabel=r"$\psi_N$"
@@ -1538,36 +1597,39 @@ class plot_object(object):
     def baseline_sources_plot_func(self,simul,same_color=False):
         x=simul.psi
         self.xlabel=r"$\psi_N$"
-        self.ylabel=r"$S_p, S_h$"
+        self.ylabel=r"$\hat{S}_p,\, \hat{S}_h$"
         self.share_x_label=True
         self.share_y_label=True
-        species=[0,1]
-        species_list=[simul.species[s] for s in species]
-        ys=[simul.particle_source[:,species],simul.heat_source[:,species]]
-        ylabels=[r"",r""]
-        ylimBottom0s=[False,False]
-        ylogscales=['lin','lin']
-        mark_zeros=[True,True]
+        species=[0,1,2]
+        species_list=[simul.species[s] for s in species]        
+        ys=[simul.particle_source[:,species]/(simul.masses[species]**2),simul.heat_source[:,species]/(simul.masses[species]**2)]
+        #print "m^2 = "+str(simul.masses[species]**2)
+        #ys=[simul.particle_source[:,species],simul.heat_source[:,species]]
+        ylabels=[r"",r"",r""]
+        ylimBottom0s=[False,False,False]
+        ylogscales=['lin','lin','lin']
+        mark_zeros=[True,True,True]
         self.plot_xy_data_sameplot_species_multiplot(x,ys,species_list,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
+
 
     def baseline_sources_over_conc_plot_func(self,simul,same_color=False):
         x=simul.psi
         self.xlabel=r"$\psi_N$"
-        self.ylabel=r"$\{S_p,\, S_h\} (n_i/n_a)_{\mathrm{core}}$"
+        self.ylabel=r"$\{\hat{S}_p,\, \hat{S}_h\} (n_i/n_a)_{\mathrm{core}}$"
         self.share_x_label=True
         self.share_y_label=True
-        species=[0,1]
+        species=[0,1,2]
         species_list=[simul.species[s] for s in species]
 
         conc=simul.nHat[0,[species]]/simul.nHat[0,0]
         print conc
         
-        ys=[simul.particle_source[:,species]/conc,simul.heat_source[:,species]/conc]
+        ys=[simul.particle_source[:,species]/(conc*simul.masses[species]**2),simul.heat_source[:,species]/(conc*simul.masses[species]**2)]
         
-        ylabels=[r"",r""]
-        ylimBottom0s=[False,False]
-        ylogscales=['lin','lin']
-        mark_zeros=[True,True]
+        ylabels=[r"",r"",r""]
+        ylimBottom0s=[False,False,False]
+        ylogscales=['lin','lin','lin']
+        mark_zeros=[True,True,True]
         self.plot_xy_data_sameplot_species_multiplot(x,ys,species_list,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
 
     def baseline_kPar_plot_func(self,simul,same_color=False):
@@ -1631,17 +1693,64 @@ class plot_object(object):
         self.share_x_label=True
         self.share_y_label=False
         titles=simul.species+simul.species+simul.species
-        ys=[simul.particle_flux/simul.nHat,simul.conductive_heat_flux/simul.nHat,simul.momentum_flux/simul.nHat]
-        ylabels=[r"$\hat{\Gamma}/\hat{n}$",r"$\hat{q}/\hat{n}$",r"$\hat{\Pi}/\hat{n}$"]
+        ys=[simul.particle_flux/simul.nHat,simul.conductive_heat_flux/simul.nHat,simul.masses*(simul.momentum_flux/simul.nHat)]
+        ylabels=[r"$\hat{\Gamma}/\hat{n}$",r"$\hat{q}/\hat{n}$",r"$\hat{m}\hat{\Pi}/\hat{n}$"]
         ylimBottom0s=[False,False,False,False,False,False,False,False,False]
         ylogscales=['lin','lin','lin','lin','lin','lin','lin','lin','lin']
         mark_zeros=[True,True,True,True,True,True,True,True,True]
-        self.plot_xy_species_multiplot_data_multiplot(x,ys,titles,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color) 
-    
+        self.plot_xy_species_multiplot_data_multiplot(x,ys,titles,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
+
+    def dGammaHat_dpsiN_over_particle_source_plot_func(self,simul,same_color=False):
+        x=simul.psi[1:]
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\partial\hat{\Gamma}/(C \hat{T}^{3/2}\hat{S}_p\partial \psi_N)$"
+        self.share_x_label=True
+        self.share_y_label=True
+        titles=simul.species+simul.species+simul.species
+        ys=[simul.dGammaHat_dpsiN/simul.THat32_particle_source[1:]]
+        print ys[0]
+        ylabels=[r""]
+        ylimBottom0s=[False,False,False]
+        ylogscales=['lin','lin','lin']
+        mark_zeros=[True,True,True]
+        self.plot_xy_data_sameplot_species_multiplot(x,ys,titles,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
+
+    def dGammaHat_dpsiN_new_massfac_plot_func(self,simul,same_color=False):
+        fudge_fac=2*simul.psiAHat/(numpy.pi**2)
+        
+        x=simul.psi[1:]
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r""
+        self.share_x_label=True
+        self.share_y_label=False
+        titles=simul.species+simul.species+simul.species
+        ys=[simul.dGammaHat_dpsiN,fudge_fac*simul.THat32_new_massfac_particle_source[1:]]
+        ylabels=[r"$\partial\hat{\Gamma}/\partial \psi_N$",r"$C \hat{T}^{3/2}\hat{S}_p$"]
+        ylimBottom0s=[False,False,False]
+        ylogscales=['lin','lin','lin']
+        mark_zeros=[True,True,True]
+        self.plot_xy_data_sameplot_species_multiplot(x,ys,titles,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
+
+    def dGammaHat_dpsiN_plot_func(self,simul,same_color=False):
+        fudge_fac=2*simul.psiAHat/(numpy.pi**2)
+        
+        x=simul.psi[1:]
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r""
+        self.share_x_label=True
+        self.share_y_label=False
+        titles=simul.species+simul.species+simul.species
+        ys=[simul.dGammaHat_dpsiN,fudge_fac*simul.THat32_particle_source[1:]]
+        ylabels=[r"$\partial\hat{\Gamma}/\partial \psi_N$",r"$C \hat{T}^{3/2}\hat{S}_p$"]
+        ylimBottom0s=[False,False,False]
+        ylogscales=['lin','lin','lin']
+        mark_zeros=[True,True,True]
+        self.plot_xy_data_sameplot_species_multiplot(x,ys,titles,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
         
     def plot(self,simulation,same_color=False):
         #print "func to plot:"
         #print self.plot_func
+        self.pedestal_points=simulation.pedestal_points
         self.plot_func(simulation,same_color=same_color)
 
     def no_post_proc(self):

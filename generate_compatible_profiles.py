@@ -47,6 +47,16 @@ def generate_compatible_profiles(simul,**kwargs):
     else:
         twoSpecies=False
 
+    if "zeroPhi" in kwargs.keys():
+        zeroPhi=kwargs["zeroPhi"]
+    else:
+        zeroPhi=False
+
+    if "specialEta" in kwargs.keys():
+        specialEta=kwargs["specialEta"]
+    else:
+        specialEta=False
+        
 
 
     #parse keywords to see how this object should be initialized
@@ -129,6 +139,8 @@ def generate_compatible_profiles(simul,**kwargs):
     #print psiMinPed
     #list of psi where our profiles change slope
     psiList=[psiMinPed,psiMaxPed]
+    print "pedestal start/stop: " + str(psiList)
+    
     if allflat==True:
         psiList=[psiMinNotFlat,psiMinPed,psiMaxPed,psiMaxNotFlat]
     #distance in psi until our smooth transition between gradients is finished
@@ -321,7 +333,10 @@ def generate_compatible_profiles(simul,**kwargs):
     #detaHatdpsis[main_index] = niCoreGrad
 
     etaiHatPre =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
-    etaiHatPed =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
+    if specialEta:
+       etaiHatPed =(lambda psiN: (niPed+2*niCoreGrad* (psiN-psiMinPed))) 
+    else:
+        etaiHatPed =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
     i=main_index
     PhiTopPoint=psiMaxPed
     #if samefluxshift==True:
@@ -365,6 +380,14 @@ def generate_compatible_profiles(simul,**kwargs):
             etailist=[etazHatInner,etazHatMiddle,etazHatOuter]
             etaHats[imp_index]=bezier_transition(etailist,psiList[:1]+psiList[-1:],pairList[:1]+pairList[-1:],psi)
             detaHatdpsis[imp_index] =simul.inputs.ddpsi_accurate(etaHats[imp_index])
+        if specialEta==True:
+            gradScale=4.0725
+            etazHatInner=(lambda psiN: imp_conc*(niPed+niCoreGrad*(psiN-psiMinPed)))
+            etazHatMiddle=(lambda psiN: imp_conc*(niPed-gradScale*niCoreGrad*(psiN-psiMinPed)))
+            etazHatOuter=(lambda psiN: imp_conc*(niPed-gradScale*niCoreGrad*(psiMaxPed-psiMinPed) +  niCoreGrad* (psiN-psiMaxPed)))
+            etailist=[etazHatInner,etazHatMiddle,etazHatOuter]
+            etaHats[imp_index]=bezier_transition(etailist,psiList[:1]+psiList[-1:],pairList[:1]+pairList[-1:],psi)
+            detaHatdpsis[imp_index] =simul.inputs.ddpsi_accurate(etaHats[imp_index])
 
     #solve for Phi to make delta_etai the above value
     #delta_ni=delta_i_factor*dnHatdpsis[mI]/nHats[mI]
@@ -373,6 +396,9 @@ def generate_compatible_profiles(simul,**kwargs):
     #PhiHat=numpy.linalg.solve(A, rhs)
     PhiHat=numpy.log(etaHats[main_index]/nHats[main_index])*THats[main_index]/Zs[main_index]*simul.Delta/(2*simul.omega)
     dPhiHatdpsi=(-etaHats[main_index]*dnHatdpsis[main_index]/nHats[main_index]**2 + detaHatdpsis[main_index]/nHats[main_index])*THats[main_index]*nHats[main_index]/etaHats[main_index] + numpy.log(etaHats[main_index]/nHats[main_index])*dTHatdpsis[main_index]
+    if zeroPhi:
+        PhiHat=numpy.zeros(Npsi)
+        dPhiHatdpsi=numpy.zeros(Npsi)
 
     if twoSpecies==False:
         nHats[imp_index] = etaHats[imp_index] *(nHats[main_index]/etaHats[main_index])**((Zs[imp_index]/Zs[main_index])*(THats[main_index]/THats[imp_index]))

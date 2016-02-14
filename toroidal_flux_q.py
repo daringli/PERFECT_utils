@@ -57,7 +57,7 @@ if __name__=='__main__':
     latexify()
     y=numpy.array([1.23,1.37,1.6])
     x=numpy.array([0,0.5,0.9])
-    rho=numpy.linspace(0,0.95)
+    rho=numpy.linspace(0,1)
     deg=2
     kappa=func_polyfit(x,y,deg)
     #dkappadr=func_polyfit_derivative(x,y,deg)
