@@ -56,7 +56,13 @@ def generate_compatible_profiles(simul,**kwargs):
         specialEta=kwargs["specialEta"]
     else:
         specialEta=False
-        
+
+    
+    if "psiDiamFact" in kwargs.keys():
+        psiDiamFact=kwargs["psiDiamFact"]
+    else:
+        psiDiamFact=5
+
 
 
     #parse keywords to see how this object should be initialized
@@ -78,7 +84,7 @@ def generate_compatible_profiles(simul,**kwargs):
         midShift=kwargs["midShift"]*psiN_width
     
     psiMid=1-psiN_width/2.0+midShift
-    psiDiameter=5*psiN_width
+    psiDiameter=psiDiamFact*psiN_width
     if allflat==True:
         leftBoundaryShift=-psiN_width
     else:

@@ -211,6 +211,14 @@ class perfect_simulation(object):
         return self.THat**(3./2.)*(numpy.pi/8)*self.psiAHat*VPrimeHat/(self.Delta**2)*self.particle_source/(self.masses**2)
 
     @property
+    def THat52_source(self):
+        #for comparrison with dGammaHat/dPsiN
+        VPrimeHat=[self.VPrimeHat]
+        VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
+        VPrimeHat=numpy.fabs(VPrimeHat)
+        return self.THat**(5./2.)*(numpy.pi/8)*self.psiAHat*VPrimeHat/(self.Delta**2)*((5.0/2.0)*self.particle_source + (3.0/2.0)*self.masses*self.heat_source)/(self.masses**2)
+
+    @property
     def flow_inboard(self):
         return self.outputs[self.group_name+self.flow_inboard_name][()]
 
@@ -310,6 +318,32 @@ class perfect_simulation(object):
             return self.outputs[self.group_name+self.PhiHat_name][()]
         except KeyError:
             print "PhiHat could not be obtained since no external profiles have been speciied and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate the inputs."
+
+    @property
+    def dPhiHat_dpsiN(self):
+        #intentionally "crude" to use same deriv approx as dGamma_dpsiN
+        psiN=self.psi
+        PhiHat=self.PhiHat
+        ret=numpy.zeros([len(psiN)-1,3])
+        for i in range(1,len(psiN)):
+            dpsiN=psiN[i]-psiN[i-1]
+            dPhiHat=PhiHat[i]-PhiHat[i-1]
+            #print dPhiHat/dpsiN
+            ret[i-1]=dPhiHat/dpsiN
+        return ret
+
+    @property
+    def dTHat_dpsiN(self):
+        #intentionally "crude" to use same deriv approx as dGamma_dpsiN
+        psiN=self.psi
+        THat=self.THat
+        ret=numpy.zeros([len(psiN)-1,3])
+        for i in range(1,len(psiN)):
+            dpsiN=psiN[i]-psiN[i-1]
+            dTHat=THat[i]-THat[i-1]
+            #print dTHat/dpsiN
+            ret[i-1]=dTHat/dpsiN
+        return ret
     
     @property
     def Delta(self):
@@ -359,7 +393,6 @@ class perfect_simulation(object):
 
     @property
     def dGammaHat_dpsiN(self):
-        #non-adiabatic part
         psiN=self.psi
         GammaHat=self.particle_flux
         ret=numpy.zeros([len(psiN)-1,3])
@@ -368,6 +401,19 @@ class perfect_simulation(object):
             dGammaHat=GammaHat[i]-GammaHat[i-1]
             #print dGammaHat/dpsiN
             ret[i-1]=dGammaHat/dpsiN
+        return ret
+
+    @property
+    def dqHat_dpsiN(self):
+        #non-adiabatic part
+        psiN=self.psi
+        qHat=self.conductive_heat_flux
+        ret=numpy.zeros([len(psiN)-1,3])
+        for i in range(1,len(psiN)):
+            dpsiN=psiN[i]-psiN[i-1]
+            dqHat=qHat[i]-qHat[i-1]
+            #print dGammaHat/dpsiN
+            ret[i-1]=dqHat/dpsiN
         return ret
 
     
