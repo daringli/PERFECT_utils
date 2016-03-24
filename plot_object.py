@@ -839,7 +839,7 @@ class plot_object(object):
         self.plot_xy_legend_species_subplots(x,y[:,numpy.newaxis],species=[""],legend='',xlabel=xlabel,ylabel=ylabel,ylimBottom0=ylimBottom0,same_color=same_color)
         
         self.postproc=self.xy_postproc
-
+        
 
     def plot_colormap_xyz_species_subplots(self,x,y,z,species,legend='',xlabel='',ylabel='',zlabel='',zlimBottom0=False,same_color=False,share_x=True,share_y=True):
 
@@ -848,7 +848,6 @@ class plot_object(object):
         X,Y=numpy.meshgrid(x,y)
         
         self.current_row=self.current_row+1
-        
         if same_color==False:
             self.lsi=0
             #print self.color
@@ -1471,6 +1470,7 @@ class plot_object(object):
         self.xlabel=r"$100\,\psi_N$"
         self.ylabel=r"$\theta/\pi$"
         self.zlabel=r""
+        self.ylim=[0,2]
         self.plot_colormap_xyz_species_subplots(x,y,z,species,legend,same_color=same_color)
 
     def total_density_perturbation_plot_func(self,simul,same_color=False):
@@ -1486,6 +1486,7 @@ class plot_object(object):
         self.xlabel=r"$100\,\psi_N$"
         self.ylabel=r"$\theta/\pi$"
         self.zlabel=r""
+        self.ylim=[0,2]
         self.plot_colormap_xyz_species_subplots(x,y,z,species,legend,same_color=same_color)
 
     def potential_perturbation_plot_func(self,simul,same_color=False):
@@ -1501,6 +1502,7 @@ class plot_object(object):
         self.xlabel=r"$100\,\psi_N$"
         self.ylabel=r"$\theta/\pi$"
         self.zlabel=r""
+        self.ylim=[0,2]
         self.plot_colormap_xyz(x,y,z,species,legend,same_color=same_color)
 
     def baseline_inputs_plot_func(self,simul,same_color=False):
