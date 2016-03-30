@@ -24,9 +24,6 @@ def generate_compatible_profiles(simul,**kwargs):
     species=simul.species
     Nspecies=len(species)
 
-    main_index=kwargs["mI"]
-    imp_index=kwargs["zI"]
-    e_index=kwargs["eI"]
     if "allflat" in kwargs.keys():
         allflat=kwargs["allflat"]
     else:
@@ -46,6 +43,10 @@ def generate_compatible_profiles(simul,**kwargs):
         twoSpecies=kwargs["twoSpecies"]
     else:
         twoSpecies=False
+    if not twoSpecies:
+        imp_index=kwargs["zI"]
+    main_index=kwargs["mI"]
+    e_index=kwargs["eI"]
 
     if "zeroPhi" in kwargs.keys():
         zeroPhi=kwargs["zeroPhi"]

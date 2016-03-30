@@ -12,6 +12,7 @@ import copy #to copy objects rather than get references to them
 import scipy.constants
 import subprocess
 from subprocess import call
+from get_index_range import get_index_range
 
 
 
@@ -70,7 +71,9 @@ class perfect_simulation(object):
         self.num_species_name="Nspecies"
         self.heat_source_name="heatSourceProfile"
         self.particle_source_name="particleSourceProfile"
-        
+
+        self.flow_name="flow"
+        self.kPar_name="kPar"
         self.flow_inboard_name="flowInboard"
         self.flow_outboard_name="flowOutboard"
         self.kPar_inboard_name="kParInboard"
@@ -200,7 +203,7 @@ class perfect_simulation(object):
         VPrimeHat=[self.VPrimeHat]
         VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
         VPrimeHat=numpy.fabs(VPrimeHat)
-        return self.THat**(3./2.)*(numpy.pi/8)*self.psiAHat*VPrimeHat/(self.Delta**2)*self.particle_source
+        return 1.6480*self.THat**(3./2.)*self.psiAHat*VPrimeHat/(self.Delta)*self.particle_source
 
     @property
     def THat32_particle_source(self):
@@ -208,7 +211,7 @@ class perfect_simulation(object):
         VPrimeHat=[self.VPrimeHat]
         VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
         VPrimeHat=numpy.fabs(VPrimeHat)
-        return self.THat**(3./2.)*(numpy.pi/8)*self.psiAHat*VPrimeHat/(self.Delta**2)*self.particle_source/(self.masses**2)
+        return 1.6480*self.THat**(3./2.)*self.psiAHat*VPrimeHat/(self.Delta)*self.particle_source/(self.masses**2)
 
     @property
     def THat52_source(self):
@@ -216,7 +219,7 @@ class perfect_simulation(object):
         VPrimeHat=[self.VPrimeHat]
         VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
         VPrimeHat=numpy.fabs(VPrimeHat)
-        return self.THat**(5./2.)*(numpy.pi/8)*self.psiAHat*VPrimeHat/(self.Delta**2)*((5.0/2.0)*self.particle_source + (3.0/2.0)*self.masses*self.heat_source)/(self.masses**2)
+        return -self.THat**(5./2.)*self.psiAHat*VPrimeHat/(self.Delta)*(4.1199*self.particle_source + 2.4720*self.heat_source)/(self.masses**2)
 
     @property
     def flow_inboard(self):
@@ -237,7 +240,15 @@ class perfect_simulation(object):
     @property
     def FSABFlow(self):
         return self.outputs[self.group_name+self.FSABFlow_name][()]
-    
+
+    @property
+    def flow(self):
+        return self.outputs[self.group_name+self.flow_name][()]
+
+    @property
+    def kPar(self):
+        return self.outputs[self.group_name+self.kPar_name][()]
+
     @property
     def FSABJPar(self):
         return numpy.sum(self.Z*(self.nHat*self.FSABFlow),axis=1)
@@ -268,8 +279,6 @@ class perfect_simulation(object):
     @property
     def deltaT(self):
         return self.outputs[self.group_name+self.deltaT_name][()]
-
-   
 
     @property
     def masses(self):
@@ -635,9 +644,14 @@ class normalized_perfect_simulation(perfect_simulation):
     def normed_flow_inboard(self):
         return self.Delta*self.vBar*self.flow_inboard
 
+
     @property
     def normed_flow_outboard(self):
         return self.Delta*self.vBar*self.flow_outboard
+
+    @property
+    def normed_flow(self):
+        return self.Delta*self.vBar*self.flow
     
     @property
     def normed_potential_perturbation(self):

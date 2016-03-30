@@ -111,7 +111,7 @@ sentinel=object()
 
 class plot_object(object):
 
-    def __init__(self,plot_func_str=sentinel,numRows=sentinel,numCols=sentinel,title=sentinel,numColors=sentinel,xlim=sentinel,ylim=sentinel,show_xpoints=False,plc="silver"):
+    def __init__(self,plot_func_str=sentinel,numRows=sentinel,numCols=sentinel,title=sentinel,numColors=sentinel,xlim=sentinel,ylim=sentinel,show_xpoints=False,show_ypoints=False,plc="silver"):
 
         #self.set_style_counter=0
         
@@ -186,13 +186,18 @@ class plot_object(object):
             "dGammaHat_dpsiN_new_massfac" : self.dGammaHat_dpsiN_new_massfac_plot_func,
             "dGammaHat_dpsiN" : self.dGammaHat_dpsiN_plot_func,
             "dqHat_dpsiN" : self.dqHat_dpsiN_plot_func,
+            "flow_difference": self.flow_difference_plot_func,
+            "flow_max_psi_of_theta":self.flow_max_psi_of_theta_plot_func,
+            "flow_theta":self.flow_theta_plot_func,
+            "kPar_max_psi_of_theta":self.kPar_max_psi_of_theta_plot_func,
+            "kPar_theta":self.kPar_theta_plot_func,
         }
 
         self.xlim=xlim
         self.ylim=ylim
 
         self.show_xpoints=show_xpoints
-
+        self.show_ypoints=show_ypoints
 
         #self.cm=truncate_colormap(cm.nipy_spectral,0,0.95)
         #self.cm=truncate_colormap(cm.gnuplot2,0.1,0.75)
@@ -316,19 +321,20 @@ class plot_object(object):
     def set_y_scale(self):
             for specy in self.species_plot_dict.keys():
                 if self.manual_scale==True:
-
+                    r=numpy.fabs(self.species_data_minmax[specy][0]-self.species_data_minmax[specy][1])
+                    
                     if self.ylimBottom0==False:
-                        lower=self.species_data_minmax[specy][0]-0.1*numpy.fabs(self.species_data_minmax[specy][0])
-                        upper=self.species_data_minmax[specy][1]+0.1*numpy.fabs(self.species_data_minmax[specy][1])
+                        lower=self.species_data_minmax[specy][0]-0.1*r
+                        upper=self.species_data_minmax[specy][1]+0.1*r
                     else:
                         lower=0
-                        upper=self.species_data_minmax[specy][1]+0.1*numpy.fabs(self.species_data_minmax[specy][1])                    
+                        upper=self.species_data_minmax[specy][1]+0.1*r
                     
                 else:
                     for specy in self.species_plot_dict.keys():
                         if self.ylimBottom0==False:
                             lower=self.ylim[0]-0.1*numpy.fabs(self.ylim[0])
-                            upper=self.ylim[1]-0.1*numpy.fabs(self.ylim[1])
+                            upper=self.ylim[1]+0.1*numpy.fabs(self.ylim[1])
                         else:
                             lower=0
                             upper=self.ylim[1]-0.1*numpy.fabs(self.ylim[1])               
@@ -747,9 +753,6 @@ class plot_object(object):
         else:
             self.lsi=self.lsi+1
         linestyle=self.ls[self.lsi]
-
-        
-
         
         if share_x==True:
             self.fig.subplots_adjust(hspace=0.01)
@@ -789,6 +792,9 @@ class plot_object(object):
             if self.show_xpoints:
                 for p in self.pedestal_points:
                     self.ax.axvline(x=p,color=self.plc,linestyle=':')
+            if self.show_ypoints:
+                for p in self.pedestal_points:
+                    self.ax.axhline(y=p,color=self.plc,linestyle=':')
             self.ax.plot(x, y[:,i], '-',label=legend,ls=linestyle,c=self.c)
 
 
@@ -810,17 +816,18 @@ class plot_object(object):
             else:
                 xlim_indices=[0,len(x)-1]
                 
-            if self.ylim!=sentinel:
-                self.ax.set_ylim(self.ylim)
-                ylim_indices= get_index_range(y,self.ylim)
-            else:
-                ylim_indices=[0,len(y)-1]
-
+            
             #gets min/max values in xrange
             self.update_min_max(y[xlim_indices[0]:xlim_indices[1],i],specy)
             
-            i=i+1
             
+            #if self.ylim is not sentinel:
+            #    self.ax.set_ylim(self.ylim)
+            #    #ylim_indices= get_index_range(y,self.ylim)
+            #else:
+            #    pass
+                #ylim_indices=[0,len(y)-1]
+            i=i+1
             if share_x==True:
                 if specy!=species[-1]:
                     xticklabels=xticklabels+self.ax.get_xticklabels()
@@ -1779,6 +1786,209 @@ class plot_object(object):
         mark_zeros=[True,True,True,True,True,True,True,True,True]
         self.plot_xy_species_multiplot_data_multiplot(x,ys,titles,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
 
+    def kPar_difference_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r""
+        self.share_x_label=True
+        self.share_y_label=False
+        title=""
+        y=simul.kPar_inboard[:,[0]]-simul.kPar_inboard[:,[1]]
+        ylabel=r"$k_{\|,i} - k_{\|,z}$ Inboard"
+        ylimBottom0=False
+        self.plot_xy_legend(x,y,title,ylabel=ylabel,ylimBottom0=ylimBottom0,same_color=same_color)
+        
+    def flow_difference_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r""
+        self.share_x_label=True
+        self.share_y_label=False
+        title=""
+        y=simul.normed_flow_inboard[:,[0]]-simul.normed_flow_inboard[:,[1]]
+        ylabel=r"$V_{\|,i} - V_{\|,z}$ Inboard"
+        ylimBottom0=False
+        self.plot_xy_legend(x,y,title,ylabel=ylabel,ylimBottom0=ylimBottom0,same_color=same_color)
+
+
+    def kPar_theta_plot_func(self,simul,psiN=0.934,same_color=False):
+        indices=get_index_range(simul.psi,[psiN,psiN],ret_range=False)
+
+        x=simul.theta
+        self.xlabel=r"$\theta/\pi$"
+        self.ylabel=r"k_\|, \psi_N="+str(psiN)
+        self.share_x_label=True
+        self.share_y_label=False
+        species=simul.species
+        self.xlim=[self.xlim[0],self.pedestal_points[1]]
+        y=simul.kPar[indices[0],:,:]
+        #print y
+        ylabel=r""
+        ylimBottom0=False
+
+        print "min_theta kPar(theta):"
+        print min(y[:,0])
+        
+        old_xlim=self.xlim
+        old_ylim=self.ylim
+        old_xpoints=self.show_xpoints
+        old_ypoints=self.show_ypoints
+        
+        self.show_ypoints=old_xpoints
+        self.xlim=[0,2]
+        self.ylim=old_xlim
+        self.show_xpoints=False
+        self.plot_xy_legend_species_subplots(x/numpy.pi,y,species,ylabel=ylabel,ylimBottom0=ylimBottom0,same_color=same_color)
+        
+        self.xlim=old_xlim
+        #self.ylim=old_ylim
+        self.manual_scale=True
+        self.show_xpoints=old_xpoints
+        self.show_ypoints=old_ypoints
+
+        
+    def flow_theta_plot_func(self,simul,psiN=0.934,same_color=False):
+        indices=get_index_range(simul.psi,[psiN,psiN],ret_range=False)
+
+        x=simul.theta
+        self.xlabel=r"$\theta/\pi$"
+        self.ylabel=r"V_\|, \psi_N="+str(psiN)
+        self.share_x_label=True
+        self.share_y_label=False
+        species=simul.species
+        self.xlim=[self.xlim[0],self.pedestal_points[1]]
+        y=simul.normed_flow[indices[0],:,:]
+        #print y
+        ylabel=r""
+        ylimBottom0=False
+
+        print "min_theta flow(theta):"
+        print min(y[:,0])
+        
+        old_xlim=self.xlim
+        old_ylim=self.ylim
+        old_xpoints=self.show_xpoints
+        old_ypoints=self.show_ypoints
+        
+        self.show_ypoints=old_xpoints
+        self.xlim=[0,2]
+        self.ylim=old_xlim
+        self.show_xpoints=False
+        self.plot_xy_legend_species_subplots(x/numpy.pi,y,species,ylabel=ylabel,ylimBottom0=ylimBottom0,same_color=same_color)
+        
+        self.xlim=old_xlim
+        #self.ylim=old_ylim
+        self.manual_scale=True
+        self.show_xpoints=old_xpoints
+        self.show_ypoints=old_ypoints
+
+    
+    def kPar_max_psi_of_theta_plot_func(self,simul,same_color=False):
+        def kPar_max_psi_of_theta(xlim,simul):
+            if xlim != sentinel:
+                indices=get_index_range(simul.psi,xlim,ret_range=True)
+                psi=simul.psi[indices]
+            else:
+                psi=simul.psi
+                indices=range(len(psi))
+            #print psi
+            max_indices = numpy.array([numpy.argmax(numpy.fabs(simul.kPar[indices,:,i]),axis=0) for i in range(len(simul.kPar[0,0,:]))]) #array of indices in psi that maximizes flow for each theta index for each species
+            #print max_indices
+            #max_psiN=numpy.zeros(max_indices.shape)
+            max_psiN=max_indices.astype(float)
+            #get psi value at each index in the matrix
+            for x in numpy.nditer(max_psiN, op_flags=['readwrite']):
+                #print x
+                #print int(x)
+                x[...] = psi[int(x)]
+            #print max_psiN
+            return numpy.transpose(max_psiN)
+        
+        x=simul.theta
+        self.xlabel=r"$\theta/\pi$"
+        self.ylabel=r"\psi_{N,max}"
+        self.share_x_label=True
+        self.share_y_label=False
+        species=simul.species
+        self.xlim=[self.xlim[0],self.pedestal_points[1]]
+        y=kPar_max_psi_of_theta(self.xlim,simul)
+        #print y
+        ylabel=r""
+        ylimBottom0=False
+
+        print "min_theta psi_max:"
+        print min(y[:,0])
+        
+        old_xlim=self.xlim
+        old_ylim=self.ylim
+        old_xpoints=self.show_xpoints
+        old_ypoints=self.show_ypoints
+        
+        self.show_ypoints=old_xpoints
+        self.xlim=[0,2]
+        self.ylim=old_xlim
+        self.show_xpoints=False
+        self.plot_xy_legend_species_subplots(x/numpy.pi,y,species,ylabel=ylabel,ylimBottom0=ylimBottom0,same_color=same_color)
+        
+        self.xlim=old_xlim
+        #self.ylim=old_ylim
+        self.manual_scale=True
+        self.show_xpoints=old_xpoints
+        self.show_ypoints=old_ypoints
+        
+    def flow_max_psi_of_theta_plot_func(self,simul,same_color=False):
+        def flow_max_psi_of_theta(xlim,simul):
+            if xlim != sentinel:
+                indices=get_index_range(simul.psi,xlim,ret_range=True)
+                psi=simul.psi[indices]
+            else:
+                psi=simul.psi
+                indices=range(len(psi))
+            #print psi
+            max_indices = numpy.array([numpy.argmax(numpy.fabs(simul.flow[indices,:,i]),axis=0) for i in range(len(simul.flow[0,0,:]))]) #array of indices in psi that maximizes flow for each theta index for each species
+            #print max_indices
+            #max_psiN=numpy.zeros(max_indices.shape)
+            max_psiN=max_indices.astype(float)
+            #get psi value at each index in the matrix
+            for x in numpy.nditer(max_psiN, op_flags=['readwrite']):
+                #print x
+                #print int(x)
+                x[...] = psi[int(x)]
+            #print max_psiN
+            return numpy.transpose(max_psiN)
+        
+        x=simul.theta
+        self.xlabel=r"$\theta/\pi$"
+        self.ylabel=r"\psi_{N,max}"
+        self.share_x_label=True
+        self.share_y_label=False
+        species=simul.species
+        self.xlim=[self.xlim[0],self.pedestal_points[1]]
+        y=flow_max_psi_of_theta(self.xlim,simul)
+        #print y
+        ylabel=r""
+        ylimBottom0=False
+
+        print "min_theta psi_max:"
+        print min(y[:,0])
+        
+        old_xlim=self.xlim
+        old_ylim=self.ylim
+        old_xpoints=self.show_xpoints
+        old_ypoints=self.show_ypoints
+        
+        self.show_ypoints=old_xpoints
+        self.xlim=[0,2]
+        self.ylim=old_xlim
+        self.show_xpoints=False
+        self.plot_xy_legend_species_subplots(x/numpy.pi,y,species,ylabel=ylabel,ylimBottom0=ylimBottom0,same_color=same_color)
+        
+        self.xlim=old_xlim
+        #self.ylim=old_ylim
+        self.manual_scale=True
+        self.show_xpoints=old_xpoints
+        self.show_ypoints=old_ypoints
+
     def dGammaHat_dpsiN_over_particle_source_plot_func(self,simul,same_color=False):
         x=simul.psi[1:]
         self.xlabel=r"$\psi_N$"
@@ -1795,8 +2005,6 @@ class plot_object(object):
         self.plot_xy_data_sameplot_species_multiplot(x,ys,titles,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
 
     def dGammaHat_dpsiN_new_massfac_plot_func(self,simul,same_color=False):
-        fudge_fac=2*simul.psiAHat/(numpy.pi**2)
-        
         x=simul.psi[1:]
         self.xlabel=r"$\psi_N$"
         self.ylabel=r""
@@ -1811,31 +2019,28 @@ class plot_object(object):
         self.plot_xy_data_sameplot_species_multiplot(x,ys,titles,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
 
     def dGammaHat_dpsiN_plot_func(self,simul,same_color=False):
-        fudge_fac=2*simul.psiAHat/(numpy.pi**2)
-        
         x=simul.psi[1:]
         self.xlabel=r"$\psi_N$"
         self.ylabel=r""
         self.share_x_label=True
         self.share_y_label=False
         titles=simul.species+simul.species+simul.species
-        ys=[simul.dGammaHat_dpsiN,fudge_fac*simul.THat32_particle_source[1:]]
+        ys=[simul.dGammaHat_dpsiN,simul.THat32_particle_source[1:]]
         ylabels=[r"$\partial\hat{\Gamma}/\partial \psi_N$",r"$C \hat{T}^{3/2}\hat{S}_p$"]
         ylimBottom0s=[False,False,False]
         ylogscales=['lin','lin','lin']
         mark_zeros=[True,True,True]
         self.plot_xy_data_sameplot_species_multiplot(x,ys,titles,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
 
-    def dqHat_dpsiN_plot_func(self,simul,same_color=False):
-        fudge_fac=2*simul.psiAHat/(numpy.pi**2)
-        
+    def dqHat_dpsiN_plot_func(self,simul,same_color=False):        
         x=simul.psi[1:]
         self.xlabel=r"$\psi_N$"
         self.ylabel=r""
         self.share_x_label=True
         self.share_y_label=False
         titles=simul.species+simul.species+simul.species
-        ys=[simul.dqHat_dpsiN+(simul.Z*simul.dPhiHat_dpsiN+(5.0/2.0)*simul.dTHat_dpsiN)*simul.particle_flux[1:],fudge_fac*simul.THat52_source[1:]]
+        Z=simul.Z
+        ys=[simul.dqHat_dpsiN+((2*simul.omega/simul.Delta)*Z*simul.dPhiHat_dpsiN+(5.0/2.0)*simul.dTHat_dpsiN)*simul.particle_flux[1:],simul.THat52_source[1:]]
         ylabels=[r"",r"",r""]
         ylimBottom0s=[False,False,False]
         ylogscales=['lin','lin','lin']
