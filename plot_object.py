@@ -186,11 +186,19 @@ class plot_object(object):
             "dGammaHat_dpsiN_new_massfac" : self.dGammaHat_dpsiN_new_massfac_plot_func,
             "dGammaHat_dpsiN" : self.dGammaHat_dpsiN_plot_func,
             "dqHat_dpsiN" : self.dqHat_dpsiN_plot_func,
-            "flow_difference": self.flow_difference_plot_func,
+            "flow":self.flow_plot_func,
             "flow_max_psi_of_theta":self.flow_max_psi_of_theta_plot_func,
             "flow_theta":self.flow_theta_plot_func,
             "kPar_max_psi_of_theta":self.kPar_max_psi_of_theta_plot_func,
             "kPar_theta":self.kPar_theta_plot_func,
+            "flow":self.flow_plot_func,
+            "flow_difference": self.flow_difference_plot_func,
+            "kPar":self.kPar_plot_func,
+            "kPar_difference":self.kPar_difference_plot_func,
+            "inboard_flow_difference": self.inboard_flow_difference_plot_func,
+            "outboard_flow_difference": self.outboard_flow_difference_plot_func,
+            "inboard_kPar_difference": self.inboard_kPar_difference_plot_func,
+            "outboard_kPar_difference": self.outboard_kPar_difference_plot_func,
         }
 
         self.xlim=xlim
@@ -283,7 +291,7 @@ class plot_object(object):
         self.color=iter(self.cm(numpy.linspace(0,1,nc)))
 
     def set_size(self):
-        twoD_plots=[self.density_perturbation_plot_func,self.potential_perturbation_plot_func,self.total_density_perturbation_plot_func]
+        twoD_plots=[self.density_perturbation_plot_func,self.potential_perturbation_plot_func,self.total_density_perturbation_plot_func,self.kPar_plot_func,self.flow_plot_func,self.kPar_difference_plot_func,self.flow_difference_plot_func]
         #sets the margins of the figure to accomodate common labels
 
         if self.plot_func in twoD_plots:
@@ -864,10 +872,6 @@ class plot_object(object):
         else:
             self.lsi=self.lsi+1
         linestyle=self.ls[self.lsi]
-
-
-        
-
         
         if share_x==True:
             self.fig.subplots_adjust(hspace=0.01)
@@ -1480,6 +1484,38 @@ class plot_object(object):
         self.ylim=[0,2]
         self.plot_colormap_xyz_species_subplots(x,y,z,species,legend,same_color=same_color)
 
+    def flow_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        y=simul.theta/numpy.pi
+        y=numpy.append(y,[2])
+        z=simul.flow
+        z=numpy.append(z,numpy.expand_dims(z[:,0,:],axis=1),axis=1)
+        species=simul.species
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$100\,\psi_N$"
+        self.ylabel=r"$\theta/\pi$"
+        self.zlabel=r""
+        self.ylim=[0,2]
+        self.plot_colormap_xyz_species_subplots(x,y,z,species,legend,same_color=same_color)
+
+    def kPar_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        y=simul.theta/numpy.pi
+        y=numpy.append(y,[2])
+        z=simul.kPar
+        z=numpy.append(z,numpy.expand_dims(z[:,0,:],axis=1),axis=1)
+        species=simul.species
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$100\,\psi_N$"
+        self.ylabel=r"$\theta/\pi$"
+        self.zlabel=r""
+        self.ylim=[0,2]
+        self.plot_colormap_xyz_species_subplots(x,y,z,species,legend,same_color=same_color)
+
     def total_density_perturbation_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.theta/numpy.pi
@@ -1501,6 +1537,38 @@ class plot_object(object):
         y=simul.theta/numpy.pi
         y=numpy.append(y,[2])
         z=simul.potential_perturbation
+        z=numpy.append(z,numpy.expand_dims(z[:,0],axis=1),axis=1)
+        species=simul.species
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$100\,\psi_N$"
+        self.ylabel=r"$\theta/\pi$"
+        self.zlabel=r""
+        self.ylim=[0,2]
+        self.plot_colormap_xyz(x,y,z,species,legend,same_color=same_color)
+
+    def kPar_difference_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        y=simul.theta/numpy.pi
+        y=numpy.append(y,[2])
+        z=simul.kPar[:,:,0]-simul.kPar[:,:,1]
+        z=numpy.append(z,numpy.expand_dims(z[:,0],axis=1),axis=1)
+        species=simul.species
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$100\,\psi_N$"
+        self.ylabel=r"$\theta/\pi$"
+        self.zlabel=r""
+        self.ylim=[0,2]
+        self.plot_colormap_xyz(x,y,z,species,legend,same_color=same_color)
+
+    def flow_difference_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        y=simul.theta/numpy.pi
+        y=numpy.append(y,[2])
+        z=simul.flow[:,:,0]-simul.flow[:,:,1]
         z=numpy.append(z,numpy.expand_dims(z[:,0],axis=1),axis=1)
         species=simul.species
         legend=simul.description
@@ -1786,7 +1854,7 @@ class plot_object(object):
         mark_zeros=[True,True,True,True,True,True,True,True,True]
         self.plot_xy_species_multiplot_data_multiplot(x,ys,titles,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
 
-    def kPar_difference_plot_func(self,simul,same_color=False):
+    def inboard_kPar_difference_plot_func(self,simul,same_color=False):
         x=simul.psi
         self.xlabel=r"$\psi_N$"
         self.ylabel=r""
@@ -1797,8 +1865,20 @@ class plot_object(object):
         ylabel=r"$k_{\|,i} - k_{\|,z}$ Inboard"
         ylimBottom0=False
         self.plot_xy_legend(x,y,title,ylabel=ylabel,ylimBottom0=ylimBottom0,same_color=same_color)
+
+    def outboard_kPar_difference_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r""
+        self.share_x_label=True
+        self.share_y_label=False
+        title=""
+        y=simul.kPar_outboard[:,[0]]-simul.kPar_outboard[:,[1]]
+        ylabel=r"$k_{\|,i} - k_{\|,z}$ Inboard"
+        ylimBottom0=False
+        self.plot_xy_legend(x,y,title,ylabel=ylabel,ylimBottom0=ylimBottom0,same_color=same_color)
         
-    def flow_difference_plot_func(self,simul,same_color=False):
+    def inboard_flow_difference_plot_func(self,simul,same_color=False):
         x=simul.psi
         self.xlabel=r"$\psi_N$"
         self.ylabel=r""
@@ -1806,6 +1886,18 @@ class plot_object(object):
         self.share_y_label=False
         title=""
         y=simul.normed_flow_inboard[:,[0]]-simul.normed_flow_inboard[:,[1]]
+        ylabel=r"$V_{\|,i} - V_{\|,z}$ Inboard"
+        ylimBottom0=False
+        self.plot_xy_legend(x,y,title,ylabel=ylabel,ylimBottom0=ylimBottom0,same_color=same_color)
+
+    def outboard_flow_difference_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r""
+        self.share_x_label=True
+        self.share_y_label=False
+        title=""
+        y=simul.normed_flow_outboard[:,[0]]-simul.normed_flow_outboard[:,[1]]
         ylabel=r"$V_{\|,i} - V_{\|,z}$ Inboard"
         ylimBottom0=False
         self.plot_xy_legend(x,y,title,ylabel=ylabel,ylimBottom0=ylimBottom0,same_color=same_color)
@@ -2110,10 +2202,27 @@ class plot_object(object):
                         vmin=self.species_data_minmax[specy][0]
                         vmax=self.species_data_minmax[specy][1]
                     self.fig.axes[self.numCols*j+i_s-1].collections[0].set_clim(vmin,vmax)
-                    #shift cmap to have 0 in the middle
-                    shift=1 - vmax/(vmax + abs(vmin))
+                    if vmax*vmin<0:
+                        #shift cmap to have 0 in the middle
+                        if vmax>abs(vmin):
+                            start=0.5*(1-abs(vmin)/vmax)
+                            stop=1.0
+                        else:
+                            start=0
+                            stop=0.5*(1+vmax/abs(vmin))
+                        shift=stop - vmax/(vmax + abs(vmin))+start
+                        
+                        my_cm=shiftedColorMap(cm.coolwarm,midpoint=shift,start=start,stop=stop,name="mymap")
+                    elif vmax>0:
+                        shift=0.5 #do not shift
+                        my_cm=shiftedColorMap(cm.coolwarm,start=0.5,midpoint=shift,name="mymap")
+                    else:
+                        shift=0.5 #do not shift
+                        my_cm=shiftedColorMap(cm.coolwarm,stop=0.5,midpoint=shift,name="mymap")
+                        
                     print "colormap shift: " + str(shift)
-                    my_cm=shiftedColorMap(cm.coolwarm,midpoint=shift,name="mymap")
+
+                    
                     self.fig.axes[self.numCols*j+i_s-1].collections[0].set_clim(vmin,vmax)
                     self.fig.axes[self.numCols*j+i_s-1].collections[0].set_cmap(my_cm)
                     
