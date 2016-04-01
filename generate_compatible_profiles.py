@@ -34,7 +34,7 @@ def generate_compatible_profiles(simul,**kwargs):
     else:
         sameflux=False
 
-        if "sameeta" in kwargs.keys():
+    if "sameeta" in kwargs.keys():
         sameeta=kwargs["sameeta"]
     else:
         sameeta=False
