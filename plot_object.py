@@ -9,6 +9,8 @@ from get_index_range import get_index_range
 from matplotlib.ticker import MaxNLocator
 from matplotlib import ticker
 
+from generate_psi_of_r import drdpsiN_of_r
+
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.ticker import ScalarFormatter, FormatStrFormatter
 
@@ -158,6 +160,7 @@ class plot_object(object):
             "deltaN": self.deltaN_plot_func,
             "deltaEta": self.deltaEta_plot_func,
             "deltaT": self.deltaT_plot_func,
+            "rhoP": self.rhoP_plot_func,
             "density_perturbation": self.density_perturbation_plot_func,
             "potential_perturbation": self.potential_perturbation_plot_func,
             "total_density_perturbation": self.total_density_perturbation_plot_func,
@@ -199,6 +202,8 @@ class plot_object(object):
             "outboard_flow_difference": self.outboard_flow_difference_plot_func,
             "inboard_kPar_difference": self.inboard_kPar_difference_plot_func,
             "outboard_kPar_difference": self.outboard_kPar_difference_plot_func,
+            "electron_flow_diff":self.electron_flow_diff_plot_func,
+            "electron_flow_relative_diff":self.electron_flow_relative_diff_plot_func,
         }
 
         self.xlim=xlim
@@ -1280,6 +1285,7 @@ class plot_object(object):
         self.ylimBottom0=True
         self.plot_xy_legend(x,y,legend,ylimBottom0=self.ylimBottom0,same_color=same_color)
 
+
     def normed_FSABJPar_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.normed_FSABJPar
@@ -1373,6 +1379,21 @@ class plot_object(object):
         self.ylabel=r"$\delta_{\eta}$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
 
+    def rhoP_plot_func(self,simul,same_color=False):
+        x=simul.psi
+        a=0.7 #in meters
+        drdpsiN=drdpsiN_of_r(a,simul)
+        print "dr/dpsiN: "+str(drdpsiN)
+        y=-drdpsiN*simul.deltaEta*simul.etaHat/simul.detaHatdpsiN
+        
+        species=simul.species
+        legend=simul.description
+        self.share_y_label=True
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\rho_{p}/m$"
+        self.plot_xy_legend(x,y,species,legend,same_color=same_color)
+
     def normed_flow_outboard_plot_func(self,simul,same_color=False):
         x=simul.psi
         y=simul.normed_flow_outboard
@@ -1432,6 +1453,8 @@ class plot_object(object):
         self.xlabel=r"$\psi_N$"
         self.ylabel=r"$\langle B V_\parallel \rangle/(Tm/s)$"
         self.plot_xy_legend_species_subplots(x,y,species,legend,same_color=same_color)
+
+
 
     def FSABFlow_plot_func(self,simul,same_color=False):
         x=simul.psi
@@ -1709,7 +1732,6 @@ class plot_object(object):
         mark_zeros=[False,False]
         self.plot_xy_species_multiplot_data_multiplot(x,ys,titles,ylabels=ylabels,ylimBottom0s=ylimBottom0s,ylogscales=ylogscales,mark_zeros=mark_zeros,same_color=same_color)
 
-        
     def baseline_sources_plot_func(self,simul,same_color=False):
         x=simul.psi
         self.xlabel=r"$\psi_N$"
@@ -2144,6 +2166,39 @@ class plot_object(object):
         #print self.plot_func
         self.pedestal_points=simulation.pedestal_points
         self.plot_func(simulation,same_color=same_color)
+
+
+    def electron_flow_diff_plot_func(self,simul1,simul2,same_color=False):
+        x=simul1.psi
+        eI=2
+        y=(simul1.FSABFlow[:,eI]-simul2.FSABFlow[:,eI])
+        species=simul1.species
+        legend=simul1.description
+        self.share_y_label=False
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$\langle \hat{B} \hat{V}_\parallel \rangle_1 - \langle \hat{B} \hat{V}_\parallel \rangle_2$"
+        self.ylimBottom0=False
+        self.plot_xy_legend(x,y,legend,ylabel=self.ylabel,ylimBottom0=self.ylimBottom0,same_color=same_color)
+    
+    def electron_flow_relative_diff_plot_func(self,simul1,simul2,same_color=False):
+        x=simul1.psi
+        eI=2
+        y=(simul1.FSABFlow[:,eI]-simul2.FSABFlow[:,eI])/simul1.FSABFlow[:,eI]
+        species=simul1.species
+        legend=simul1.description
+        self.share_y_label=False
+        self.share_x_label=True
+        self.xlabel=r"$\psi_N$"
+        self.ylabel=r"$1 - \langle \hat{B} \hat{V}_\parallel \rangle_2/\langle \hat{B} \hat{V}_\parallel \rangle_1$"
+        self.ylimBottom0=False
+        self.plot_xy_legend(x,y,legend,ylabel=self.ylabel,ylimBottom0=self.ylimBottom0,same_color=same_color)
+
+    def plot2(self,simulation1,simulation2,same_color=False):
+        #print "func to plot:"
+        #print self.plot_func
+        self.pedestal_points=simulation1.pedestal_points
+        self.plot_func(simulation1,simulation2,same_color=same_color)
 
     def no_post_proc(self):
         #for when no post processing of the figure is needed

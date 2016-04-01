@@ -63,6 +63,7 @@ class perfect_simulation(object):
         self.THat_name="THat"
         self.nHat_name="nHat"
         self.etaHat_name="etaHat"
+        self.detaHatdpsiN_name="d(etaHat)d(psi)"
         self.PhiHat_name="PhiHat"
         self.U_name="U"
         self.deltaN_name="deltaN"
@@ -316,6 +317,18 @@ class perfect_simulation(object):
             return self.outputs[self.group_name+self.etaHat_name][()]
         except KeyError:
             print "etaHat could not be obtained since no external profiles have been speciied and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate the inputs."
+
+    @property
+    def detaHatdpsiN(self):
+        try:
+            return self.input_profiles[self.input_profiles_groupname+"detaHatdpsis"][()]
+        except AttributeError:
+            pass
+        try:
+            return self.outputs[self.group_name+self.detaHatdpsiN_name][()]
+        except KeyError:
+            print "etaHat could not be obtained since no external profiles have been speciied and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate the inputs."
+    
 
     @property
     def PhiHat(self):

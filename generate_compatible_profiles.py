@@ -34,6 +34,12 @@ def generate_compatible_profiles(simul,**kwargs):
     else:
         sameflux=False
 
+        if "sameeta" in kwargs.keys():
+        sameeta=kwargs["sameeta"]
+    else:
+        sameeta=False
+
+        
     if "samefluxshift" in kwargs.keys():
         samefluxshift=kwargs["samefluxshift"]
     else:
@@ -376,7 +382,7 @@ def generate_compatible_profiles(simul,**kwargs):
     #To make n_z and n_i same at points, those points should satisfy
     # eta_z=n_i (n_i/eta_i)^(-[Zz/Zi] Ti/Tz)
     #etaHats[imp_index] = 0.01*nHats[main_index][psiMinPedIndex]
-    if twoSpecies==False:
+    if (twoSpecies==False) and (sameeta==False):
         imp_conc=kwargs["imp_conc"]
         etaHats[imp_index]=imp_conc*(niPed+niCoreGrad*(psi-psiMinPed))
         detaHatdpsis[imp_index] = imp_conc*niCoreGrad
@@ -396,6 +402,8 @@ def generate_compatible_profiles(simul,**kwargs):
             etaHats[imp_index]=bezier_transition(etailist,psiList[:1]+psiList[-1:],pairList[:1]+pairList[-1:],psi)
             detaHatdpsis[imp_index] =simul.inputs.ddpsi_accurate(etaHats[imp_index])
 
+    if sameeta==True:
+        etaHats[imp_index]=etaHats[main_index]
     #solve for Phi to make delta_etai the above value
     #delta_ni=delta_i_factor*dnHatdpsis[mI]/nHats[mI]
     #rhs=((psiAHat*B*numpy.sqrt(THats[mI]))/(Delta*I*numpy.sqrt(mi)))*(delta_etai-delta_ni)
