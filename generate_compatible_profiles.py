@@ -363,7 +363,7 @@ def generate_compatible_profiles(simul,**kwargs):
     #else:
     #    prefactor=1.0
     prefactor=1.0
-    PhiTop=prefactor*THatPed[main_index](PhiTopPoint)*numpy.log(etaiHatPed(PhiTopPoint)*1.0/niHatPed(PhiTopPoint))*2.0*simul.omega/simul.Delta
+    PhiTop=prefactor*(THatPed[main_index](PhiTopPoint)/Zs[main_index])*numpy.log(etaiHatPed(PhiTopPoint)*1.0/niHatPed(PhiTopPoint))*(2.0*simul.omega/simul.Delta)
     
     #for i in [0,1,2]:
     #    print "THat aft "+str(i)+" : " +str(THatAft[i](1))
