@@ -346,7 +346,7 @@ class perfect_simulation(object):
         #intentionally "crude" to use same deriv approx as dGamma_dpsiN
         psiN=self.psi
         PhiHat=self.PhiHat
-        ret=numpy.zeros([len(psiN)-1,3])
+        ret=numpy.zeros([len(psiN)-1,self.num_species])
         for i in range(1,len(psiN)):
             dpsiN=psiN[i]-psiN[i-1]
             dPhiHat=PhiHat[i]-PhiHat[i-1]
@@ -359,7 +359,7 @@ class perfect_simulation(object):
         #intentionally "crude" to use same deriv approx as dGamma_dpsiN
         psiN=self.psi
         THat=self.THat
-        ret=numpy.zeros([len(psiN)-1,3])
+        ret=numpy.zeros([len(psiN)-1,self.num_species])
         for i in range(1,len(psiN)):
             dpsiN=psiN[i]-psiN[i-1]
             dTHat=THat[i]-THat[i-1]
@@ -417,7 +417,7 @@ class perfect_simulation(object):
     def dGammaHat_dpsiN(self):
         psiN=self.psi
         GammaHat=self.particle_flux
-        ret=numpy.zeros([len(psiN)-1,3])
+        ret=numpy.zeros([len(psiN)-1,self.num_species])
         for i in range(1,len(psiN)):
             dpsiN=psiN[i]-psiN[i-1]
             dGammaHat=GammaHat[i]-GammaHat[i-1]
@@ -430,7 +430,7 @@ class perfect_simulation(object):
         #non-adiabatic part
         psiN=self.psi
         qHat=self.conductive_heat_flux
-        ret=numpy.zeros([len(psiN)-1,3])
+        ret=numpy.zeros([len(psiN)-1,self.num_species])
         for i in range(1,len(psiN)):
             dpsiN=psiN[i]-psiN[i-1]
             dqHat=qHat[i]-qHat[i-1]

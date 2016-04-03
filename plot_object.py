@@ -1030,7 +1030,7 @@ class plot_object(object):
 
     def particle_source_plot_func(self,simul,same_color=False):
         x=simul.psi
-        y=simul.particle_source
+        y=simul.particle_source/(simul.masses**2)
         
         species=simul.species
         legend=simul.description
@@ -1116,7 +1116,7 @@ class plot_object(object):
 
     def heat_source_plot_func(self,simul,same_color=False):
         x=simul.psi
-        y=simul.heat_source
+        y=simul.heat_source/(simul.masses**2)
         
         species=simul.species
         legend=simul.description

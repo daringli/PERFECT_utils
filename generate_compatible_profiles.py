@@ -64,11 +64,17 @@ def generate_compatible_profiles(simul,**kwargs):
     else:
         specialEta=False
 
-    
+    #width of simulation region expressed in terms of pedestal width
     if "psiDiamFact" in kwargs.keys():
         psiDiamFact=kwargs["psiDiamFact"]
     else:
         psiDiamFact=5
+
+    #how sharp bezier transition between region is compared to pedestal width
+    if "transitionFact" in kwargs.keys():
+        offset_frac=kwargs["transitionFact"]
+    else:
+        offset_frac=0.2
 
 
 
@@ -157,7 +163,7 @@ def generate_compatible_profiles(simul,**kwargs):
     if allflat==True:
         psiList=[psiMinNotFlat,psiMinPed,psiMaxPed,psiMaxNotFlat]
     #distance in psi until our smooth transition between gradients is finished
-    offset=(psiMaxPed-psiMinPed)/5
+    offset=(psiMaxPed-psiMinPed)*offset_frac
     pairList=[[offset,offset],[offset,offset]]
     if allflat==True:
         pairList=[[offset,offset],[offset,offset],[offset,offset],[offset,offset]]
