@@ -1,0 +1,2 @@
+def is_attribute_species_dependent(simulList,attrib):
+    return all([len(getattr(simulList[i_si],attrib)[0,:])==len(simulList[i_si].species) for i_si in range(len(simulList)) if simulation_has_more_than_1species[i_si] == True])

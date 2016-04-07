@@ -1,0 +1,51 @@
+from shiftedColorMap import shiftedColorMap
+import numpy
+import matplotlib
+import matplotlib.pyplot as plt
+
+def invert_cm(cm,name="reversedCM"):
+    #inverts a colormap
+    """indices=numpy.linspace(0,1,257)
+    rev_indices=1-indices
+    cdict = {
+        'red': [],
+        'green': [],
+        'blue': [],
+        'alpha': []
+    }
+    for i,ri in zip(indices,rev_indices):
+        r, g, b, a = cm(i)
+        cdict['red'].append((ri, r, r))
+        cdict['green'].append((ri, g, g))
+        cdict['blue'].append((ri, b, b))
+        cdict['alpha'].append((ri, a, a))
+    
+    new_cm = matplotlib.colors.LinearSegmentedColormap(name, cdict)
+    plt.register_cmap(cmap=new_cm)"""
+    new_cm=shiftedColorMap(cm,midpoint=0.5,start=1.0,stop=0.0)
+    return new_cm
+
+
+def symmetrize_colormap(cm,vmin,vmax):
+    #if min<0 and max>0, centers the colormap around zero
+    # and if abs(min) != abs(max), truncates it to make values with the same absolute value
+    # have colors with an equal distance from zero.
+    #(default cms uses its entire range no matter how the data looks)
+    if vmax*vmin<0:
+        #shift cmap to have 0 in the middle
+        if vmax>abs(vmin):
+            start=0.5*(1-abs(vmin)/vmax)
+            stop=1.0
+        else:
+            start=0
+            stop=0.5*(1+vmax/abs(vmin))
+        shift=stop - vmax/(vmax + abs(vmin))+start
+                        
+        new_cm=shiftedColorMap(cm,midpoint=shift,start=start,stop=stop,name="new_map")
+    elif vmax>0:
+        shift=0.5 #do not shift
+        new_cm=shiftedColorMap(cm,start=0.5,midpoint=shift,name="new_map")
+    else:
+        shift=0.5 #do not shift
+        new_cm=shiftedColorMap(cm,stop=0.5,midpoint=shift,name="new_map")
+    return new_cm

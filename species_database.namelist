@@ -1,0 +1,27 @@
+&unitSpecification
+  units = "SI"
+  ! Should be SI, for now.
+  ! Other units may be supported later
+/
+
+&speciesMass
+  e = 9.10938356d-31
+  D = 3.349854702d-27
+  T = 5.008267084250913d-27
+  He = 6.644657230d-27
+  Be = 1.4965079306243405d-26
+  C = 1.9926467051999998d-26
+  N = 14.0030740048d-26
+  
+/
+
+&speciesCharge
+  e = -1.602176565d-19
+  D = 1.602176565d-19
+  T = 1.602176565d-19
+  He = 3.20435313d-19
+  Be = 6.40870626d-19
+  C = 9.61305939d-19
+  N = 1.1215235955d-18
+  
+/

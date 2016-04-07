@@ -16,16 +16,19 @@ from get_index_range import get_index_range
 
 
 
-
 sentinel=object() #to detect default inputs
 
 class perfect_simulation(object):
 
-    def __init__(self,input_filename,output_filename=sentinel,group_name=sentinel,pedestal_points=[]):
+    def __init__(self,input_filename,output_filename=sentinel,species_filename=sentinel,group_name=sentinel,pedestal_points=[]):
         
         #description of simulation, for usage as legend in plots, etc.
         self.description=""
-        self.species=[] #list of species identifiers
+        #read species from file in simulation dir
+        #relevant field can also be set by chaning self.species_list
+        if species_filename is not sentinel:
+            self.species=species_filename
+        
 
         #getting input
         self.input=input_filename
@@ -61,10 +64,12 @@ class perfect_simulation(object):
         self.Delta_name="Delta"
         self.omega_name="omega"
         self.THat_name="THat"
+        self.dTHatdpsiN_name="d(THat)d(psi)"
         self.nHat_name="nHat"
         self.etaHat_name="etaHat"
         self.detaHatdpsiN_name="d(etaHat)d(psi)"
         self.PhiHat_name="PhiHat"
+        self.dPhiHatdpsiN_name="d(PhiHat)d(psi)"
         self.U_name="U"
         self.deltaN_name="deltaN"
         self.deltaEta_name="deltaEta"
@@ -84,7 +89,22 @@ class perfect_simulation(object):
 
         self.density_perturbation_name="densityPerturbation"
 
-
+        self.local_name="makeLocalApproximation"
+        
+    @property
+    def species(self):
+        return self.species_list
+    
+    @species.setter
+    def species(self,species_filename):
+        #read species files on the format species1,species2,species3,...
+        #should be on one line. can contain whitespaces
+        self.species_filename="." + "/" + species_filename
+        self.species_dir = self.species_filename.rsplit('/',1)[:-1][0]
+        self.species_filename_nodir = "." + "/" + self.species_filename.rsplit('/',1)[-1]
+        print open(species_filename,'r').read()
+        self.species_list=[x.strip() for x in open(species_filename,'r').read().split('\n')[0].split(',')]
+        
     @property
     def input(self):
         return self.input_filename
@@ -147,7 +167,15 @@ class perfect_simulation(object):
             if self.output_filename is not None:
                 self.always_run_simulation(cmdline)
 
-    
+
+    @property
+    def local(self):
+        if self.outputs[self.group_name+self.local_name][()] == 1:
+            return True
+        elif self.outputs[self.group_name+self.local_name][()] == -1:
+            return False
+        else:
+            print "perfect_simulation: error: makeLocalApproximation is neither true nor false!?"
     @property
     def Z(self):
         return numpy.array(self.inputs.charges)
@@ -199,15 +227,23 @@ class perfect_simulation(object):
         return self.outputs[self.group_name+self.particle_source_name][()]
 
     @property
-    def THat32_new_massfac_particle_source(self):
-        #for comparrison with dGammaHat/dPsiN
-        VPrimeHat=[self.VPrimeHat]
-        VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
-        VPrimeHat=numpy.fabs(VPrimeHat)
-        return 1.6480*self.THat**(3./2.)*self.psiAHat*VPrimeHat/(self.Delta)*self.particle_source
+    def heat_source_over_m2(self):
+        return self.outputs[self.group_name+self.heat_source_name][()]/(self.masses**2)
 
     @property
-    def THat32_particle_source(self):
+    def particle_source_over_m2(self):
+        return self.outputs[self.group_name+self.particle_source_name][()]/(self.masses**2)
+
+    #@property
+    #def THat32_new_massfac_particle_source(self):
+    #    #for comparrison with dGammaHat/dPsiN
+    #    VPrimeHat=[self.VPrimeHat]
+    #    VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
+    #    VPrimeHat=numpy.fabs(VPrimeHat)
+    #    return 1.6480*self.THat**(3./2.)*self.psiAHat*VPrimeHat/(self.Delta)*self.particle_source
+
+    @property
+    def GammaHat_source(self):
         #for comparrison with dGammaHat/dPsiN
         VPrimeHat=[self.VPrimeHat]
         VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
@@ -215,12 +251,16 @@ class perfect_simulation(object):
         return 1.6480*self.THat**(3./2.)*self.psiAHat*VPrimeHat/(self.Delta)*self.particle_source/(self.masses**2)
 
     @property
-    def THat52_source(self):
+    def qHat_source(self):
         #for comparrison with dGammaHat/dPsiN
         VPrimeHat=[self.VPrimeHat]
         VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
         VPrimeHat=numpy.fabs(VPrimeHat)
-        return -self.THat**(5./2.)*self.psiAHat*VPrimeHat/(self.Delta)*(4.1199*self.particle_source + 2.4720*self.heat_source)/(self.masses**2)
+        dPhiHatdpsiN=[self.dPhiHatdpsiN]
+        dPhiHatdpsiN=numpy.dot(numpy.transpose(dPhiHatdpsiN),[numpy.array([1]*self.num_species)])
+        
+        
+        return -self.THat**(5./2.)*self.psiAHat*VPrimeHat/(self.Delta)*(4.1199*self.particle_source + 2.4720*self.heat_source)/(self.masses**2) -((2*self.omega/self.Delta)*self.Z*dPhiHatdpsiN + (5./2.)*self.dTHatdpsiN)*self.particle_flux
 
     @property
     def flow_inboard(self):
@@ -297,6 +337,18 @@ class perfect_simulation(object):
             print "THat could not be obtained since no external profiles have been specified and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate the inputs."
 
     @property
+    def dTHatdpsiN(self):
+        try:
+            return self.input_profiles[self.input_profiles_groupname+"dTHatdpsis"][()]
+        except AttributeError:
+            pass
+        try:
+            return self.outputs[self.group_name+self.dTHatdpsiN_name][()]
+        except KeyError:
+            print "PhiHat could not be obtained since no external profiles have been speciied and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate the inputs."
+
+
+    @property
     def nHat(self):
         try:
             return self.input_profiles[self.input_profiles_groupname+"nHats"][()]
@@ -338,6 +390,17 @@ class perfect_simulation(object):
             pass
         try:
             return self.outputs[self.group_name+self.PhiHat_name][()]
+        except KeyError:
+            print "PhiHat could not be obtained since no external profiles have been speciied and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate the inputs."
+
+    @property
+    def dPhiHatdpsiN(self):
+        try:
+            return self.input_profiles[self.input_profiles_groupname+"dPhiHatdpsi"][()]
+        except AttributeError:
+            pass
+        try:
+            return self.outputs[self.group_name+self.dPhiHatdpsiN_name][()]
         except KeyError:
             print "PhiHat could not be obtained since no external profiles have been speciied and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate the inputs."
 
@@ -479,8 +542,8 @@ class perfect_simulation(object):
 #####################################
 
 class normalized_perfect_simulation(perfect_simulation):
-    def __init__(self,input_filename,norm_filename,output_filename=sentinel,group_name=sentinel,pedestal_points=[]):
-        perfect_simulation.__init__(self,input_filename,output_filename,group_name,pedestal_points)
+    def __init__(self,input_filename,norm_filename,species_filename=sentinel,output_filename=sentinel,group_name=sentinel,pedestal_points=[]):
+        perfect_simulation.__init__(self,input_filename,output_filename,species_filename,group_name,pedestal_points)
 
         self.norm=norm_filename
 
@@ -513,9 +576,7 @@ class normalized_perfect_simulation(perfect_simulation):
         self.eBar=self.normfile[norm_group_name]["eBar"]
         self.ePhiBar=self.normfile[norm_group_name]["ePhiBar"]
         self.vBar=numpy.sqrt(2*self.TBar/float(self.mBar))
-
         
-            
     def verify_Delta(self,tolerance):
         if self.units=="SI":
             Delta_norm=self.mBar*self.vBar/float(self.eBar*self.BBar*self.RBar)

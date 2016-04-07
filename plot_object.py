@@ -253,6 +253,7 @@ class plot_object(object):
         
         self.species_plot_dict={}
         self.species_data_minmax={}
+        self.species_in_simul=[]
         if self.ylim==sentinel:
             self.manual_scale=True #uses above minmax to set plotted datarange
         else:
@@ -321,15 +322,15 @@ class plot_object(object):
         self.adjust_bottom=self.adjust_bottom*self.base_height/self.height
         self.adjust_top=1-(1-self.adjust_top)*self.base_height/self.height
 
-    def update_min_max(self,data,species_plot_index):
+    def update_min_max(self,data,specy):
         if len(data)==0:
             print "update_min_max: warning, input data is empty."
         newmax=numpy.max(data)
-        if newmax>self.species_data_minmax[species_plot_index][1]:
-            self.species_data_minmax[species_plot_index][1]=newmax
+        if newmax>self.species_data_minmax[specy][1]:
+            self.species_data_minmax[specy][1]=newmax
         newmin=numpy.min(data)
-        if newmin<self.species_data_minmax[species_plot_index][0]:
-            self.species_data_minmax[species_plot_index][0]=newmin
+        if newmin<self.species_data_minmax[specy][0]:
+            self.species_data_minmax[specy][0]=newmin
 
     def set_y_scale(self):
             for specy in self.species_plot_dict.keys():
@@ -359,7 +360,7 @@ class plot_object(object):
 
     def plot_xy_data_sameplot_species_multiplot(self,x,ys,species,ylabels=None,ylimBottom0s=None,ylogscales=None,mark_zeros=None,share_x=True,same_color=False):
         #should have the same number of species for all the datasets!!
-
+        self.species_in_simul.append(species)
         if same_color==False:
             self.lwi+=1
 
@@ -494,7 +495,7 @@ class plot_object(object):
 
     
     def plot_xy_species_multiplot_data_multiplot(self,x,ys,titles,ylabels=None,ylimBottom0s=None,ylogscales=None,mark_zeros=None,share_x=True,same_color=False):
-
+        self.species_in_simul.append(species)
         if same_color==False:
             self.lwi+=1
         
@@ -630,7 +631,7 @@ class plot_object(object):
 
         
     def plot_xy_species_sameplot_data_multiplot(self,x,ys,species,ylabels=None,ylimBottom0s=None,ylogscales=None,mark_zeros=None,share_x=True,same_color=False):
-
+        self.species_in_simul.append(species)
 
         if ylabels==None:
             ylabels=['']*len(ys)
@@ -756,7 +757,7 @@ class plot_object(object):
         #see if species has a subplot, if not, create one for it
         #print x
         #print y
-        
+        self.species_in_simul.append(species)
         if same_color==False:
             self.lsi=0
             #print self.color
@@ -772,6 +773,8 @@ class plot_object(object):
             xticklabels=[]
 
         i=0
+        #print species
+        
         for specy in species:
             
             if specy not in self.species_plot_dict.keys():
@@ -842,7 +845,7 @@ class plot_object(object):
                 #ylim_indices=[0,len(y)-1]
             i=i+1
             if share_x==True:
-                if specy!=species[-1]:
+                if self.species_plot_dict[specy]==(self.maxPlotNum+1):
                     xticklabels=xticklabels+self.ax.get_xticklabels()
                 #plt.setp(self.ax.get_yticklabels()[1::2], visible=False)
                 plt.setp(self.ax.get_yticklabels()[0], visible=False)
@@ -866,7 +869,8 @@ class plot_object(object):
         #print "in plot_colormap_xyz_species"
         
         X,Y=numpy.meshgrid(x,y)
-        
+        self.species_in_simul.append(species)
+
         self.current_row=self.current_row+1
         if same_color==False:
             self.lsi=0
@@ -2248,15 +2252,19 @@ class plot_object(object):
         self.fig.subplots_adjust(left=self.adjust_left)
 
         if self.manual_scale==True:
-            for specy in self.species_plot_dict.keys():
-                i_s=self.species_plot_dict[specy]
-                for j in range(self.numRows):
+            for j in range(self.numRows):
+                for specy in self.species_in_simul[j]:
+                    i_s=self.species_plot_dict[specy]
                     if self.ylimBottom0:
                         vmin=0
                     else:
                         vmin=self.species_data_minmax[specy][0]
-                        vmax=self.species_data_minmax[specy][1]
+                    vmax=self.species_data_minmax[specy][1]
                     self.fig.axes[self.numCols*j+i_s-1].collections[0].set_clim(vmin,vmax)
+                    print "----------------------"
+                    print vmax
+                    print vmin
+                    print "----------------------"
                     if vmax*vmin<0:
                         #shift cmap to have 0 in the middle
                         if vmax>abs(vmin):

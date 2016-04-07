@@ -11,6 +11,7 @@ from nu_r import nu_r #nu_r
 from coulomb_logarithms import lambda_ee as coulombLog #lambda=ln(Lambda)
 from perfectProfilesFile import perfectProfiles
 
+from set_species_param import set_species_param
 
 
 #print things
@@ -111,6 +112,10 @@ def generate_compatible_profiles(simul,**kwargs):
     simul.inputs.changevar("resolutionParameters","psiDiameter",psiDiameter)
     simul.inputs.changevar("physicsParameters","psiMid",psiMid)
     simul.inputs.changevar("physicsParameters","leftBoundaryShift",leftBoundaryShift)
+    #this modifies the charge and mass of the species in the simulation
+    set_species_param(simul.species,"/home/bstefan/documents/svn/stefan/scripts/python/PERFECT_utils/species_database.namelist",simul.norm,simul)
+
+    
 
     
     simul.inputs.read(simul.input_filename)
