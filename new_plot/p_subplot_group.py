@@ -28,3 +28,11 @@ class perfect_subplot_group:
     def get_min(self,attr_name):
         mines = [numpy.min(x) for x in self.getattrs(attr_name)]
         return numpy.min(mines)
+
+    def set_middle_attr(self,attr_name,value):
+        #sets an attribute of the middle element of a list.
+        #This is designed for plots where subplots in the same group are close to each other
+        #so that it makes sense to only label one of them.
+        l=len(self.p_subplot_list)
+        i=int(l/2.0)
+        setattr(self.p_subplot_list[i],attr_name,value)

@@ -163,11 +163,40 @@ class perfect_simulation(object):
         self.output=self.input_dir+"/"+self.inputs.outputFilename
         
 
-        def run_simulation(self,cmdline):
-            if self.output_filename is not None:
-                self.always_run_simulation(cmdline)
+    def run_simulation(self,cmdline):
+        if self.output_filename is not None:
+            self.always_run_simulation(cmdline)
 
 
+    def attrib_at_psi_of_theta(self,attrib,psiN):
+        indices=get_index_range(self.psi,[psiN,psiN],ret_range=False)
+        return getattr(self,attrib)[indices[0],:,:]
+                
+    def attrib_max_psi_of_theta(self,attrib,xlim=None):
+        #help function to return the value of psiN that maximizes an attribute
+        #for each given theta
+        if xlim != None:
+            print "xlim: " + str(xlim)
+            indices=get_index_range(self.psi,xlim,ret_range=True)
+            psi=self.psi
+        else:
+            psi=self.psi
+            indices=range(len(psi))
+        print [psi[indices[0]],psi[indices[-1]]]
+        data=getattr(self,attrib)
+        max_indices=numpy.zeros(data[0,:,:].shape)
+        max_psiN=numpy.zeros(data[0,:,:].shape)
+        for i_sp in range(len(data[0,0,:])):
+            #for each species
+            for i_th in range(len(data[0,:,i_sp])):
+                #for each theta
+                print numpy.argmax(data[indices,i_th,i_sp])
+                max_indices[i_th,i_sp] = numpy.argmax(data[indices,i_th,i_sp])
+                max_psiN[i_th,i_sp]=psi[max_indices[i_th,i_sp]]
+        #print max_indices
+        print [numpy.min(max_psiN),numpy.max(max_psiN)]
+        return max_psiN
+    
     @property
     def local(self):
         if self.outputs[self.group_name+self.local_name][()] == 1:
@@ -287,8 +316,37 @@ class perfect_simulation(object):
         return self.outputs[self.group_name+self.flow_name][()]
 
     @property
+    def flow_difference(self):
+        if self.num_species>1:
+            main_index=0
+            impurity_index=1
+            return self.flow[:,:,main_index] - self.flow[:,:,impurity_index]
+        else:
+            print "perfect_simulation: flow_difference: warning: no impurity species. Difference will be just the main ion flow"
+            return self.flow[:,:,main_index]
+
+    @property
+    def flow_max_psi_of_theta(self):
+        return self.attrib_max_psi_of_theta("flow",[0.91,0.97463697978512787])
+
+    @property
+    def flow_at_psi_of_theta(self):
+        return self.attrib_at_psi_of_theta("flow",0.955)
+
+    
+    @property
     def kPar(self):
         return self.outputs[self.group_name+self.kPar_name][()]
+
+    @property
+    def kPar_max_psi_of_theta(self):
+        return self.attrib_max_psi_of_theta("kPar",[0.9,0.97463697978512787])
+
+    @property
+    def kPar_at_psi_of_theta(self):
+        return self.attrib_at_psi_of_theta("kPar",0.955)
+
+    
 
     @property
     def FSABJPar(self):

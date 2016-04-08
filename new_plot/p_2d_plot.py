@@ -11,7 +11,7 @@ import numpy
 import sys
 
 
-def perfect_2d_plot(dirlist,attribs,normname="norms.namelist",speciesname="species",cm=cm.rainbow,lg=True,xlims=[90,100]):
+def perfect_2d_plot(dirlist,attribs,normname="norms.namelist",speciesname="species",cm=cm.rainbow,lg=True,xlims=[90,100],species=True):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -24,6 +24,9 @@ def perfect_2d_plot(dirlist,attribs,normname="norms.namelist",speciesname="speci
     normlist=[x + "/" + normname for x in dirlist]
     specieslist=[x + "/" + speciesname for x in dirlist]
     simulList=perfect_simulations_from_dirs(dirlist,normlist,specieslist)
+    if species==False:
+        for simul in simulList:
+            simul.species_list=['']
 
     #get number of columns needed to fit all species
     species_set=set([])

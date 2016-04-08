@@ -13,7 +13,7 @@ import sys
 
 
 
-def perfect_1d_plot(dirlist,attribs,normname="norms.namelist",speciesname="species",cm=cm.rainbow,lg=True,xlims=[0.9,1.0],same_plot=False,outputname="default",ylabels=None):
+def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",cm=cm.rainbow,lg=True,xlims=[0.9,1.0],same_plot=False,outputname="default",ylabels=None,label_all=False):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -110,7 +110,7 @@ def perfect_1d_plot(dirlist,attribs,normname="norms.namelist",speciesname="speci
                     print "p_1d_plot: warning: more than one of the same species in the simulation. Will add contributions."
                     data=[numpy.sum(getattr(simul,attrib)[:,index[i_si]],axis=1) for i_si,simul in enumerate(simulList) if s in simul.species]
                 
-                x=[simul.psi for simul in simulList if s in simul.species]
+                x=[getattr(simul,xattr) for simul in simulList if s in simul.species]
                 linecolors=[all_linecolors[i_si] for i_si,simul in enumerate(simulList) if s in simul.species]
                 coordinates=(i,0)
                 if perhaps_last and (i_sp == len(species_set) - 1):
@@ -119,8 +119,8 @@ def perfect_1d_plot(dirlist,attribs,normname="norms.namelist",speciesname="speci
                 else:
                     last_groupname="not_last"
 
-                psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,groups=[s,attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,colors=linecolors,yaxis_label=ylabels[i_a]))
-                #psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,group=[s,attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,colors=linecolors))
+                psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,groups=[s,attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,colors=linecolors)) #yaxis_label=ylabels[i_a]
+                
 
         else:
             i=i+1
@@ -131,11 +131,11 @@ def perfect_1d_plot(dirlist,attribs,normname="norms.namelist",speciesname="speci
                 last_groupname="not_last"
             #species independent plot
             data=[getattr(simul,attrib) for simul in simulList]
-            x=[simul.psi for simul in simulList]
+            x=[getattr(simul,xattr) for simul in simulList]
             linecolors=all_linecolors
             coordinates=(i,0)
-            psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,groups=[attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,colors=linecolors,yaxis_label=ylabels[i_a]))
-            #psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,group=[s,attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,colors=linecolors))
+            psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,groups=[attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,colors=linecolors)) #yaxis_label=ylabels[i_a]
+            
         
         psp_lists.append(psp_list)
         if not same_plot:
@@ -154,8 +154,19 @@ def perfect_1d_plot(dirlist,attribs,normname="norms.namelist",speciesname="speci
             print psp.groups
         if same_plot:
             attrib_groups=[perfect_subplot_group(psp_list,groups=[a]) for a in attribs]
+            for ylabel,attrib_group in zip(ylabels,attrib_groups):
+                if label_all:
+                    attrib_group.setattrs("yaxis_label",ylabel)
+                else:
+                    attrib_group.set_middle_attr("yaxis_label",ylabel)
         else:
             attrib_groups=[perfect_subplot_group(psp_list,groups=[a]) for a in [attribs[i_li]]]
+            for ylabel,attrib_group in zip([ylabels[i_li]],attrib_groups):
+                if label_all:
+                    attrib_group.setattrs("yaxis_label",ylabel)
+                else:
+                    attrib_group.set_middle_attr("yaxis_label",ylabel)
+        
         species_groups=[perfect_subplot_group(psp_list,groups=[s]) for s in species_set]
         species_indep_groups=perfect_subplot_group(psp_list,groups=["species_independent"])
         local_group = perfect_subplot_group(psp_list,groups=["local"])
@@ -165,12 +176,18 @@ def perfect_1d_plot(dirlist,attribs,normname="norms.namelist",speciesname="speci
         
         for species_group,s in zip(species_groups,species_set):
             species_group.setattrs("title",s)
+            
 
-        all_group.setattrs("xlims",[0.9,1])
+        all_group.setattrs("xlims",xlims)
         all_group.setattrs("show_yaxis_ticklabel",True)
         last_group.setattrs("show_xaxis_ticklabel",True)
         print gridspec_list[i_li]
-        perfect_visualizer(psp_list,gridspec_list[i_li],global_xlabel=r"$\psi_N$",dimensions=1)
+        if xattr=="psi":
+            global_xlabel=r"$\psi_N$"
+        elif xattr=="theta":
+            global_xlabel=r"$\theta$"
+            
+        perfect_visualizer(psp_list,gridspec_list[i_li],global_xlabel=global_xlabel,dimensions=1)
         if same_plot:
             plt.savefig(outputname+".pdf")
         else:
