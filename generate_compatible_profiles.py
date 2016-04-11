@@ -7,6 +7,7 @@ import numpy #matrix things, etc
 from bezier_transition import bezier_transition #for smooth transition between 2 functions
 import scipy.constants #constants
 import scipy.optimize
+import os
 from nu_r import nu_r #nu_r
 from coulomb_logarithms import lambda_ee as coulombLog #lambda=ln(Lambda)
 from perfectProfilesFile import perfectProfiles
