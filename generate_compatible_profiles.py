@@ -113,10 +113,8 @@ def generate_compatible_profiles(simul,**kwargs):
     simul.inputs.changevar("physicsParameters","psiMid",psiMid)
     simul.inputs.changevar("physicsParameters","leftBoundaryShift",leftBoundaryShift)
     #this modifies the charge and mass of the species in the simulation
-    set_species_param(simul.species,"/home/bstefan/documents/svn/stefan/scripts/python/PERFECT_utils/species_database.namelist",simul.norm,simul)
-
-    
-
+    species_filename= os.path.join(os.path.dirname(__file__), 'species_database.namelist')
+    set_species_param(simul.species,species_filename,simul.norm,simul)
     
     simul.inputs.read(simul.input_filename)
 
