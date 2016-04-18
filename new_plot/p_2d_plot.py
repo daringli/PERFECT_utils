@@ -4,6 +4,8 @@ from p_subplot_group import perfect_subplot_group
 from p_visualizer import perfect_visualizer
 from perfect_simulations_from_dirs import perfect_simulations_from_dirs
 from array_rank import arraylist_rank
+from sort_species_list import sort_species_list
+from generic_species_labels import generic_species_labels
 
 from matplotlib.pyplot import cm
 import matplotlib.pyplot as plt
@@ -11,7 +13,7 @@ import numpy
 import sys
 
 
-def perfect_2d_plot(dirlist,attribs,normname="norms.namelist",speciesname="species",cm=cm.rainbow,lg=True,xlims=[90,100],species=True):
+def perfect_2d_plot(dirlist,attribs,normname="norms.namelist",speciesname="species",cm=cm.rainbow,lg=True,xlims=[90,100],species=True,sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -28,10 +30,20 @@ def perfect_2d_plot(dirlist,attribs,normname="norms.namelist",speciesname="speci
         for simul in simulList:
             simul.species_list=['']
 
+    elif generic_labels:
+        for simul in simulList:
+            simul.species_list=generic_species_labels(simul.species_list,label_dict)
+            first=generic_species_labels(first,label_dict)
+            last=generic_species_labels(last,label_dict)
+            
+        
     #get number of columns needed to fit all species
     species_set=set([])
     for simul in simulList:
         species_set = species_set | set(simul.species)
+    if sort_species:
+        species_set=sort_species_list(list(species_set),first,last)
+    
     
     gridspec=[len(simulList),len(species_set)]
     #print gridspec

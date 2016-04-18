@@ -78,6 +78,11 @@ class perfect_subplot:
 
         self.xlims=kwarg_default("xlims",None,**kwargs)
         self.ylims=kwarg_default("ylims",None,**kwargs)
+
+        self.vlines=kwarg_default("vlines",None,**kwargs)
+        self.hlines=kwarg_default("hlines",None,**kwargs)
+
+        
                 
         #############################################################################
         #
@@ -91,6 +96,7 @@ class perfect_subplot:
 
             #split 2D array into list of 1D arrays
             self.data=array2D_to_array_list(data,data_otheraxis)
+            #print  self.data
 
             #terminology suitable for 1D case
             data_lineaxis=data_otheraxis

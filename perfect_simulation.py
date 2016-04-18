@@ -13,6 +13,7 @@ import scipy.constants
 import subprocess
 from subprocess import call
 from get_index_range import get_index_range
+from nstack import nstack
 
 
 
@@ -80,6 +81,8 @@ class perfect_simulation(object):
 
         self.flow_name="flow"
         self.kPar_name="kPar"
+        self.FSAkPar_name="FSAKPar"
+        self.FSAFlow_name="FSAFlow"
         self.flow_inboard_name="flowInboard"
         self.flow_outboard_name="flowOutboard"
         self.kPar_inboard_name="kParInboard"
@@ -90,6 +93,9 @@ class perfect_simulation(object):
         self.density_perturbation_name="densityPerturbation"
 
         self.local_name="makeLocalApproximation"
+
+        print "Total source charge in domain:" + str(self.total_source_charge)
+        print "final j:" + str(self.jHat[-1])
         
     @property
     def species(self):
@@ -236,7 +242,36 @@ class perfect_simulation(object):
         return self.heat_flux-(5.0/2.0)*self.THat*self.particle_flux
 
     @property
-    def ambipolarity(self):
+    def particle_flux_over_nPed(self):
+        psiN_point=0.9
+        psiN_index=get_index_range(self.psi,[psiN_point,psiN_point])[1]
+        npeds=[simul.nHat[i,psiN_index] for i in range(self.num_species)]
+        return self.particle_flux/npeds
+    
+    
+    @property
+    def momentum_flux_over_nPed(self):
+        psiN_point=0.9
+        psiN_index=get_index_range(self.psi,[psiN_point,psiN_point])[1]
+        npeds=[simul.nHat[i,psiN_index] for i in range(self.num_species)]
+        return self.momentum_flux/npeds
+
+    @property
+    def heat_flux_over_nPed(self):
+        psiN_point=0.9
+        psiN_index=get_index_range(self.psi,[psiN_point,psiN_point])[1]
+        npeds=[simul.nHat[i,psiN_index] for i in range(self.num_species)]
+        return self.heat_flux/npeds
+
+    @property
+    def conductive_heat_flux_over_nPed(self):
+        psiN_point=0.9
+        psiN_index=get_index_range(self.psi,[psiN_point,psiN_point])[1]
+        npeds=[simul.nHat[i,psiN_index] for i in range(self.num_species)]
+        return self.conductive_heat_flux/npeds
+    
+    @property
+    def jHat(self):
         return numpy.sum(self.Z*self.particle_flux,axis=1)
 
     @property
@@ -263,6 +298,21 @@ class perfect_simulation(object):
     def particle_source_over_m2(self):
         return self.outputs[self.group_name+self.particle_source_name][()]/(self.masses**2)
 
+    @property
+    def particle_source_over_m2nPed(self):
+        psiN_point=0.9
+        psiN_index=get_index_range(self.psi,[psiN_point,psiN_point])[1]
+        npeds=[simul.nHat[i,psiN_index] for i in range(self.num_species)]
+        return self.particle_source_over_m2/npeds
+
+    @property
+    def heat_source_over_m2nPed(self):
+        psiN_point=0.9
+        psiN_index=get_index_range(self.psi,[psiN_point,psiN_point])[1]
+        npeds=[simul.nHat[i,psiN_index] for i in range(self.num_species)]
+        return self.heat_source_over_m2/npeds
+    
+    
     #@property
     #def THat32_new_massfac_particle_source(self):
     #    #for comparrison with dGammaHat/dPsiN
@@ -277,7 +327,7 @@ class perfect_simulation(object):
         VPrimeHat=[self.VPrimeHat]
         VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
         VPrimeHat=numpy.fabs(VPrimeHat)
-        return 1.6480*self.THat**(3./2.)*self.psiAHat*VPrimeHat/(self.Delta)*self.particle_source/(self.masses**2)
+        return 2*(numpy.sqrt(numpy.pi)/2)*self.THat**(3./2.)*self.psiAHat*VPrimeHat/(self.Delta)*self.particle_source/(self.masses**2)
 
     @property
     def qHat_source(self):
@@ -289,8 +339,13 @@ class perfect_simulation(object):
         dPhiHatdpsiN=numpy.dot(numpy.transpose(dPhiHatdpsiN),[numpy.array([1]*self.num_species)])
         
         
-        return -self.THat**(5./2.)*self.psiAHat*VPrimeHat/(self.Delta)*(4.1199*self.particle_source + 2.4720*self.heat_source)/(self.masses**2) -((2*self.omega/self.Delta)*self.Z*dPhiHatdpsiN + (5./2.)*self.dTHatdpsiN)*self.particle_flux
+        return -2.0*self.THat**(5./2.)*self.psiAHat*VPrimeHat/(self.Delta)*((5*numpy.sqrt(numpy.pi)/4)*self.particle_source + (3.0*numpy.sqrt(numpy.pi)/4.0)*self.heat_source)/(self.masses**2) -((2*self.omega/self.Delta)*self.Z*dPhiHatdpsiN + (5./2.)*self.dTHatdpsiN)*self.particle_flux
 
+    @property
+    def FSAFlow(self):
+        return self.outputs[self.group_name+self.FSAFlow_name][()]
+    
+    
     @property
     def flow_inboard(self):
         return self.outputs[self.group_name+self.flow_inboard_name][()]
@@ -299,6 +354,11 @@ class perfect_simulation(object):
     def flow_outboard(self):
         return self.outputs[self.group_name+self.flow_outboard_name][()]
 
+    @property
+    def FSAkPar(self):
+        return self.outputs[self.group_name+self.FSAkPar_name][()]
+    
+    
     @property
     def kPar_inboard(self):
         return self.outputs[self.group_name+self.kPar_inboard_name][()]
@@ -314,6 +374,15 @@ class perfect_simulation(object):
     @property
     def flow(self):
         return self.outputs[self.group_name+self.flow_name][()]
+
+    @property
+    def flow_minus_FSAFlow(self):
+        return self.flow-numpy.expand_dims(self.FSAFlow,axis=1)
+
+    
+    @property
+    def flow_over_vT(self):
+        return self.Delta*nstack(numpy.sqrt(self.masses/self.THat),axis=1,n=len(self.theta))*self.outputs[self.group_name+self.flow_name][()]
 
     @property
     def flow_difference(self):
@@ -338,6 +407,11 @@ class perfect_simulation(object):
     def kPar(self):
         return self.outputs[self.group_name+self.kPar_name][()]
 
+    @property
+    def kPar_minus_FSAkPar(self):
+        return self.kPar-numpy.expand_dims(self.FSAkPar,axis=1)
+
+    
     @property
     def kPar_max_psi_of_theta(self):
         return self.attrib_max_psi_of_theta("kPar",[0.9,0.97463697978512787])
@@ -476,6 +550,10 @@ class perfect_simulation(object):
         return ret
 
     @property
+    def dpsiN(self):
+        return self.psi[1]-self.psi[0]
+    
+    @property
     def dTHat_dpsiN(self):
         #intentionally "crude" to use same deriv approx as dGamma_dpsiN
         psiN=self.psi
@@ -487,6 +565,29 @@ class perfect_simulation(object):
             #print dTHat/dpsiN
             ret[i-1]=dTHat/dpsiN
         return ret
+
+    @property
+    def alpha(self):
+        #Zeff-Zmain
+        if self.num_species>2:
+            electron_index=self.species_list.index("e")
+            Z=self.Z
+            Z[electron_index]=0 # to exclude electrons from calculation
+            return numpy.sum(Z**2*self.nHat,axis=1)/numpy.sum(Z*self.nHat,axis=1)-Z[0]
+        else:
+            print "perfect_simulation: alpha: warning: no impurity species. alpha=Zeff-Z_main set to zero."
+            return [0]*len(self.psi)
+
+
+    @property
+    def source_charge(self):
+        return numpy.sum(self.Z*self.GammaHat_source,axis=1)
+    
+    @property
+    def total_source_charge(self):
+        final_i=-30
+        source_charge=numpy.sum(self.Z*self.GammaHat_source,axis=1)
+        return scipy.integrate.simps(source_charge[0:final_i],self.psi[0:final_i])
     
     @property
     def Delta(self):
@@ -538,25 +639,33 @@ class perfect_simulation(object):
     def dGammaHat_dpsiN(self):
         psiN=self.psi
         GammaHat=self.particle_flux
-        ret=numpy.zeros([len(psiN)-1,self.num_species])
+        ret=numpy.zeros([len(psiN),self.num_species])
         for i in range(1,len(psiN)):
             dpsiN=psiN[i]-psiN[i-1]
             dGammaHat=GammaHat[i]-GammaHat[i-1]
             #print dGammaHat/dpsiN
             ret[i-1]=dGammaHat/dpsiN
+        ret[0]=0
         return ret
+
+    @property
+    def djHat_dpsiN(self):
+        return numpy.sum(self.Z*self.dGammaHat_dpsiN,axis=1)
+
+
 
     @property
     def dqHat_dpsiN(self):
         #non-adiabatic part
         psiN=self.psi
         qHat=self.conductive_heat_flux
-        ret=numpy.zeros([len(psiN)-1,self.num_species])
+        ret=numpy.zeros([len(psiN),self.num_species])
         for i in range(1,len(psiN)):
             dpsiN=psiN[i]-psiN[i-1]
             dqHat=qHat[i]-qHat[i-1]
             #print dGammaHat/dpsiN
             ret[i-1]=dqHat/dpsiN
+        ret[0]=0
         return ret
 
     

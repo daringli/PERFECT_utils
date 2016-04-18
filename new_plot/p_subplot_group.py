@@ -2,7 +2,7 @@ from p_subplot import perfect_subplot
 import numpy
 
 class perfect_subplot_group:
-    def __init__(self,p_subplot_list,groups,get_all=False,logic="or"):
+    def __init__(self,p_subplot_list,groups=[],get_all=False,logic="or"):
         if get_all is False:
             if logic=="or":
                 self.p_subplot_list = [x for x in p_subplot_list if not set(x.groups).isdisjoint(groups)]
@@ -21,14 +21,33 @@ class perfect_subplot_group:
         return [getattr(p_subplot,attr_name) for p_subplot in self.p_subplot_list]
 
 
-    def get_max(self,attr_name):
-        maxes = [numpy.max(x) for x in self.getattrs(attr_name)]
-        return numpy.max(maxes)
+    def get_max(self,attr_name,margin=0):
+        #get the maximum values for all quantites in all subplots in this group
+        maxes=[]
+        for subplot in self.getattrs(attr_name):
+            for simulation in subplot:
+                maxes=maxes+[numpy.max(simulation)]
+        max=numpy.max(maxes)
+        if margin == 0:
+            return max
+        else:
+            return max + margin*self.get_range(attr_name)
 
-    def get_min(self,attr_name):
-        mines = [numpy.min(x) for x in self.getattrs(attr_name)]
-        return numpy.min(mines)
+    def get_min(self,attr_name,margin=0):
+        #get the maximum values for all quantites in all subplots in this group
+        mines=[]
+        for subplot in self.getattrs(attr_name):
+            for simulation in subplot:
+                mines=mines+[numpy.min(simulation)]   
+        min = numpy.min(mines)
+        if margin == 0:
+            return min
+        else:
+            return min - margin*self.get_range(attr_name)
 
+    def get_range(self,attr_name):
+        return numpy.fabs(self.get_max(attr_name)-self.get_min(attr_name))
+        
     def set_middle_attr(self,attr_name,value):
         #sets an attribute of the middle element of a list.
         #This is designed for plots where subplots in the same group are close to each other

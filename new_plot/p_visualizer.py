@@ -34,13 +34,13 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
         adjust_left=kwarg_default("adjust_left",0.17,**kwargs)
         adjust_top=kwarg_default("adjust_top",0.97,**kwargs)
         adjust_right=kwarg_default("adjust_right",0.95,**kwargs)
-        base_rows=3
+        base_rows=3.0
     elif dimensions == 2:
         adjust_bottom=kwarg_default("adjust_bottom",0.15,**kwargs)
         adjust_left=kwarg_default("adjust_left",0.12,**kwargs)
         adjust_top=kwarg_default("adjust_top",0.85,**kwargs)
         adjust_right=kwarg_default("adjust_right",0.99,**kwargs)
-        base_rows=2
+        base_rows=2.0
     base_topbot_adjust=adjust_bottom+(1-adjust_top)
 
     def row_to_height(rows):
@@ -102,6 +102,12 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
         ax.spines['top'].set_linestyle(p_subplot.border_linestyle)
         ax.spines['left'].set_linestyle(p_subplot.border_linestyle)
         ax.spines['right'].set_linestyle(p_subplot.border_linestyle)
+        if p_subplot.vlines is not None:
+            for p in p_subplot.vlines:
+                ax.axvline(x=p,color='silver',linestyle=':')
+        if p_subplot.hlines is not None:
+            for p in p_subplot.hlines:
+                ax.axhline(y=p,color='k',linestyle=':')
         
         if p_subplot.show_xaxis_ticklabel == False:
             plt.setp(ax.get_xticklabels(), visible=False)
@@ -138,18 +144,14 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
         
         ############## 1D #########
         if p_subplot.dimensions == 1:
-            x=numpy.transpose(p_subplot.x)
-            y=numpy.transpose(p_subplot.data)
-            
+            x=p_subplot.x
+            y=p_subplot.data            
             ax.yaxis.offset_text_position="there"
 
             if type(p_subplot.linestyles) is not list:
-                p_subplot.linestyles=[p_subplot.linestyles]*len(y[0,:])
-            for i in range(len(y[0,:])):
-                #print len(y[0,:])
-                #print len(p_subplot.colors)
-                #print len(p_subplot.linestyles)
-                ax.plot(x[:,i],y[:,i],linestyle=p_subplot.linestyles[i],color=p_subplot.colors[i])
+                p_subplot.linestyles=[p_subplot.linestyles]*len(y)
+            for i in range(len(y)):
+                ax.plot(x[i],y[i],linestyle=p_subplot.linestyles[i],color=p_subplot.colors[i])
             ax.yaxis.set_label_coords(-0.15, 0.5)
             ax.set_title(p_subplot.title,y=0.40,x=1.04,fontsize=8)
             

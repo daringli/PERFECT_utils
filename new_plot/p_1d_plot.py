@@ -5,15 +5,19 @@ from p_visualizer import perfect_visualizer
 from perfect_simulations_from_dirs import perfect_simulations_from_dirs
 from array_rank import arraylist_rank
 from is_attribute_species_dependent import is_attribute_species_dependent
+from sort_species_list import sort_species_list
+from generic_species_labels import generic_species_labels
 
 from matplotlib.pyplot import cm
 import matplotlib.pyplot as plt
 import numpy
 import sys
 
+import scipy.integrate
 
 
-def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",cm=cm.rainbow,lg=True,xlims=[0.9,1.0],same_plot=False,outputname="default",ylabels=None,label_all=False):
+
+def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",cm=cm.rainbow,lg=True,xlims=[0.9,1.0],same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -46,8 +50,11 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
         print "p_1d_plot: warning: there are simulations with one (or) less species! Logic to determine whether attribute is a species property will not work."
         
     
-
-    #get number of columns needed to fit all species
+    if generic_labels:
+        for simul in simulList:
+            simul.species_list=generic_species_labels(simul.species_list,label_dict)
+            first=generic_species_labels(first,label_dict)
+            last=generic_species_labels(last,label_dict)
     species_set=set([])
     for simul in simulList:
         species_set = species_set | set(simul.species)
@@ -63,10 +70,13 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
     #assign colors to simulations
     all_linecolors=[]
     color_index=0
-    for loc in local:
-        all_linecolors.append(colors[color_index])
-        if loc == True:
-            color_index=color_index+1
+    if lg:
+        for loc in local:
+            all_linecolors.append(colors[color_index])
+            if loc == True:
+                color_index=color_index+1
+    else:
+        all_linecolors=colors
         
     linestyles=[] #linestyles generated from local or global
     for l in local:
@@ -95,8 +105,8 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                 perhaps_last=False
         else:
             perhaps_last=True
-
-            
+        if sort_species:
+            species_set=sort_species_list(list(species_set),first,last)
         if attrib_sp_dep:
             for i_sp,s in enumerate(species_set):
                 i=i+1
@@ -180,6 +190,8 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
 
         all_group.setattrs("xlims",xlims)
         all_group.setattrs("show_yaxis_ticklabel",True)
+        all_group.setattrs("vlines",vlines)
+        all_group.setattrs("hlines",hlines)
         last_group.setattrs("show_xaxis_ticklabel",True)
         print gridspec_list[i_li]
         if xattr=="psi":
@@ -187,7 +199,7 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
         elif xattr=="theta":
             global_xlabel=r"$\theta$"
             
-        perfect_visualizer(psp_list,gridspec_list[i_li],global_xlabel=global_xlabel,dimensions=1)
+        perfect_visualizer(psp_list,gridspec_list[i_li],global_xlabel=global_xlabel,dimensions=1,global_ylabel=global_ylabel)
         if same_plot:
             plt.savefig(outputname+".pdf")
         else:
