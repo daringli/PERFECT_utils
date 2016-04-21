@@ -193,7 +193,7 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
         all_group.setattrs("vlines",vlines)
         all_group.setattrs("hlines",hlines)
         last_group.setattrs("show_xaxis_ticklabel",True)
-        print gridspec_list[i_li]
+        #print gridspec_list[i_li]
         if xattr=="psi":
             global_xlabel=r"$\psi_N$"
         elif xattr=="theta":

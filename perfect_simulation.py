@@ -228,6 +228,14 @@ class perfect_simulation(object):
         VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
         signOfVPrimeHat=numpy.sign(VPrimeHat)
         return self.outputs[self.group_name+self.momentum_flux_name][()]*signOfVPrimeHat
+
+    @property
+    def m_momentum_flux(self):
+        return self.momentum_flux*self.masses
+
+    @property
+    def sum_m_momentum_flux(self):
+        return numpy.sum(self.masses*self.momentum_flux,axis=1)
     
     @property
     def heat_flux(self):
@@ -245,7 +253,7 @@ class perfect_simulation(object):
     def particle_flux_over_nPed(self):
         psiN_point=0.9
         psiN_index=get_index_range(self.psi,[psiN_point,psiN_point])[1]
-        npeds=[simul.nHat[i,psiN_index] for i in range(self.num_species)]
+        npeds=[self.nHat[psiN_index,i] for i in range(self.num_species)]
         return self.particle_flux/npeds
     
     
@@ -253,26 +261,38 @@ class perfect_simulation(object):
     def momentum_flux_over_nPed(self):
         psiN_point=0.9
         psiN_index=get_index_range(self.psi,[psiN_point,psiN_point])[1]
-        npeds=[simul.nHat[i,psiN_index] for i in range(self.num_species)]
+        npeds=[self.nHat[psiN_index,i] for i in range(self.num_species)]
         return self.momentum_flux/npeds
+
+    @property
+    def m_momentum_flux_over_nPed(self):
+        psiN_point=0.9
+        psiN_index=get_index_range(self.psi,[psiN_point,psiN_point])[1]
+        npeds=[self.nHat[psiN_index,i] for i in range(self.num_species)]
+        return self.m_momentum_flux/npeds
 
     @property
     def heat_flux_over_nPed(self):
         psiN_point=0.9
         psiN_index=get_index_range(self.psi,[psiN_point,psiN_point])[1]
-        npeds=[simul.nHat[i,psiN_index] for i in range(self.num_species)]
+        npeds=[self.nHat[psiN_index,i] for i in range(self.num_species)]
         return self.heat_flux/npeds
 
     @property
     def conductive_heat_flux_over_nPed(self):
         psiN_point=0.9
         psiN_index=get_index_range(self.psi,[psiN_point,psiN_point])[1]
-        npeds=[simul.nHat[i,psiN_index] for i in range(self.num_species)]
+        npeds=[self.nHat[psiN_index,i] for i in range(self.num_species)]
         return self.conductive_heat_flux/npeds
     
     @property
     def jHat(self):
         return numpy.sum(self.Z*self.particle_flux,axis=1)
+
+    #for backwards compatibility, for now.
+    @property
+    def ambipolarity(self):
+        return self.jHat
 
     @property
     def momentum_flux_sum(self):
@@ -302,14 +322,14 @@ class perfect_simulation(object):
     def particle_source_over_m2nPed(self):
         psiN_point=0.9
         psiN_index=get_index_range(self.psi,[psiN_point,psiN_point])[1]
-        npeds=[simul.nHat[i,psiN_index] for i in range(self.num_species)]
+        npeds=[self.nHat[psiN_index,i] for i in range(self.num_species)]
         return self.particle_source_over_m2/npeds
 
     @property
     def heat_source_over_m2nPed(self):
         psiN_point=0.9
         psiN_index=get_index_range(self.psi,[psiN_point,psiN_point])[1]
-        npeds=[simul.nHat[i,psiN_index] for i in range(self.num_species)]
+        npeds=[self.nHat[psiN_index,i] for i in range(self.num_species)]
         return self.heat_source_over_m2/npeds
     
     
@@ -640,13 +660,24 @@ class perfect_simulation(object):
         psiN=self.psi
         GammaHat=self.particle_flux
         ret=numpy.zeros([len(psiN),self.num_species])
-        for i in range(1,len(psiN)):
+        for i in range(1,len(psiN)-1):
             dpsiN=psiN[i]-psiN[i-1]
-            dGammaHat=GammaHat[i]-GammaHat[i-1]
+            dGammaHat=GammaHat[i+1]-GammaHat[i-1]     
             #print dGammaHat/dpsiN
-            ret[i-1]=dGammaHat/dpsiN
-        ret[0]=0
+            ret[i]=dGammaHat/(2.0*dpsiN) 
         return ret
+
+    @property
+    def jprefac_dPi_dpsiN(self):
+        psiN=self.psi
+        Pi=self.sum_m_momentum_flux
+        ret=numpy.zeros(len(psiN))
+        for i in range(1,len(psiN)-1):
+            dpsiN=psiN[i]-psiN[i-1]
+            dPi=Pi[i+1]-Pi[i-1]     
+            #print dGammaHat/dpsiN
+            ret[i]=dPi/(2.0*dpsiN) 
+        return ret*self.Delta/self.psiAHat
 
     @property
     def djHat_dpsiN(self):

@@ -494,7 +494,7 @@ class plot_object(object):
 
 
     
-    def plot_xy_species_multiplot_data_multiplot(self,x,ys,titles,ylabels=None,ylimBottom0s=None,ylogscales=None,mark_zeros=None,share_x=True,same_color=False):
+    def plot_xy_species_multiplot_data_multiplot(self,x,ys,titles,species=[],ylabels=None,ylimBottom0s=None,ylogscales=None,mark_zeros=None,share_x=True,same_color=False):
         self.species_in_simul.append(species)
         if same_color==False:
             self.lwi+=1

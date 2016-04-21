@@ -9,6 +9,7 @@ def is_attribute_species_dependent(simulList,attrib):
 
     #warning: this will always be false for simulations with one species
     #TODO: species dependence of attributes should be encoded in simulation object
+    print attrib
     return all([numpy.shape(getattr(simul,attrib))[-1]  == len(simul.species) for simul in simulList])
 
 

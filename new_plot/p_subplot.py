@@ -5,6 +5,8 @@ from array2D_to_array_list import array2D_to_array_list
 from sys import exit
 from matplotlib.pyplot import cm
 from symmetrize_colormap import invert_cm
+from colormap_remove_middle import cm_remove_middle
+from diverging_red_blue_colormap import diverging_rb_cm
 
 class perfect_subplot:
     def __init__(self,data,x,subplot_coordinates,dimensions=None,y=None,**kwargs):
@@ -200,7 +202,8 @@ class perfect_subplot:
 
             self.zlims=kwarg_default("zlims",None,**kwargs)
 
-            self.cm=kwarg_default("cm",invert_cm(cm.RdBu),**kwargs)
+            self.cm=kwarg_default("cm",invert_cm(cm_remove_middle(cm.RdBu)),**kwargs)
+            #self.cm=kwarg_default("cm",diverging_rb_cm(),**kwargs)
             self.symmetrize_cm=kwarg_default("symmetrize_cm",True,**kwargs)
 
             self.hidden_xticklabels=kwarg_default("hidden_xticklabels",[0,-1],**kwargs)
