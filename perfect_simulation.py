@@ -94,8 +94,8 @@ class perfect_simulation(object):
 
         self.local_name="makeLocalApproximation"
 
-        print "Total source charge in domain:" + str(self.total_source_charge)
-        print "final j:" + str(self.jHat[-1])
+        #print "Total source charge in domain:" + str(self.total_source_charge)
+        #print "final j:" + str(self.jHat[-1])
         
     @property
     def species(self):
