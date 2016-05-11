@@ -24,7 +24,26 @@ def colorlist(nspecies,nsimul,lg=True):
         c33=colortuple(37,52,148)     
         
 
-        colorlist=[c11,c12,c13,c21,c22,c23,c31,c32,c33]
+        colorlist=[c11,c12,c13,c21,c22,c21,c31,c32,c33]
+
+    if nspecies==3 and nsimul==1:
+
+        
+        c11=colortuple(223,101,176)
+        c12=colortuple(221,28,119)
+        c13=colortuple(189,0,38)
+
+        c21=colortuple(254,153,41)
+        c22=colortuple(217,95,14)
+        c23=colortuple(153,52,4)
+
+        c31=colortuple(65,182,196)
+        c32=colortuple(44,127,184)
+        c33=colortuple(37,52,148)     
+        
+
+        #colorlist=[c11,c12,c13,c21,c22,c23,c31,c32,c33]
+        colorlist=[c13,c21,c32]
     elif nspecies==1 and nsimul==3:
         c1=colortuple(150,150,150)
         c2=colortuple(99,99,99)

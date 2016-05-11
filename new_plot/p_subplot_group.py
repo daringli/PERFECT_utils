@@ -16,9 +16,19 @@ class perfect_subplot_group:
         for p_subplot in self.p_subplot_list:
             setattr(p_subplot,attr_name,value)
         
-    def getattrs(self,attr_name):
+    def getattrs(self,attr_name,range=True):
         #returns a list of the attribute for all members in the list
-        return [getattr(p_subplot,attr_name) for p_subplot in self.p_subplot_list]
+        if range:
+            # we only return the plotted part of the array attribute
+            if attr_name == "data":
+                return [p_subplot.data_inrange() for p_subplot in self.p_subplot_list]
+            if attr_name == "x":
+                return [p_subplot.x_inrange() for p_subplot in self.p_subplot_list]
+            if attr_name == "y":
+                return [p_subplot.y_inrange() for p_subplot in self.p_subplot_list]
+        else:
+            # we return the entire array, disregarding xlimits and ylimits
+            return [getattr(p_subplot,attr_name) for p_subplot in self.p_subplot_list]
 
 
     def get_max(self,attr_name,margin=0):
@@ -27,7 +37,7 @@ class perfect_subplot_group:
         for subplot in self.getattrs(attr_name):
             for simulation in subplot:
                 maxes=maxes+[numpy.max(simulation)]
-        max=numpy.max(maxes)
+        max=numpy.max(maxes)                
         if margin == 0:
             return max
         else:
@@ -38,7 +48,7 @@ class perfect_subplot_group:
         mines=[]
         for subplot in self.getattrs(attr_name):
             for simulation in subplot:
-                mines=mines+[numpy.min(simulation)]   
+                mines=mines+[numpy.min(simulation)]
         min = numpy.min(mines)
         if margin == 0:
             return min

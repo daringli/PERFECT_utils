@@ -162,6 +162,9 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
     for i_li,psp_list in enumerate(psp_lists):
         for psp in psp_list:
             print psp.groups
+            psp.xlims=xlims
+            psp.data=psp.data_inrange()
+            psp.x=psp.x_inrange()
         if same_plot:
             attrib_groups=[perfect_subplot_group(psp_list,groups=[a]) for a in attribs]
             for ylabel,attrib_group in zip(ylabels,attrib_groups):
@@ -187,8 +190,6 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
         for species_group,s in zip(species_groups,species_set):
             species_group.setattrs("title",s)
             
-
-        all_group.setattrs("xlims",xlims)
         all_group.setattrs("show_yaxis_ticklabel",True)
         all_group.setattrs("vlines",vlines)
         all_group.setattrs("hlines",hlines)

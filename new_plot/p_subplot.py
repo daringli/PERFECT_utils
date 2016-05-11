@@ -7,6 +7,7 @@ from matplotlib.pyplot import cm
 from symmetrize_colormap import invert_cm
 from colormap_remove_middle import cm_remove_middle
 from diverging_red_blue_colormap import diverging_rb_cm
+from get_index_range import get_index_range
 
 class perfect_subplot:
     def __init__(self,data,x,subplot_coordinates,dimensions=None,y=None,**kwargs):
@@ -148,6 +149,7 @@ class perfect_subplot:
             self.hidden_xticklabels=kwarg_default("hidden_xticklabels",[],**kwargs)
             self.hidden_yticklabels=kwarg_default("hidden_yticklabels",[0,-1],**kwargs)
             self.linestyles=kwarg_default("linestyles",["solid"]*len(x),**kwargs)
+            self.linewidths=kwarg_default("linewidths",[1]*len(x),**kwargs)
             self.colors=kwarg_default("colors",["k"]*len(x),**kwargs)
             
 
@@ -209,6 +211,46 @@ class perfect_subplot:
             self.hidden_xticklabels=kwarg_default("hidden_xticklabels",[0,-1],**kwargs)
             self.hidden_yticklabels=kwarg_default("hidden_yticklabels",[],**kwargs)
             self.hidden_zticklabels=kwarg_default("hidden_zticklabels",[],**kwargs)
+
+
+    #functions data in the range that will be plotted
+
+    def x_inrange(self):
+        if self.dimensions==1:
+            xs=[]
+            for x in self.x:
+                ixrange=get_index_range(x,self.xlims,True)
+                xs=xs + [x[ixrange]]
+            return xs
+        if self.dimensions==2:
+            ixrange=get_index_range(self.x,self.xlims,True)
+            return self.x[ixrange]
+
+    def y_inrange(self):
+        if self.dimensions==1:
+            print "warning-error: Cannot take yrange of 1D data."
+        if self.dimensions==2:
+            iyrange=get_index_range(self.y,self.ylims,True)
+            return self.y[iyrange]
+
+    def data_inrange(self):
+        #print self.dimensions
+        if self.dimensions==1:
+            #since a subplot can have 1D data of different length
+            data=[]
+            for x,d in zip(self.x,self.data):
+                ixrange=get_index_range(x,self.xlims,True)
+                data=data+[d[ixrange]]
+        if self.dimensions==2:
+            xlims=self.xlims
+            ylims=self.ylims
+            ixrange=numpy.array(get_index_range(self.x,xlims,True))
+            iyrange=numpy.array(get_index_range(self.y,ylims,True))
+            data=self.data[ixrange[:,numpy.newaxis],iyrange]
+            #print numpy.shape(data)
+            #print numpy.size(ixrange)
+            #print numpy.size(iyrange)
+        return data
 
 if __name__=="__main__":
     data=numpy.array([[1,2,3],[4,5,6]])

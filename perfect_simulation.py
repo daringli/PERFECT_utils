@@ -67,6 +67,7 @@ class perfect_simulation(object):
         self.THat_name="THat"
         self.dTHatdpsiN_name="d(THat)d(psi)"
         self.nHat_name="nHat"
+        self.dnHatdpsiN_name="d(nHat)d(psi)"
         self.etaHat_name="etaHat"
         self.detaHatdpsiN_name="d(etaHat)d(psi)"
         self.PhiHat_name="PhiHat"
@@ -80,6 +81,9 @@ class perfect_simulation(object):
         self.particle_source_name="particleSourceProfile"
 
         self.flow_name="flow"
+        self.toroidal_flow_name="toroidalFlow"
+        self.poloidal_flow_name="poloidalFlow"
+        self.magnetization_flow_perturbation_name="magnetizationFlowPerturbation"
         self.kPar_name="kPar"
         self.FSAkPar_name="FSAKPar"
         self.FSAFlow_name="FSAFlow"
@@ -89,6 +93,11 @@ class perfect_simulation(object):
         self.kPar_outboard_name="kParOutboard"
         self.collisionality_name="nuPrimeProfile"
         self.FSABFlow_name="FSABFlow"
+
+        self.RHat_name="RHat"
+        self.IHat_name="IHat"
+        self.BHat_name="BHat"
+        self.FSABHat2_name="FSABHat2"
 
         self.density_perturbation_name="densityPerturbation"
 
@@ -177,18 +186,22 @@ class perfect_simulation(object):
     def attrib_at_psi_of_theta(self,attrib,psiN):
         indices=get_index_range(self.psi,[psiN,psiN],ret_range=False)
         return getattr(self,attrib)[indices[0],:,:]
+
+    def attrib_at_theta_of_psi(self,attrib,theta):
+        indices=get_index_range(self.theta,[theta,theta],ret_range=False)
+        return getattr(self,attrib)[:,indices[0],:]
                 
     def attrib_max_psi_of_theta(self,attrib,xlim=None):
         #help function to return the value of psiN that maximizes an attribute
         #for each given theta
         if xlim != None:
-            print "xlim: " + str(xlim)
+            #print "xlim: " + str(xlim)
             indices=get_index_range(self.psi,xlim,ret_range=True)
             psi=self.psi
         else:
             psi=self.psi
             indices=range(len(psi))
-        print [psi[indices[0]],psi[indices[-1]]]
+        #print [psi[indices[0]],psi[indices[-1]]]
         data=getattr(self,attrib)
         max_indices=numpy.zeros(data[0,:,:].shape)
         max_psiN=numpy.zeros(data[0,:,:].shape)
@@ -196,11 +209,11 @@ class perfect_simulation(object):
             #for each species
             for i_th in range(len(data[0,:,i_sp])):
                 #for each theta
-                print numpy.argmax(data[indices,i_th,i_sp])
+                #print numpy.argmax(data[indices,i_th,i_sp])
                 max_indices[i_th,i_sp] = numpy.argmax(data[indices,i_th,i_sp])
                 max_psiN[i_th,i_sp]=psi[max_indices[i_th,i_sp]]
         #print max_indices
-        print [numpy.min(max_psiN),numpy.max(max_psiN)]
+        #print [numpy.min(max_psiN),numpy.max(max_psiN)]
         return max_psiN
     
     @property
@@ -402,7 +415,7 @@ class perfect_simulation(object):
     
     @property
     def flow_over_vT(self):
-        return self.Delta*nstack(numpy.sqrt(self.masses/self.THat),axis=1,n=len(self.theta))*self.outputs[self.group_name+self.flow_name][()]
+        return self.Delta*nstack(numpy.sqrt(self.masses/self.THat),axis=1,n=len(self.theta))*self.flow
 
     @property
     def flow_difference(self):
@@ -414,6 +427,77 @@ class perfect_simulation(object):
             print "perfect_simulation: flow_difference: warning: no impurity species. Difference will be just the main ion flow"
             return self.flow[:,:,main_index]
 
+    @property
+    def toroidal_flow(self):
+        return self.outputs[self.group_name+self.toroidal_flow_name][()]
+
+    @property
+    def toroidal_flow_at_psi_of_theta(self):
+        return self.attrib_at_psi_of_theta("toroidal_flow",0.955)
+
+    @property
+    def toroidal_flow_outboard(self):
+        return self.attrib_at_theta_of_psi("toroidal_flow",0)
+
+    @property
+    def toroidal_flow_inboard(self):
+        return self.attrib_at_theta_of_psi("toroidal_flow",numpy.pi)
+    
+    @property
+    def toroidal_flow_over_vT(self):
+        return self.Delta*nstack(numpy.sqrt(self.masses/self.THat),axis=1,n=len(self.theta))*self.toroidal_flow
+
+    @property
+    def toroidal_flow_difference(self):
+        if self.num_species>1:
+            main_index=0
+            impurity_index=1
+            return self.toroidal_flow[:,:,main_index] - self.toroidal_flow[:,:,impurity_index]
+        else:
+            print "perfect_simulation: toroidal_flow_difference: warning: no impurity species. Difference will be just the main ion toroidal flow"
+            return self.toroidal_flow[:,:,main_index]
+
+    
+    @property
+    def poloidal_flow(self):
+        return self.outputs[self.group_name+self.poloidal_flow_name][()]
+
+    @property
+    def poloidal_flow_at_psi_of_theta(self):
+        return self.attrib_at_psi_of_theta("poloidal_flow",0.955)
+
+    @property
+    def poloidal_flow_outboard(self):
+        return self.attrib_at_theta_of_psi("poloidal_flow",0)
+
+    @property
+    def poloidal_flow_inboard(self):
+        return self.attrib_at_theta_of_psi("poloidal_flow",numpy.pi)
+
+    @property
+    def k_poloidal(self):
+        return self.poloidal_flow*2*self.psiAHat*self.Z*self.FSABHat2[:,numpy.newaxis,numpy.newaxis]/(numpy.expand_dims(self.BHat*self.IHat,axis=2)*numpy.expand_dims(self.dTHatdpsiN,axis=1))
+
+    @property
+    def poloidal_flow_over_vT(self):
+        return self.Delta*nstack(numpy.sqrt(self.masses/self.THat),axis=1,n=len(self.theta))*self.poloidal_flow
+
+    @property
+    def poloidal_flow_difference(self):
+        if self.num_species>1:
+            main_index=0
+            impurity_index=1
+            return self.poloidal_flow[:,:,main_index] - self.poloidal_flow[:,:,impurity_index]
+        else:
+            print "perfect_simulation: poloidal_flow_difference: warning: no impurity species. Difference will be just the main ion poloidal flow"
+            return self.poloidal_flow[:,:,main_index]
+
+    
+    @property
+    def magnetization_flow_perturbation(self):
+        return self.outputs[self.group_name+self.magnetization_flow_perturbation_name][()]
+
+    
     @property
     def flow_max_psi_of_theta(self):
         return self.attrib_max_psi_of_theta("flow",[0.91,0.97463697978512787])
@@ -450,12 +534,12 @@ class perfect_simulation(object):
     def potential_perturbation(self):
         prefactor=numpy.sum((self.Z**2)*(self.nHat/self.THat),axis=1)**(-1)*self.Delta/(2*self.omega)
         prefactor=prefactor[:,numpy.newaxis]
+        return prefactor*self.charge_perturbation
+
+    @property
+    def charge_perturbation(self):
         Zn=numpy.expand_dims(self.Z*self.nHat, axis=1)
-        #print Zn.shape
-        #print self.density_perturbation.shape
-        #print prefactor.shape
-        #print (prefactor*numpy.sum(Zn*self.density_perturbation,axis=2)).shape
-        return prefactor*numpy.sum(Zn*self.density_perturbation,axis=2)
+        return numpy.sum(Zn*self.density_perturbation,axis=2)
     
     @property
     def U(self):
@@ -510,6 +594,17 @@ class perfect_simulation(object):
             return self.outputs[self.group_name+self.nHat_name][()]
         except KeyError:
             print "nHat could not be obtained since no external profiles have been speciied and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate the inputs."
+
+    @property
+    def dnHatdpsiN(self):
+        try:
+            return self.input_profiles[self.input_profiles_groupname+"dnHatdpsis"][()]
+        except AttributeError:
+            pass
+        try:
+            return self.outputs[self.group_name+self.dnHatdpsiN_name][()]
+        except KeyError:
+            print "nHat could not be obtained since no external profiles have been specified and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate the inputs."
 
     @property
     def etaHat(self):
@@ -699,6 +794,70 @@ class perfect_simulation(object):
         ret[0]=0
         return ret
 
+    @property
+    def IHat(self):
+        return nstack(self.outputs[self.group_name+self.IHat_name][()],axis=1,n=len(self.theta)) #add theta axis
+
+    @property
+    def RHat(self):
+        return nstack(self.outputs[self.group_name+self.RHat_name][()],axis=0,n=len(self.psi)) #add psi axis
+
+    @property
+    def BHat(self):
+        return self.outputs[self.group_name+self.BHat_name][()]
+
+    @property
+    def FSABHat2(self):
+        return self.outputs[self.group_name+self.FSABHat2_name][()]
+
+    @property
+    def Bt(self):
+        return self.IHat/self.RHat
+
+    @property
+    def Bp(self):
+        return numpy.sqrt(self.BHat**2-self.Bt**2)
+
+    @property
+    def poloidal_flow_parallel(self):
+        return numpy.expand_dims(self.Bp/self.BHat,axis=2)*self.flow
+
+    @property
+    def poloidal_flow_ExB(self):
+        return self.omega/(self.Delta*self.psiAHat)*numpy.expand_dims(self.Bp*self.IHat/self.BHat**2,axis=2)*self.density_perturbation
+
+    @property
+    def poloidal_flow_gradP(self):
+        return self.Delta/(2*self.psiAHat)*(self.masses/self.Z)*(numpy.expand_dims(self.Bp*self.IHat/(self.BHat**2),axis=2)/numpy.expand_dims(self.nHat,axis=1))*self.magnetization_flow_perturbation
+
+    @property
+    def poloidal_flow_inputs(self):
+        return (1/(2*self.psiAHat))*(numpy.expand_dims(self.THat,axis=1)/self.Z)*numpy.expand_dims(self.Bp*self.IHat/(self.BHat**2),axis=2)*numpy.expand_dims(self.dnHatdpsiN/self.nHat + self.dTHatdpsiN/self.THat +(2*self.omega*self.Z/(self.Delta*self.THat))*numpy.expand_dims(self.dPhiHatdpsiN,axis=1),axis=1)
+    
+    @property
+    def poloidal_flow_test(self):
+        return self.poloidal_flow_parallel + self.poloidal_flow_ExB + self.poloidal_flow_gradP + self.poloidal_flow_inputs
+
+    @property
+    def toroidal_flow_parallel(self):
+        return numpy.expand_dims(self.Bt/self.BHat,axis=2)*self.flow
+
+    @property
+    def toroidal_flow_ExB(self):
+        return self.omega/(self.Delta*self.psiAHat)*numpy.expand_dims(self.Bp**2*self.RHat/self.BHat**2,axis=2)*self.density_perturbation
+
+    @property
+    def toroidal_flow_gradP(self):
+        return (self.Delta/(2*self.psiAHat))*(self.masses/self.Z)*(numpy.expand_dims(self.Bp**2*self.RHat/(self.BHat**2),axis=2)/numpy.expand_dims(self.nHat,axis=1))*self.magnetization_flow_perturbation
+
+    @property
+    def toroidal_flow_inputs(self):
+        return (1/(2*self.psiAHat))*(numpy.expand_dims(self.THat,axis=1)/self.Z)*numpy.expand_dims(self.Bp**2*self.RHat/(self.BHat**2),axis=2)*numpy.expand_dims(self.dnHatdpsiN/self.nHat + self.dTHatdpsiN/self.THat +(2*self.omega*self.Z/(self.Delta*self.THat))*numpy.expand_dims(self.dPhiHatdpsiN,axis=1),axis=1)
+    
+    @property
+    def toroidal_flow_test(self):
+        return self.toroidal_flow_parallel - self.toroidal_flow_ExB - self.toroidal_flow_gradP - self.toroidal_flow_inputs
+
     
     def copy_simulation_to_dir(self,dir):
         #try to make the new directory or don't if it exists
@@ -732,7 +891,7 @@ class perfect_simulation(object):
         return sim_copy
         
         
-
+    
 
 
 
