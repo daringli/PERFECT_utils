@@ -414,6 +414,7 @@ def generate_compatible_profiles(simul,**kwargs):
 
     if sameeta==True:
         etaHats[imp_index]=etaHats[main_index]
+        detaHatdpsis[imp_index]=detaHatdpsis[main_index]
     #solve for Phi to make delta_etai the above value
     #delta_ni=delta_i_factor*dnHatdpsis[mI]/nHats[mI]
     #rhs=((psiAHat*B*numpy.sqrt(THats[mI]))/(Delta*I*numpy.sqrt(mi)))*(delta_etai-delta_ni)
