@@ -174,7 +174,6 @@ class plot_object(object):
             "baseline_kPar_inboard": self.baseline_kPar_inboard_plot_func,
             "baseline_flows": self.baseline_flows_plot_func,
             "baseline_fluxes": self.baseline_fluxes_plot_func,
-            "baseline_fluxes2": self.baseline_fluxes2_plot_func,
             "baseline_all_fluxes": self.baseline_all_fluxes_plot_func,
             "baseline_particle_flux": self.baseline_particle_flux_plot_func,
             "baseline_conductive_heat_flux": self.baseline_conductive_heat_flux_plot_func,

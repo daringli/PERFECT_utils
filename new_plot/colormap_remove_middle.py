@@ -13,22 +13,35 @@ def cm_remove_middle(cm,midpoint=0.5,cut_radius=0.2,name="my_cm"):
         'blue': [],
         'alpha': []
     }
-    reg_index = np.linspace(0, 1, 257)
+    donext=False
+    reg_index = np.linspace(0, 1, 100)
+    dri=reg_index[1]-reg_index[0]
+    slope1=1/(1-2*cut_radius)
+    slope2=0.5/(0.5-cut_radius)
+    offset=1-slope2
     for ri in reg_index:
         if (ri > midpoint+cut_radius) or (ri < midpoint - cut_radius):
-            #print ri
             r, g, b, a = cm(ri)
-            cdict['red'].append((ri, r, r))
-            cdict['green'].append((ri, g, g))
-            cdict['blue'].append((ri, b, b))
-            cdict['alpha'].append((ri, a, a))
-        elif ri==midpoint:
-            r, g, b, a = cm(ri)
-            cdict['red'].append((ri, r, r))
-            cdict['green'].append((ri, g, g))
-            cdict['blue'].append((ri, b, b))
-            cdict['alpha'].append((ri, a, a))
-    newcmap = matplotlib.colors.LinearSegmentedColormap(name, cdict)
+            if ri < midpoint :
+                cdict['red'].append((ri*slope1, r, r))
+                cdict['green'].append((ri*slope1, g, g))
+                cdict['blue'].append((ri*slope1, b, b))
+                cdict['alpha'].append((ri*slope1, a, a))
+                #print str(ri) +":" + str(ri*slope1)
+            else:
+                cdict['red'].append((offset+ri*slope2, r, r))
+                cdict['green'].append((offset+ri*slope2, g, g))
+                cdict['blue'].append((offset+ri*slope2, b, b))
+                cdict['alpha'].append((offset+ri*slope2, a, a))
+                #print str(ri) +":" + str(offset+ri*slope2)
+        if ri < (midpoint+dri) and ri > (midpoint-dri):
+            r2, g2, b2, a2 = cm(midpoint)
+            cdict['red'].append((midpoint, r2, r2))
+            cdict['green'].append((midpoint, g2, g2))
+            cdict['blue'].append((midpoint, b2, b2))
+            cdict['alpha'].append((midpoint, a2, a2))
+        
+    newcmap = matplotlib.colors.LinearSegmentedColormap(name, cdict,N=512)
     plt.register_cmap(cmap=newcmap)
     return newcmap
     

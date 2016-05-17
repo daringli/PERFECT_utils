@@ -65,3 +65,13 @@ class perfect_subplot_group:
         l=len(self.p_subplot_list)
         i=int(l/2.0)
         setattr(self.p_subplot_list[i],attr_name,value)
+
+    def set_middle_ylabel(self,ylabel):
+        #set the ylabel of a connected group to be in the middle
+        #will not be sensible for groups that are spread out
+        l=len(self.p_subplot_list)
+        i=int(l/2.0)
+        setattr(self.p_subplot_list[i],"yaxis_label",ylabel)
+        if l%2 == 0:
+            #even number of subplots: set ylabel just above int(l/2.0) subplot
+            setattr(self.p_subplot_list[i],"yaxis_label_y",1.0)

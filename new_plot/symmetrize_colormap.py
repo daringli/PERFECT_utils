@@ -2,26 +2,16 @@ from shiftedColorMap import shiftedColorMap
 import numpy
 import matplotlib
 import matplotlib.pyplot as plt
+#for __main__
+from matplotlib.pyplot import cm
+import numpy
+from diverging_red_blue_colormap import diverging_rb_cm
+from colormap_remove_middle import cm_remove_middle
+
+
 
 def invert_cm(cm,name="reversedCM"):
     #inverts a colormap
-    """indices=numpy.linspace(0,1,257)
-    rev_indices=1-indices
-    cdict = {
-        'red': [],
-        'green': [],
-        'blue': [],
-        'alpha': []
-    }
-    for i,ri in zip(indices,rev_indices):
-        r, g, b, a = cm(i)
-        cdict['red'].append((ri, r, r))
-        cdict['green'].append((ri, g, g))
-        cdict['blue'].append((ri, b, b))
-        cdict['alpha'].append((ri, a, a))
-    
-    new_cm = matplotlib.colors.LinearSegmentedColormap(name, cdict)
-    plt.register_cmap(cmap=new_cm)"""
     new_cm=shiftedColorMap(cm,midpoint=0.5,start=1.0,stop=0.0)
     return new_cm
 
@@ -30,22 +20,46 @@ def symmetrize_colormap(cm,vmin,vmax):
     #if min<0 and max>0, centers the colormap around zero
     # and if abs(min) != abs(max), truncates it to make values with the same absolute value
     # have colors with an equal distance from zero.
-    #(default cms uses its entire range no matter how the data looks)
     if vmax*vmin<0:
-        #shift cmap to have 0 in the middle
         if vmax>abs(vmin):
-            start=0.5*(1-abs(vmin)/vmax)
+            start=(vmax-abs(vmin))/(2.0*vmax) 
             stop=1.0
         else:
-            start=0
-            stop=0.5*(1+vmax/abs(vmin))
-        shift=stop - vmax/(vmax + abs(vmin))+start
-                        
-        new_cm=shiftedColorMap(cm,midpoint=shift,start=start,stop=stop,name="new_map")
-    elif vmax>0:
-        shift=0.5 #do not shift
-        new_cm=shiftedColorMap(cm,start=0.5,midpoint=shift,name="new_map")
+            start=0.0
+            stop=(abs(vmin)+vmax)/(2.0*abs(vmin)) 
+        midpoint=abs(vmin)/float((vmax+abs(vmin)))
+        new_cm=shiftedColorMap(cm,midpoint=midpoint,start=start,stop=stop,name="new_map")
     else:
-        shift=0.5 #do not shift
-        new_cm=shiftedColorMap(cm,stop=0.5,midpoint=shift,name="new_map")
+        # truncate lower half of colormap
+        if vmax>0:
+            start=0.5+0.5*abs(vmin/float(vmax))
+            stop=1.0
+        else:
+            start=0.0
+            stop=0.5-0.5*abs(vmax/float(vmin))
+        new_cm=shiftedColorMap(cm,start=start,stop=stop,name="new_map",nomid=True)
+    
     return new_cm
+
+
+if __name__=="__main__":
+    #cm=diverging_rb_cm()
+    #cm=invert_cm(cm.RdBu)
+    cm=invert_cm(cm_remove_middle(cm.RdBu,cut_radius=0.1))
+    x=numpy.linspace(0,2*numpy.pi)
+    y=numpy.linspace(0,2*numpy.pi)
+    X,Y=numpy.meshgrid(x,y)
+    z1=1.5*(1+numpy.sin(X-Y))
+    z2=2+numpy.sin(X-Y)
+    z3=numpy.sin(X-Y)
+    cm1=symmetrize_colormap(cm,0,6)
+    cm2=symmetrize_colormap(cm,1,3)
+    cm3=symmetrize_colormap(cm,-1,1)
+    f,(ax1,ax2,ax3)=plt.subplots(3, 1)
+    p1=ax1.pcolor(X, Y, z1,rasterized=True,linewidth=0,cmap=cm1)
+    p2=ax2.pcolor(X, Y, z2,rasterized=True,linewidth=0,cmap=cm2)
+    p3=ax3.pcolor(X, Y, z3,rasterized=True,linewidth=0,cmap=cm3)
+    plt.colorbar(p1, ax=ax1)
+    plt.colorbar(p2, ax=ax2)
+    plt.colorbar(p3, ax=ax3)
+    plt.show()

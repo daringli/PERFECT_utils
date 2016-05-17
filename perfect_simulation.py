@@ -479,6 +479,18 @@ class perfect_simulation(object):
         return self.poloidal_flow*2*self.psiAHat*self.Z*self.FSABHat2[:,numpy.newaxis,numpy.newaxis]/(numpy.expand_dims(self.BHat*self.IHat,axis=2)*numpy.expand_dims(self.dTHatdpsiN,axis=1))
 
     @property
+    def k_poloidal_at_psi_of_theta(self):
+        return self.attrib_at_psi_of_theta("k_poloidal",0.955)
+
+    @property
+    def k_poloidal_flow_outboard(self):
+        return self.attrib_at_theta_of_psi("k_poloidal",0)
+
+    @property
+    def k_poloidal_flow_inboard(self):
+        return self.attrib_at_theta_of_psi("k_poloidal",numpy.pi)
+
+    @property
     def poloidal_flow_over_vT(self):
         return self.Delta*nstack(numpy.sqrt(self.masses/self.THat),axis=1,n=len(self.theta))*self.poloidal_flow
 

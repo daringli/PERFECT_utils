@@ -104,7 +104,7 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
         ax.spines['right'].set_linestyle(p_subplot.border_linestyle)
         if p_subplot.vlines is not None:
             for p in p_subplot.vlines:
-                ax.axvline(x=p,color='silver',linestyle=':')
+                ax.axvline(x=p,color='k',linestyle=':')
         if p_subplot.hlines is not None:
             for p in p_subplot.hlines:
                 ax.axhline(y=p,color='k',linestyle=':')
@@ -123,11 +123,6 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
             plt.setp(ax.xaxis, visible=False)
         if p_subplot.show_yaxis == False:
             plt.setp(ax.yaxis, visible=False)
-            
-        if p_subplot.xaxis_label is not None:
-            ax.set_xlabel(p_subplot.xaxis_label)
-        if p_subplot.yaxis_label is not None:
-            ax.set_ylabel(p_subplot.yaxis_label)
 
                 
         if p_subplot.xscale == 'linear':
@@ -141,20 +136,23 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
         if p_subplot.yscale == 'log':
             y_locator=ticker.LogLocator(p_subplot.yticks)
         ax.yaxis.set_major_locator(y_locator)
-        
+
+       
         ############## 1D #########
         if p_subplot.dimensions == 1:
             x=p_subplot.x
             y=p_subplot.data            
             ax.yaxis.offset_text_position="there"
 
+            
+
+            
             if type(p_subplot.linestyles) is not list:
                 p_subplot.linestyles=[p_subplot.linestyles]*len(y)
+                p_subplot.linewidths=[p_subplot.linewidths]*len(y)
             for i in range(len(y)):
-                ax.plot(x[i],y[i],linestyle=p_subplot.linestyles[i],color=p_subplot.colors[i])
-            ax.yaxis.set_label_coords(-0.15, 0.5)
-            ax.set_title(p_subplot.title,y=0.40,x=1.04,fontsize=8)
-            
+                ax.plot(x[i],y[i],linestyle=p_subplot.linestyles[i],color=p_subplot.colors[i],linewidth=p_subplot.linewidths[i])
+            ax.yaxis.set_label_coords(-0.15, 0.5)            
 
         ############# 2D ###########
         if p_subplot.dimensions == 2:
@@ -171,6 +169,7 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
                 divider = make_axes_locatable(ax)
                 cax = divider.append_axes("top", "-10%", pad="10%")
                 cb=fig.colorbar(ax.collections[0],cax=cax,orientation="horizontal")
+                #cb.solids.set_edgecolor("face")
                 monkey_patch(cb.ax.xaxis, 'x')
                 if p_subplot.yscale == 'linear':
                     tick_locator = ticker.MaxNLocator(nbins=p_subplot.zticks)
@@ -189,6 +188,7 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
                     cb.formatter.set_powerlimits((float("-inf"), float("inf")))
                     cb.update_ticks()
                 cb.ax.xaxis.offset_text_position="there2"
+
             if p_subplot.zaxis_label is not None:
                 cb.ax.set_xlabel(p_subplot.zaxis_label)
             if p_subplot.zlims is not None:
@@ -201,11 +201,19 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
                 ax.collections[0].set_cmap(cm)
                 for i in p_subplot.hidden_zticklabels:
                     plt.setp(cb.ax.get_xticklabels()[i],visible=False)
+            cb.solids.set_edgecolor("face")
+
                 
-            ax.set_title(p_subplot.title,y=1.19,x=0.5,fontsize=8)
-            
+        
         #we need to sort out ticks after plotting, since they are generated
         #during the plot operation
+        if p_subplot.xaxis_label is not None:
+            ax.set_xlabel(p_subplot.xaxis_label)
+        if p_subplot.yaxis_label is not None:
+            #print str(p_subplot.yaxis_label)+": " +"("+str(p_subplot.yaxis_label_x)+","+str(p_subplot.yaxis_label_y)+")"
+            ax.set_ylabel(p_subplot.yaxis_label)
+            ax.yaxis.set_label_coords(p_subplot.yaxis_label_x,p_subplot.yaxis_label_y) 
+        
         if p_subplot.xlims is not None:
             ax.set_xlim(p_subplot.xlims)
         if p_subplot.xlims is not None:
@@ -229,6 +237,11 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
             plt.setp(ax.get_xticklabels()[i],visible=False)
         for i in p_subplot.hidden_yticklabels:  
             plt.setp(ax.get_yticklabels()[i],visible=False)
+        
+
+        
+        #print str(p_subplot.title)+": " +"("+str(p_subplot.title_x)+","+str(p_subplot.title_y)+")"
+        ax.set_title(p_subplot.title,x=p_subplot.title_x,y=p_subplot.title_y,fontsize=8)
     
 if __name__=="__main__":
 

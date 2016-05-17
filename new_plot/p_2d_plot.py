@@ -14,7 +14,7 @@ import numpy
 import sys
 
 
-def perfect_2d_plot(dirlist,attribs,normname="norms.namelist",speciesname="species",cm=cm.rainbow,lg=True,xlims=[90,100],ylims=[0,2],species=True,sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None):
+def perfect_2d_plot(dirlist,attribs,normname="norms.namelist",speciesname="species",cm=cm.rainbow,lg=True,xlims=[90,100],ylims=[0,2],species=True,sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[]):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -109,15 +109,16 @@ def perfect_2d_plot(dirlist,attribs,normname="norms.namelist",speciesname="speci
         local_group = perfect_subplot_group(psp_list,groups=["local"])
         global_group = perfect_subplot_group(psp_list,groups=["global"])
         all_group=perfect_subplot_group(psp_list,groups='',get_all=True)
-
+        share_scale_group=perfect_subplot_group(psp_list,groups=share_scale,logic="or")
         
-        color=iter(cm(numpy.linspace(0,1,len(pair_groups))))
         
         if lg==False:
+            color=iter(cm(numpy.linspace(0,1,len(simulList))))
             for sim_group in sim_groups:
                 c=next(color)
                 sim_group.setattrs("border_color",c)
         else:
+            color=iter(cm(numpy.linspace(0,1,len(pair_groups))))
             for pair_group in pair_groups:
                 c=next(color)
                 pair_group.setattrs("border_color",c)
@@ -132,6 +133,10 @@ def perfect_2d_plot(dirlist,attribs,normname="norms.namelist",speciesname="speci
         
         for species_group in species_groups:
             species_group.setattrs("zlims",[species_group.get_min("data"),species_group.get_max("data")])
+            print [species_group.get_min("data"),species_group.get_max("data")]
+            
+        if len(share_scale_group.p_subplot_list)>0:
+            share_scale_group.setattrs("zlims",[share_scale_group.get_min("data"),share_scale_group.get_max("data")])
 
         if len(nospecies_group.p_subplot_list)>0:
             nospecies_group.setattrs("zlims",[nospecies_group.get_min("data"),nospecies_group.get_max("data")])

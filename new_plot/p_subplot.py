@@ -85,6 +85,9 @@ class perfect_subplot:
         self.vlines=kwarg_default("vlines",None,**kwargs)
         self.hlines=kwarg_default("hlines",None,**kwargs)
 
+        self.yaxis_label_x=kwarg_default("yaxis_label_x",-0.15,**kwargs)
+        self.yaxis_label_y=kwarg_default("yaxis_label_y",0.5,**kwargs)
+
         
                 
         #############################################################################
@@ -151,6 +154,10 @@ class perfect_subplot:
             self.linestyles=kwarg_default("linestyles",["solid"]*len(x),**kwargs)
             self.linewidths=kwarg_default("linewidths",[1]*len(x),**kwargs)
             self.colors=kwarg_default("colors",["k"]*len(x),**kwargs)
+
+            #title position
+            self.title_y=kwarg_default("title_y",0.4,**kwargs)
+            self.title_x=kwarg_default("title_x",1.04,**kwargs)
             
 
         #############################################################################
@@ -204,13 +211,18 @@ class perfect_subplot:
 
             self.zlims=kwarg_default("zlims",None,**kwargs)
 
-            self.cm=kwarg_default("cm",invert_cm(cm_remove_middle(cm.RdBu)),**kwargs)
+            self.cm=kwarg_default("cm",invert_cm(cm_remove_middle(cm.RdBu,cut_radius=0.1)),**kwargs)
+            #self.cm=kwarg_default("cm",invert_cm(cm.RdBu),**kwargs)
             #self.cm=kwarg_default("cm",diverging_rb_cm(),**kwargs)
             self.symmetrize_cm=kwarg_default("symmetrize_cm",True,**kwargs)
 
             self.hidden_xticklabels=kwarg_default("hidden_xticklabels",[0,-1],**kwargs)
             self.hidden_yticklabels=kwarg_default("hidden_yticklabels",[],**kwargs)
             self.hidden_zticklabels=kwarg_default("hidden_zticklabels",[],**kwargs)
+
+            #title position
+            self.title_y=kwarg_default("title_y",1.19,**kwargs)
+            self.title_x=kwarg_default("title_x",0.5,**kwargs)
 
 
     #functions data in the range that will be plotted
@@ -246,6 +258,8 @@ class perfect_subplot:
             ylims=self.ylims
             ixrange=numpy.array(get_index_range(self.x,xlims,True))
             iyrange=numpy.array(get_index_range(self.y,ylims,True))
+            #print ixrange
+            #print iyrange
             data=self.data[ixrange[:,numpy.newaxis],iyrange]
             #print numpy.shape(data)
             #print numpy.size(ixrange)
