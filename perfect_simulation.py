@@ -84,6 +84,7 @@ class perfect_simulation(object):
         self.toroidal_flow_name="toroidalFlow"
         self.poloidal_flow_name="poloidalFlow"
         self.magnetization_flow_perturbation_name="magnetizationFlowPerturbation"
+        self.magnetization_perturbation_name="magnetizationPerturbation"
         self.kPar_name="kPar"
         self.FSAkPar_name="FSAKPar"
         self.FSAFlow_name="FSAFlow"
@@ -95,11 +96,13 @@ class perfect_simulation(object):
         self.FSABFlow_name="FSABFlow"
 
         self.RHat_name="RHat"
+        self.JHat_name="JHat"
         self.IHat_name="IHat"
         self.BHat_name="BHat"
         self.FSABHat2_name="FSABHat2"
 
         self.density_perturbation_name="densityPerturbation"
+        self.pressure_perturbation_name="pressurePerturbation"
 
         self.local_name="makeLocalApproximation"
 
@@ -429,7 +432,8 @@ class perfect_simulation(object):
 
     @property
     def toroidal_flow(self):
-        return self.outputs[self.group_name+self.toroidal_flow_name][()]
+        return self.toroidal_flow_test
+        #return self.outputs[self.group_name+self.toroidal_flow_name][()]
 
     @property
     def toroidal_flow_at_psi_of_theta(self):
@@ -461,6 +465,7 @@ class perfect_simulation(object):
     @property
     def poloidal_flow(self):
         return self.outputs[self.group_name+self.poloidal_flow_name][()]
+        #return self.poloidal_flow_test
 
     @property
     def poloidal_flow_at_psi_of_theta(self):
@@ -476,20 +481,91 @@ class perfect_simulation(object):
 
     @property
     def k_poloidal(self):
-        return self.poloidal_flow*2*self.psiAHat*self.Z*self.FSABHat2[:,numpy.newaxis,numpy.newaxis]/(numpy.expand_dims(self.BHat*self.IHat,axis=2)*numpy.expand_dims(self.dTHatdpsiN,axis=1))
+        return self.poloidal_flow*2*self.psiAHat*self.Z*self.FSABHat2[:,numpy.newaxis,numpy.newaxis]/(numpy.expand_dims(self.Bp*self.IHat,axis=2)*numpy.expand_dims(self.dTHatdpsiN,axis=1))
 
     @property
     def k_poloidal_at_psi_of_theta(self):
         return self.attrib_at_psi_of_theta("k_poloidal",0.955)
 
     @property
-    def k_poloidal_flow_outboard(self):
+    def k_poloidal_outboard(self):
         return self.attrib_at_theta_of_psi("k_poloidal",0)
 
     @property
-    def k_poloidal_flow_inboard(self):
-        return self.attrib_at_theta_of_psi("k_poloidal",numpy.pi)
+    def k_poloidal_outboard_ExB(self):
+        return self.attrib_at_theta_of_psi("k_poloidal_ExB",0)
 
+    @property
+    def k_poloidal_outboard_gradP(self):
+        return self.attrib_at_theta_of_psi("k_poloidal_gradP",0)
+
+    @property
+    def k_poloidal_outboard_gradP_test(self):
+        return self.attrib_at_theta_of_psi("k_poloidal_gradP_test",0)
+
+    
+    @property
+    def k_poloidal_outboard_inputs_parallel(self):
+        return self.attrib_at_theta_of_psi("k_poloidal_inputs_parallel",0)
+
+    @property
+    def k_poloidal_outboard_inputs(self):
+        return self.attrib_at_theta_of_psi("k_poloidal_inputs",0)
+
+    @property
+    def k_poloidal_outboard_parallel(self):
+        return self.attrib_at_theta_of_psi("k_poloidal_parallel",0)
+    
+    @property
+    def k_poloidal_inboard(self):
+        return self.attrib_at_theta_of_psi("k_poloidal",numpy.pi)
+    
+    @property
+    def k_poloidal_inboard_ExB(self):
+        return self.attrib_at_theta_of_psi("k_poloidal_ExB",numpy.pi)
+
+    @property
+    def k_poloidal_inboard_gradP(self):
+        return self.attrib_at_theta_of_psi("k_poloidal_gradP",numpy.pi)
+
+    
+    @property
+    def k_poloidal_inboard_gradP_test(self):
+        return self.attrib_at_theta_of_psi("k_poloidal_gradP_test",numpy.pi)
+
+    
+    @property
+    def k_poloidal_inboard_inputs_parallel(self):
+        return self.attrib_at_theta_of_psi("k_poloidal_inputs_parallel",numpy.pi)
+
+    @property
+    def k_poloidal_inboard_inputs(self):
+        return self.attrib_at_theta_of_psi("k_poloidal_inputs",numpy.pi)
+
+    @property
+    def k_poloidal_inboard_parallel(self):
+        return self.attrib_at_theta_of_psi("k_poloidal_parallel",numpy.pi)
+
+    @property
+    def magnetization_perturbation_inboard(self):
+        return self.attrib_at_theta_of_psi("magnetization_perturbation",numpy.pi)
+
+    @property
+    def magnetization_perturbation_outboard(self):
+        return self.attrib_at_theta_of_psi("magnetization_perturbation",0.0)
+
+    
+    @property
+    def magnetization_flow_perturbation_inboard(self):
+        return self.attrib_at_theta_of_psi("magnetization_flow_perturbation",numpy.pi)
+
+    @property
+    def magnetization_flow_perturbation_outboard(self):
+        return self.attrib_at_theta_of_psi("magnetization_flow_perturbation",0.0)
+
+
+    
+    
     @property
     def poloidal_flow_over_vT(self):
         return self.Delta*nstack(numpy.sqrt(self.masses/self.THat),axis=1,n=len(self.theta))*self.poloidal_flow
@@ -508,8 +584,11 @@ class perfect_simulation(object):
     @property
     def magnetization_flow_perturbation(self):
         return self.outputs[self.group_name+self.magnetization_flow_perturbation_name][()]
+        
+    @property
+    def magnetization_perturbation(self):
+        return self.outputs[self.group_name+self.magnetization_perturbation_name][()]
 
-    
     @property
     def flow_max_psi_of_theta(self):
         return self.attrib_max_psi_of_theta("flow",[0.91,0.97463697978512787])
@@ -756,6 +835,11 @@ class perfect_simulation(object):
         return self.outputs[self.group_name+self.density_perturbation_name][()]
 
     @property
+    def pressure_perturbation(self):
+        #non-adiabatic part
+        return self.outputs[self.group_name+self.pressure_perturbation_name][()]
+
+    @property
     def total_density_perturbation(self):
         #non-adiabatic part
         ZoT=numpy.expand_dims(self.Z/self.THat, axis=1)
@@ -815,6 +899,10 @@ class perfect_simulation(object):
         return nstack(self.outputs[self.group_name+self.RHat_name][()],axis=0,n=len(self.psi)) #add psi axis
 
     @property
+    def JHat(self):
+        return self.outputs[self.group_name+self.JHat_name][()]
+        
+    @property
     def BHat(self):
         return self.outputs[self.group_name+self.BHat_name][()]
 
@@ -836,27 +924,76 @@ class perfect_simulation(object):
 
     @property
     def poloidal_flow_ExB(self):
-        return self.omega/(self.Delta*self.psiAHat)*numpy.expand_dims(self.Bp*self.IHat/self.BHat**2,axis=2)*self.density_perturbation
+        return self.omega/(self.Delta*self.psiAHat)*numpy.expand_dims(self.Bp*self.IHat/self.BHat**2,axis=2)*self.density_perturbation*numpy.expand_dims(numpy.expand_dims(self.dPhiHatdpsiN,axis=1),axis=2)
 
     @property
     def poloidal_flow_gradP(self):
         return self.Delta/(2*self.psiAHat)*(self.masses/self.Z)*(numpy.expand_dims(self.Bp*self.IHat/(self.BHat**2),axis=2)/numpy.expand_dims(self.nHat,axis=1))*self.magnetization_flow_perturbation
 
     @property
+    def poloidal_flow_gradP_test(self):
+        mp=self.magnetization_perturbation
+        dpsiN=self.dpsiN
+        psiN=self.psi
+        for i in range(0,len(psiN)):
+            if i==0:
+                mpf=[(mp[i+1]-mp[i])/dpsiN]
+            else:
+                mpf=mpf+[(mp[i]-mp[i-1])/dpsiN]
+        mpf=numpy.array(mpf)
+        return self.Delta/(2*self.psiAHat)*(self.masses/self.Z)*(numpy.expand_dims(self.Bp*self.IHat/(self.BHat**2),axis=2)/numpy.expand_dims(self.nHat,axis=1))*mpf
+
+    
+    @property
     def poloidal_flow_inputs(self):
         return (1/(2*self.psiAHat))*(numpy.expand_dims(self.THat,axis=1)/self.Z)*numpy.expand_dims(self.Bp*self.IHat/(self.BHat**2),axis=2)*numpy.expand_dims(self.dnHatdpsiN/self.nHat + self.dTHatdpsiN/self.THat +(2*self.omega*self.Z/(self.Delta*self.THat))*numpy.expand_dims(self.dPhiHatdpsiN,axis=1),axis=1)
+
+    @property
+    def poloidal_flow_inputs_parallel(self):
+        return self.poloidal_flow_parallel + self.poloidal_flow_inputs
     
     @property
     def poloidal_flow_test(self):
         return self.poloidal_flow_parallel + self.poloidal_flow_ExB + self.poloidal_flow_gradP + self.poloidal_flow_inputs
 
     @property
+    def k_poloidal_parallel(self):
+        return self.poloidal_flow_parallel*2*self.psiAHat*self.Z*self.FSABHat2[:,numpy.newaxis,numpy.newaxis]/(numpy.expand_dims(self.Bp*self.IHat,axis=2)*numpy.expand_dims(self.dTHatdpsiN,axis=1))
+        
+    @property
+    def k_poloidal_ExB(self):
+        return self.poloidal_flow_ExB*2*self.psiAHat*self.Z*self.FSABHat2[:,numpy.newaxis,numpy.newaxis]/(numpy.expand_dims(self.Bp*self.IHat,axis=2)*numpy.expand_dims(self.dTHatdpsiN,axis=1))
+        
+    
+    @property
+    def k_poloidal_gradP(self):
+        return self.poloidal_flow_gradP*2*self.psiAHat*self.Z*self.FSABHat2[:,numpy.newaxis,numpy.newaxis]/(numpy.expand_dims(self.Bp*self.IHat,axis=2)*numpy.expand_dims(self.dTHatdpsiN,axis=1))
+
+    @property
+    def k_poloidal_gradP_test(self):
+        return self.poloidal_flow_gradP_test*2*self.psiAHat*self.Z*self.FSABHat2[:,numpy.newaxis,numpy.newaxis]/(numpy.expand_dims(self.Bp*self.IHat,axis=2)*numpy.expand_dims(self.dTHatdpsiN,axis=1))
+    
+    
+    @property
+    def k_poloidal_inputs(self):
+        return self.poloidal_flow_inputs*2*self.psiAHat*self.Z*self.FSABHat2[:,numpy.newaxis,numpy.newaxis]/(numpy.expand_dims(self.Bp*self.IHat,axis=2)*numpy.expand_dims(self.dTHatdpsiN,axis=1))
+
+    @property
+    def k_poloidal_inputs_parallel(self):
+        return self.k_poloidal_inputs + self.k_poloidal_parallel
+    
+    @property
+    def k_poloidal_test(self):
+        return self.k_poloidal_parallel + self.k_poloidal_ExB + self.k_poloidal_gradP + self.k_poloidal_inputs
+
+    
+    @property
     def toroidal_flow_parallel(self):
         return numpy.expand_dims(self.Bt/self.BHat,axis=2)*self.flow
 
     @property
     def toroidal_flow_ExB(self):
-        return self.omega/(self.Delta*self.psiAHat)*numpy.expand_dims(self.Bp**2*self.RHat/self.BHat**2,axis=2)*self.density_perturbation
+        return self.omega/(self.Delta*self.psiAHat)*numpy.expand_dims(self.Bp**2*self.RHat/self.BHat**2,axis=2)*self.density_perturbation*numpy.expand_dims(numpy.expand_dims(self.dPhiHatdpsiN,axis=1),axis=2)
 
     @property
     def toroidal_flow_gradP(self):
