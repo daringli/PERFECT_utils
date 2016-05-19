@@ -583,11 +583,13 @@ class perfect_simulation(object):
     
     @property
     def magnetization_flow_perturbation(self):
-        return self.outputs[self.group_name+self.magnetization_flow_perturbation_name][()]
+        #return self.outputs[self.group_name+self.magnetization_flow_perturbation_name][()]
+        return self.magnetization_flow_perturbation_test
         
     @property
     def magnetization_perturbation(self):
-        return self.outputs[self.group_name+self.magnetization_perturbation_name][()]
+        #return self.outputs[self.group_name+self.magnetization_perturbation_name][()]
+        return numpy.expand_dims(3*self.nHat*self.THat/(self.Delta*self.masses),axis=1)*self.pressure_perturbation - self.outputs[self.group_name+self.magnetization_perturbation_name][()]
 
     @property
     def flow_max_psi_of_theta(self):
@@ -928,10 +930,11 @@ class perfect_simulation(object):
 
     @property
     def poloidal_flow_gradP(self):
-        return self.Delta/(2*self.psiAHat)*(self.masses/self.Z)*(numpy.expand_dims(self.Bp*self.IHat/(self.BHat**2),axis=2)/numpy.expand_dims(self.nHat,axis=1))*self.magnetization_flow_perturbation
+        #return self.Delta/(2*self.psiAHat)*(self.masses/self.Z)*(numpy.expand_dims(self.Bp*self.IHat/(self.BHat**2),axis=2)/numpy.expand_dims(self.nHat,axis=1))*self.magnetization_flow_perturbation
+        return self.poloidal_flow_gradP_test
 
     @property
-    def poloidal_flow_gradP_test(self):
+    def magnetization_flow_perturbation_test(self):
         mp=self.magnetization_perturbation
         dpsiN=self.dpsiN
         psiN=self.psi
@@ -941,7 +944,11 @@ class perfect_simulation(object):
             else:
                 mpf=mpf+[(mp[i]-mp[i-1])/dpsiN]
         mpf=numpy.array(mpf)
-        return self.Delta/(2*self.psiAHat)*(self.masses/self.Z)*(numpy.expand_dims(self.Bp*self.IHat/(self.BHat**2),axis=2)/numpy.expand_dims(self.nHat,axis=1))*mpf
+        return mpf
+    
+    @property
+    def poloidal_flow_gradP_test(self):
+        return self.Delta/(2*self.psiAHat)*(self.masses/self.Z)*(numpy.expand_dims(self.Bp*self.IHat/(self.BHat**2),axis=2)/numpy.expand_dims(self.nHat,axis=1))*self.magnetization_flow_perturbation_test
 
     
     @property
@@ -997,7 +1004,12 @@ class perfect_simulation(object):
 
     @property
     def toroidal_flow_gradP(self):
-        return (self.Delta/(2*self.psiAHat))*(self.masses/self.Z)*(numpy.expand_dims(self.Bp**2*self.RHat/(self.BHat**2),axis=2)/numpy.expand_dims(self.nHat,axis=1))*self.magnetization_flow_perturbation
+        #return (self.Delta/(2*self.psiAHat))*(self.masses/self.Z)*(numpy.expand_dims(self.Bp**2*self.RHat/(self.BHat**2),axis=2)/numpy.expand_dims(self.nHat,axis=1))*self.magnetization_flow_perturbation
+        return self.toroidal_flow_gradP_test
+
+    @property
+    def toroidal_flow_gradP_test(self):
+        return (self.Delta/(2*self.psiAHat))*(self.masses/self.Z)*(numpy.expand_dims(self.Bp**2*self.RHat/(self.BHat**2),axis=2)/numpy.expand_dims(self.nHat,axis=1))*self.magnetization_flow_perturbation_test
 
     @property
     def toroidal_flow_inputs(self):
