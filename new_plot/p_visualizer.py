@@ -24,6 +24,7 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
     
     dimensions=kwarg_default("dimensions",1,**kwargs)
     height=kwarg_default("height",0.15,**kwargs)
+    textcols=kwarg_default("textcols",1,**kwargs)
     rows=kwarg_default("rows",gridspec_params[0],**kwargs)
     cols=kwarg_default("cols",gridspec_params[1],**kwargs)
 
@@ -46,12 +47,13 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
     def row_to_height(rows):
             return (rows/base_rows)*3.39*(1-base_topbot_adjust)*(numpy.sqrt(5)-1.0)/2.0 +3.39*base_topbot_adjust*(numpy.sqrt(5)-1.0)/2.0
 
+
     height=row_to_height(rows)
     base_height=row_to_height(base_rows)
     adjust_bottom=adjust_bottom*base_height/height
     adjust_top=1-(1-adjust_top)*base_height/height
     
-    latexify(fig_height=height)
+    latexify(fig_height=height,columns=textcols)
     fig=plt.figure()
 
 
@@ -118,7 +120,7 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
         if p_subplot.show_yaxis_ticklabel == False:
             plt.setp(ax.get_yticklabels(), visible=False)
             ax.yaxis.get_major_formatter().set_powerlimits((float("-inf"), float("inf")))
-            
+
         if p_subplot.show_xaxis == False:
             plt.setp(ax.xaxis, visible=False)
         if p_subplot.show_yaxis == False:
@@ -143,7 +145,6 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
             x=p_subplot.x
             y=p_subplot.data            
             ax.yaxis.offset_text_position="there"
-
             
 
             
@@ -151,7 +152,15 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
                 p_subplot.linestyles=[p_subplot.linestyles]*len(y)
                 p_subplot.linewidths=[p_subplot.linewidths]*len(y)
             for i in range(len(y)):
-                ax.plot(x[i],y[i],linestyle=p_subplot.linestyles[i],color=p_subplot.colors[i],linewidth=p_subplot.linewidths[i])
+                try:
+                    ax.plot(x[i],y[i],linestyle=p_subplot.linestyles[i],color=p_subplot.colors[i],linewidth=p_subplot.linewidths[i])
+                except IndexError:
+                    print "Index error in ax.plot(). Most likely, linestyles, linewidths and colors have the wrong lengths."
+                    print "len(colors): " + str(len(p_subplot.colors))
+                    print "len(linestyles): " + str(len(p_subplot.linestyles))
+                    print "len(linewidths): " + str(len(p_subplot.linewidths))
+                    print "len(x): " + str(len(x))
+                    print "len(y): " + str(len(y))
             ax.yaxis.set_label_coords(-0.15, 0.5)            
 
         ############# 2D ###########
@@ -218,6 +227,12 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
             ax.set_xlim(p_subplot.xlims)
         if p_subplot.xlims is not None:
             ax.set_ylim(p_subplot.ylims)
+
+        if p_subplot.xaxis_powerlimits is not None:
+            print "Warning: xlabel power limits not fully implemented: offset position unknown, offset not shown."
+            ax.ticklabel_format(axis='x', style='sci', scilimits=p_subplot.xaxis_powerlimits)
+            #ax.xaxis.get_major_formatter().set_powerlimits(p_subplot.xaxis_powerlimits)
+        
         
         if p_subplot.yscale == 'log':
             ax.set_yscale(p_subplot.yscale, nonposy='clip',subsy=[10])
@@ -228,7 +243,10 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
             ax.get_yticklabels()[1].set_visible(False)
             ax.get_yticklabels()[-2].set_visible(False)
         elif p_subplot.yscale=='linear':
-            ax.ticklabel_format(axis='y', style='sci', scilimits=(-0,1))
+            if p_subplot.yaxis_powerlimits is None:
+                ax.ticklabel_format(axis='y', style='sci', scilimits=(-0,1))
+            else:
+                ax.ticklabel_format(axis='y', style='sci', scilimits=p_subplot.yaxis_powerlimits)
             ax.get_yticklabels()[0].set_visible(False)
             ax.get_yticklabels()[-1].set_visible(False)
         elif p_subplot.yscale=='symlog':
@@ -242,7 +260,10 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
         
         #print str(p_subplot.title)+": " +"("+str(p_subplot.title_x)+","+str(p_subplot.title_y)+")"
         ax.set_title(p_subplot.title,x=p_subplot.title_x,y=p_subplot.title_y,fontsize=8)
-    
+
+
+
+        
 if __name__=="__main__":
 
 

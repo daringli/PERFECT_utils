@@ -17,7 +17,7 @@ import scipy.integrate
 
 
 
-def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",cm=cm.rainbow,lg=True,xlims=[0.9,1.0],same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[]):
+def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",cm=cm.rainbow,lg=True,xlims=[0.9,1.0],same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[],interactive=False):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -67,6 +67,9 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
     gridspec_list=[]
     local=[simul.local for simul in simulList]
     colors=cm(numpy.linspace(0,1,len(simulList)-sum(local)))
+    if len(colors) == 0:
+        #all simulations were local
+        colors=cm(numpy.linspace(0,1,len(simulList)))
     #assign colors to simulations
     all_linecolors=[]
     color_index=0
@@ -218,12 +221,19 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
             global_xlabel=r"$\psi_N$"
         elif xattr=="theta":
             global_xlabel=r"$\theta/\pi$"
+        elif xattr=="sqrtpsi":
+            global_xlabel=r"$\sqrt{\psi_N}$"
+        elif xattr=="psiOverOrbitWidth":
+            global_xlabel=r"$\sqrt{\psi_N}$"
             
         perfect_visualizer(psp_list,gridspec_list[i_li],global_xlabel=global_xlabel,dimensions=1,global_ylabel=global_ylabel)
         if same_plot:
             plt.savefig(outputname+".pdf")
         else:
             plt.savefig(attribs[i_li]+".pdf")
+        if interactive:
+            #dangerous, since it will (for some reason) be executed after all 1d_plot calls and show everything plotted in the given script.
+            plt.show()
         
 
     

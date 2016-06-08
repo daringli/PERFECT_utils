@@ -70,6 +70,10 @@ class perfect_subplot:
         self.show_xaxis=kwarg_default("show_xaxis",True,**kwargs)
         self.show_yaxis=kwarg_default("show_yaxis",True,**kwargs)
 
+        #powerlimit should be a tuple: (-a,b)
+        self.xaxis_powerlimits=kwarg_default("xaxis_powerlimits",None,**kwargs)
+        self.yaxis_powerlimits=kwarg_default("yaxis_powerlimits",None,**kwargs)
+
         self.xaxis_label=kwarg_default("xaxis_label",None,**kwargs)
         self.yaxis_label=kwarg_default("yaxis_label",None,**kwargs)
             

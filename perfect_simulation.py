@@ -1,4 +1,5 @@
 import sys
+
 from perfectInputFile import perfectInput
 import numpy
 import f90nml
@@ -14,6 +15,8 @@ import subprocess
 from subprocess import call
 from get_index_range import get_index_range
 from nstack import nstack
+from diff_matrix import diff_matrix
+from array_rank import arraylist_rank
 
 
 
@@ -100,6 +103,8 @@ class perfect_simulation(object):
         self.IHat_name="IHat"
         self.BHat_name="BHat"
         self.FSABHat2_name="FSABHat2"
+        self.q_name="Miller_q"
+        self.epsilon_name="epsil"
 
         self.density_perturbation_name="densityPerturbation"
         self.pressure_perturbation_name="pressurePerturbation"
@@ -188,7 +193,14 @@ class perfect_simulation(object):
 
     def attrib_at_psi_of_theta(self,attrib,psiN):
         indices=get_index_range(self.psi,[psiN,psiN],ret_range=False)
-        return getattr(self,attrib)[indices[0],:,:]
+        a=getattr(self,attrib)
+        rank=arraylist_rank(a)
+        if rank==3:
+            return a[indices[0],:,:]
+        elif rank==2:
+            return a[indices[0],:]
+        elif rank==1:
+            return a[indices[0]]
 
     def attrib_at_theta_of_psi(self,attrib,theta):
         indices=get_index_range(self.theta,[theta,theta],ret_range=False)
@@ -432,8 +444,8 @@ class perfect_simulation(object):
 
     @property
     def toroidal_flow(self):
-        return self.toroidal_flow_test
-        #return self.outputs[self.group_name+self.toroidal_flow_name][()]
+        #return self.toroidal_flow_test
+        return self.outputs[self.group_name+self.toroidal_flow_name][()]
 
     @property
     def toroidal_flow_at_psi_of_theta(self):
@@ -464,9 +476,9 @@ class perfect_simulation(object):
     
     @property
     def poloidal_flow(self):
-        return self.outputs[self.group_name+self.poloidal_flow_name][()]
         #return self.poloidal_flow_test
-
+        return self.outputs[self.group_name+self.poloidal_flow_name][()]
+        
     @property
     def poloidal_flow_at_psi_of_theta(self):
         return self.attrib_at_psi_of_theta("poloidal_flow",0.955)
@@ -482,6 +494,7 @@ class perfect_simulation(object):
     @property
     def k_poloidal(self):
         return self.poloidal_flow*2*self.psiAHat*self.Z*self.FSABHat2[:,numpy.newaxis,numpy.newaxis]/(numpy.expand_dims(self.Bp*self.IHat,axis=2)*numpy.expand_dims(self.dTHatdpsiN,axis=1))
+        #return self.k_poloidal_test
 
     @property
     def k_poloidal_at_psi_of_theta(self):
@@ -563,7 +576,55 @@ class perfect_simulation(object):
     def magnetization_flow_perturbation_outboard(self):
         return self.attrib_at_theta_of_psi("magnetization_flow_perturbation",0.0)
 
+    @property
+    def perpendicular_flow_inboard(self):
+        return self.attrib_at_theta_of_psi("perpendicular_flow",numpy.pi)
 
+    @property
+    def perpendicular_flow_outboard(self):
+        return self.attrib_at_theta_of_psi("perpendicular_flow",0)
+
+    @property
+    def perpendicular_flow_inboard_ExB(self):
+        return self.attrib_at_theta_of_psi("perpendicular_flow_ExB",numpy.pi)
+
+    @property
+    def perpendicular_flow_outboard_ExB(self):
+        return self.attrib_at_theta_of_psi("perpendicular_flow_ExB",0)
+
+    @property
+    def perpendicular_flow_inboard_gradP(self):
+        return self.attrib_at_theta_of_psi("perpendicular_flow_gradP",numpy.pi)
+
+    @property
+    def perpendicular_flow_outboard_gradP(self):
+        return self.attrib_at_theta_of_psi("perpendicular_flow_gradP",0)
+
+    @property
+    def perpendicular_flow_inboard_inputs(self):
+        return self.attrib_at_theta_of_psi("perpendicular_flow_inputs",numpy.pi)
+
+    @property
+    def perpendicular_flow_outboard_inputs(self):
+        return self.attrib_at_theta_of_psi("perpendicular_flow_inputs",0)
+
+    @property
+    def perpendicular_flow_inboard_inputs_ExB(self):
+        return self.attrib_at_theta_of_psi("perpendicular_flow_inputs_ExB",numpy.pi)
+
+    @property
+    def perpendicular_flow_outboard_inputs_ExB(self):
+        return self.attrib_at_theta_of_psi("perpendicular_flow_inputs_ExB",0)
+
+    @property
+    def perpendicular_flow_inboard_inputs_diamagnetic(self):
+        return self.attrib_at_theta_of_psi("perpendicular_flow_inputs_diamagnetic",numpy.pi)
+
+    @property
+    def perpendicular_flow_outboard_inputs_diamagnetic(self):
+        return self.attrib_at_theta_of_psi("perpendicular_flow_inputs_diamagnetic",0)
+
+    
     
     
     @property
@@ -583,13 +644,13 @@ class perfect_simulation(object):
     
     @property
     def magnetization_flow_perturbation(self):
-        #return self.outputs[self.group_name+self.magnetization_flow_perturbation_name][()]
-        return self.magnetization_flow_perturbation_test
+        return self.outputs[self.group_name+self.magnetization_flow_perturbation_name][()]
+        #return self.magnetization_flow_perturbation_test
         
     @property
     def magnetization_perturbation(self):
-        #return self.outputs[self.group_name+self.magnetization_perturbation_name][()]
-        return numpy.expand_dims(3*self.nHat*self.THat/(self.Delta*self.masses),axis=1)*self.pressure_perturbation - self.outputs[self.group_name+self.magnetization_perturbation_name][()]
+        return self.outputs[self.group_name+self.magnetization_perturbation_name][()]
+        #return numpy.expand_dims(3*self.nHat*self.THat/(self.Delta*self.masses),axis=1)*self.pressure_perturbation - self.outputs[self.group_name+self.magnetization_perturbation_name][()]
 
     @property
     def flow_max_psi_of_theta(self):
@@ -720,7 +781,14 @@ class perfect_simulation(object):
             return self.outputs[self.group_name+self.detaHatdpsiN_name][()]
         except KeyError:
             print "etaHat could not be obtained since no external profiles have been speciied and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate the inputs."
-    
+
+    @property
+    def pHat(self):
+        return self.nHat*self.THat
+
+    @property
+    def dpHatdpsiN(self):
+        return self.dnHatdpsiN*self.THat + self.nHat*self.dTHattdpsiN
 
     @property
     def PhiHat(self):
@@ -757,9 +825,20 @@ class perfect_simulation(object):
             ret[i-1]=dPhiHat/dpsiN
         return ret
 
+   
+
     @property
     def dpsiN(self):
         return self.psi[1]-self.psi[0]
+
+    @property
+    def dtheta(self):
+        return self.theta[1]-self.theta[0]
+
+    @property
+    def Npsi(self):
+        return len(self.psi)
+    
     
     @property
     def dTHat_dpsiN(self):
@@ -813,6 +892,10 @@ class perfect_simulation(object):
     def psi(self):
         return self.outputs[self.group_name+self.psi_name][()]
         #self.inputs.psi
+
+    @property
+    def sqrtpsi(self):
+        return numpy.sqrt(self.psi)
 
     @property
     def psiAHat(self):
@@ -914,11 +997,62 @@ class perfect_simulation(object):
 
     @property
     def Bt(self):
+        #will always be positive for PERFECT Miller (in toroidal direction)
         return self.IHat/self.RHat
 
     @property
+    def q(self):
+        return self.outputs[self.group_name+self.q_name][()]
+
+    @property
+    def epsilon(self):
+        return self.outputs[self.group_name+self.epsilon_name][()]
+
+    @property
     def Bp(self):
-        return numpy.sqrt(self.BHat**2-self.Bt**2)
+        #will typically be negative for PERFECT Miller (opposite to poloidal direction)
+        return numpy.sign(self.JHat)*numpy.sqrt(self.BHat**2-self.Bt**2)
+
+    @property
+    def FSABp(self):
+        #a typical Bp
+        return numpy.trapz(numpy.fabs(self.Bp)/numpy.fabs(self.JHat),dx=self.dtheta)/numpy.fabs(self.VPrimeHat)
+
+    @property
+    def sqrtFSABp2(self):
+        #another typical Bp
+        return numpy.sqrt(numpy.trapz(numpy.fabs(self.Bp**2)/numpy.fabs(self.JHat),dx=self.dtheta)/numpy.fabs(self.VPrimeHat))
+
+    @property
+    def FSABHat2_test(self):
+        #to compare external FSA to PERFECT internal
+        #2016-06-03: differ at 0.01
+        return numpy.trapz(self.BHat**2/numpy.fabs(self.JHat),dx=self.dtheta)/numpy.fabs(self.VPrimeHat)
+
+    @property
+    def FSABp_test(self):
+        #<B_p> = 1/V' \int d\theta/|\nabla \theta| ?= 2\pi R/(qV')
+        #From comparing with above: does not seem so.
+        return 2*numpy.pi/numpy.expand_dims((self.q*self.VPrimeHat),axis=1)
+
+    @property
+    def orbit_width(self):
+        # uses hardcoded numerical values for RBar dpsiN/dr...
+        print "###################################"
+        print "...          WARNING            ..."
+        print "###################################"
+        print "perfect_simulation.orbit_width contains hard-coded RBar dpsi_N/dr values."
+        RBar_dpsiN_over_dr =4.92
+        return numpy.fabs(numpy.sqrt(self.epsilon*self.THat*self.masses)/(self.Z*numpy.expand_dims(numpy.fabs(self.FSABp),axis=1))*self.Delta*RBar_dpsiN_over_dr)
+
+    @property
+    def orbit_width_over_rN(self):
+        return numpy.fabs(self.orbit_width*self.dnHatdpsiN/self.nHat)
+
+    @property
+    def Bp_at_psi_of_theta(self):
+        #for PERFECT Mille geometry, Bp does not depend on psi
+        return self.attrib_at_psi_of_theta("Bp",0.955)
 
     @property
     def poloidal_flow_parallel(self):
@@ -930,21 +1064,38 @@ class perfect_simulation(object):
 
     @property
     def poloidal_flow_gradP(self):
-        #return self.Delta/(2*self.psiAHat)*(self.masses/self.Z)*(numpy.expand_dims(self.Bp*self.IHat/(self.BHat**2),axis=2)/numpy.expand_dims(self.nHat,axis=1))*self.magnetization_flow_perturbation
-        return self.poloidal_flow_gradP_test
+        return self.Delta/(2*self.psiAHat)*(self.masses/self.Z)*(numpy.expand_dims(self.Bp*self.IHat/(self.BHat**2),axis=2)/numpy.expand_dims(self.nHat,axis=1))*self.magnetization_flow_perturbation
 
     @property
     def magnetization_flow_perturbation_test(self):
-        mp=self.magnetization_perturbation
-        dpsiN=self.dpsiN
-        psiN=self.psi
-        for i in range(0,len(psiN)):
-            if i==0:
-                mpf=[(mp[i+1]-mp[i])/dpsiN]
-            else:
-                mpf=mpf+[(mp[i]-mp[i-1])/dpsiN]
-        mpf=numpy.array(mpf)
-        return mpf
+        return self.magnetization_flow_perturbation_test_order(order=4)
+    
+    def magnetization_flow_perturbation_test_order(self,order=4):
+        #for testing different derivative approximations
+        if order == 1:
+            #forward except at the first point, where it is backward
+            mp=self.magnetization_perturbation
+            dpsiN=self.dpsiN
+            psiN=self.psi
+            for i in range(0,len(psiN)):
+                if i==0:
+                    mpf=[(mp[i+1]-mp[i])/dpsiN]
+                else:
+                    mpf=mpf+[(mp[i]-mp[i-1])/dpsiN]
+            mpf=numpy.array(mpf)
+            #print mpf
+            return mpf
+        elif order == 2:
+            #centered 3-point, forward/backward 3-point at the ends
+            mp=self.magnetization_perturbation
+            ddpsiN=diff_matrix(self.psi[0],self.psi[-1],self.Npsi,order=2)
+            return numpy.tensordot(ddpsiN,mp,([1],[0])) 
+        elif order == 4:
+            #centered 5-point, forward/backward 5-point at the ends
+            mp=self.magnetization_perturbation
+            ddpsiN=diff_matrix(self.psi[0],self.psi[-1],self.Npsi,order=4)
+            return numpy.tensordot(ddpsiN,mp,([1],[0]))
+        
     
     @property
     def poloidal_flow_gradP_test(self):
@@ -961,7 +1112,7 @@ class perfect_simulation(object):
     
     @property
     def poloidal_flow_test(self):
-        return self.poloidal_flow_parallel + self.poloidal_flow_ExB + self.poloidal_flow_gradP + self.poloidal_flow_inputs
+        return self.poloidal_flow_parallel + self.poloidal_flow_ExB + self.poloidal_flow_gradP_test + self.poloidal_flow_inputs
 
     @property
     def k_poloidal_parallel(self):
@@ -991,7 +1142,7 @@ class perfect_simulation(object):
     
     @property
     def k_poloidal_test(self):
-        return self.k_poloidal_parallel + self.k_poloidal_ExB + self.k_poloidal_gradP + self.k_poloidal_inputs
+        return self.k_poloidal_parallel + self.k_poloidal_ExB + self.k_poloidal_gradP_test + self.k_poloidal_inputs
 
     
     @property
@@ -1004,8 +1155,7 @@ class perfect_simulation(object):
 
     @property
     def toroidal_flow_gradP(self):
-        #return (self.Delta/(2*self.psiAHat))*(self.masses/self.Z)*(numpy.expand_dims(self.Bp**2*self.RHat/(self.BHat**2),axis=2)/numpy.expand_dims(self.nHat,axis=1))*self.magnetization_flow_perturbation
-        return self.toroidal_flow_gradP_test
+        return (self.Delta/(2*self.psiAHat))*(self.masses/self.Z)*(numpy.expand_dims(self.Bp**2*self.RHat/(self.BHat**2),axis=2)/numpy.expand_dims(self.nHat,axis=1))*self.magnetization_flow_perturbation
 
     @property
     def toroidal_flow_gradP_test(self):
@@ -1017,9 +1167,47 @@ class perfect_simulation(object):
     
     @property
     def toroidal_flow_test(self):
-        return self.toroidal_flow_parallel - self.toroidal_flow_ExB - self.toroidal_flow_gradP - self.toroidal_flow_inputs
+        return self.toroidal_flow_parallel - self.toroidal_flow_ExB - self.toroidal_flow_gradP_test - self.toroidal_flow_inputs
 
-    
+    @property
+    def perpendicular_flow_inputs(self):
+        return self.perpendicular_flow_inputs_diamagnetic + self.perpendicular_flow_inputs_ExB
+
+    @property
+    def perpendicular_flow_inputs_ExB(self):
+        return (self.omega/(self.Delta*self.psiAHat*self.Z))*numpy.expand_dims(self.Bp*self.RHat/self.BHat,axis=2)*numpy.expand_dims(self.Z*numpy.expand_dims(self.dPhiHatdpsiN,axis=1),axis=1)
+    #self.dPhiHatdpsiN[:,numpy.newaxis,numpy.newaxis]
+
+    @property
+    def perpendicular_flow_inputs_diamagnetic(self):
+        return (1/(2*self.psiAHat))*(numpy.expand_dims(self.THat,axis=1)/self.Z)*numpy.expand_dims(self.Bp*self.RHat/self.BHat,axis=2)*numpy.expand_dims(self.dnHatdpsiN/self.nHat + self.dTHatdpsiN/self.THat,axis=1)
+
+    @property
+    def perpendicular_flow_inputs_test(self):
+        #to see if
+        #perpendicular_flow_inputs = perpendicular_flow_inputs_ExB + perpendicular_flow_inputs_diamagnetic
+        #which it is 2016-05-27
+        return self.perpendicular_flow_inputs_diamagnetic + self.perpendicular_flow_inputs_ExB
+
+    @property
+    def perpendicular_flow_ExB(self):
+        #equal to flow ExB sqrt(Vp^2+Vt^2).
+        return self.omega/(self.Delta*self.psiAHat)*numpy.expand_dims(self.Bp*self.RHat/self.BHat,axis=2)*self.density_perturbation*numpy.expand_dims(numpy.expand_dims(self.dPhiHatdpsiN,axis=1),axis=2)
+
+    @property
+    def perpendicular_flow_gradP(self):
+        #equal to flow gradP sqrt(Vp^2+Vt^2).
+        return (self.Delta/(2*self.psiAHat))*(self.masses/self.Z)*(numpy.expand_dims(self.Bp*self.RHat/(self.BHat),axis=2)/numpy.expand_dims(self.nHat,axis=1))*self.magnetization_flow_perturbation
+
+    @property
+    def perpendicular_flow(self):
+        return self.perpendicular_flow_inputs + self.perpendicular_flow_ExB + self.perpendicular_flow_gradP
+
+    @property
+    def perpendicular_flow_over_vT(self):
+        self.Delta*nstack(numpy.sqrt(self.masses/self.THat),axis=1,n=len(self.theta))*self.perpendicular_flow
+
+
     def copy_simulation_to_dir(self,dir):
         #try to make the new directory or don't if it exists
         try:
@@ -1249,5 +1437,17 @@ class normalized_perfect_simulation(perfect_simulation):
     def normed_potential_perturbation(self):
         return self.PhiBar*self.potential_perturbation
 
+    
+    @property
+    def normed_perpendicular_flow(self):
+        return self.Delta*self.vBar*self.perpendicular_flow
+
+    @property
+    def normed_perpendicular_flow_inboard(self):
+        return self.Delta*self.vBar*self.perpendicular_flow_inboard
+
+    @property
+    def normed_perpendicular_flow_outboard(self):
+        return self.Delta*self.vBar*self.perpendicular_flow_outboard
     
 
