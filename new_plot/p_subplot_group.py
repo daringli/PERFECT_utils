@@ -16,7 +16,7 @@ class perfect_subplot_group:
         for p_subplot in self.p_subplot_list:
             setattr(p_subplot,attr_name,value)
         
-    def getattrs(self,attr_name,range=True):
+    def getattrs(self,attr_name,range=False):
         #returns a list of the attribute for all members in the list
         if range:
             # we only return the plotted part of the array attribute
@@ -56,7 +56,11 @@ class perfect_subplot_group:
             return min - margin*self.get_range(attr_name)
 
     def get_range(self,attr_name):
-        return numpy.fabs(self.get_max(attr_name)-self.get_min(attr_name))
+        ret = numpy.fabs(self.get_max(attr_name)-self.get_min(attr_name))
+        if numpy.fabs(ret) <= numpy.fabs(self.get_max(attr_name)*1e-10):
+            print "Warning: p_subplot_group: get_range: range is effectively zero. Artificially padding to make plot work."
+            ret = self.get_max(attr_name)*0.1
+        return ret
         
     def set_middle_attr(self,attr_name,value):
         #sets an attribute of the middle element of a list.

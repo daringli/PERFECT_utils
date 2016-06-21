@@ -15,9 +15,12 @@ import sys
 
 import scipy.integrate
 
+from mpldatacursor import datacursor
 
 
-def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",cm=cm.rainbow,lg=True,xlims=[0.9,1.0],same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[],interactive=False):
+
+
+def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",cm=cm.rainbow,lg=True,markers=None,linestyles=None,xlims=[0.9,1.0],same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[],interactive=False):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -39,7 +42,10 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
     
     normlist=[x + "/" + normname for x in dirlist]
     specieslist=[x + "/" + speciesname for x in dirlist]
-    simulList=perfect_simulations_from_dirs(dirlist,normlist,specieslist)
+    psiN_to_psiList=[x + "/" + psiN_to_psiname for x in dirlist]
+    simulList=perfect_simulations_from_dirs(dirlist,normlist,specieslist,psiN_to_psiList)
+    if markers == None:
+        markers=['']*len(simulList)
 
     #some logic to differentiate between species independent
     #and species quantities further down will fail if there are simulations
@@ -80,13 +86,14 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                 color_index=color_index+1
     else:
         all_linecolors=colors
-        
-    linestyles=[] #linestyles generated from local or global
-    for l in local:
-        if l:
-            linestyles=linestyles+["dashed"]
-        else:
-            linestyles=linestyles+["solid"]
+
+    if linestyles == None:
+        linestyles=[] #linestyles generated from local or global
+        for l in local:
+            if l:
+                linestyles=linestyles+["dashed"]
+            else:
+                linestyles=linestyles+["solid"]
     
     for i_a,attrib in enumerate(attribs):
         psp_list=[]
@@ -136,7 +143,7 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                 else:
                     last_groupname="not_last"
 
-                psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,groups=[s,attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,colors=linecolors)) #yaxis_label=ylabels[i_a]
+                psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,groups=[s,attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,colors=linecolors,markers=markers)) #yaxis_label=ylabels[i_a]
                 
 
         else:
@@ -151,7 +158,7 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
             x=[getattr(simul,xattr) for simul in simulList]
             linecolors=all_linecolors
             coordinates=(i,0)
-            psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,groups=[attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,colors=linecolors)) #yaxis_label=ylabels[i_a]
+            psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,groups=[attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,colors=linecolors,markers=markers)) #yaxis_label=ylabels[i_a]
             
         
         psp_lists.append(psp_list)
@@ -189,6 +196,7 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                 if len(share_scale)>0:
                     share_scale_group=perfect_subplot_group(psp_list,groups=share_scale,logic="or")
                     share_scale_group.setattrs("ylims",[share_scale_group.get_min("data",margin=0.1),share_scale_group.get_max("data",margin=0.1)])
+                    
 
                     
         
@@ -202,14 +210,22 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
         for species_group,s in zip(species_groups,species_set):
             species_group.setattrs("title",s)
 
+        
+
         for attrib_group in attrib_groups:
             this_species_groups=[perfect_subplot_group(attrib_group.p_subplot_list,groups=[s]) for s in species_set]
             for this_species_group in this_species_groups:
                 if len(this_species_group.p_subplot_list)>0:
                     this_species_group.setattrs("ylims",[this_species_group.get_min("data",margin=0.1),this_species_group.get_max("data",margin=0.1)])
+                    #print [this_species_group.get_min("data",margin=0.1),this_species_group.get_max("data",margin=0.1)]
+            this_species_indep_group=perfect_subplot_group(attrib_group.p_subplot_list,groups=["species_independent"])
+            if len(this_species_indep_group.p_subplot_list)>0:
+                this_species_indep_group.setattrs("ylims",[this_species_indep_group.get_min("data",margin=0.1),this_species_indep_group.get_max("data",margin=0.1)])
             this_share_scale_group=perfect_subplot_group(attrib_group.p_subplot_list,groups=share_scale,logic="or")
             if len(this_share_scale_group.p_subplot_list)>0:
                 this_share_scale_group.setattrs("ylims",[this_share_scale_group.get_min("data",margin=0.1),this_share_scale_group.get_max("data",margin=0.1)])
+            
+            
         
             
         all_group.setattrs("show_yaxis_ticklabel",True)
@@ -225,7 +241,12 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
             global_xlabel=r"$\sqrt{\psi_N}$"
         elif xattr=="psiOverOrbitWidth":
             global_xlabel=r"$\sqrt{\psi_N}$"
-            
+        elif xattr=="actual_psi":
+            global_xlabel=r"$\hat{\psi}$"
+        elif xattr=="actual_psiN":
+            global_xlabel=r"$\psi_N$"
+        elif xattr=="psi_index":
+            global_xlabel=r"$i_\psi$"
         perfect_visualizer(psp_list,gridspec_list[i_li],global_xlabel=global_xlabel,dimensions=1,global_ylabel=global_ylabel)
         if same_plot:
             plt.savefig(outputname+".pdf")
@@ -233,6 +254,7 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
             plt.savefig(attribs[i_li]+".pdf")
         if interactive:
             #dangerous, since it will (for some reason) be executed after all 1d_plot calls and show everything plotted in the given script.
+            datacursor(display='multiple', draggable=True)
             plt.show()
         
 

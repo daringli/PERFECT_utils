@@ -24,7 +24,7 @@ sentinel=object() #to detect default inputs
 
 class perfect_simulation(object):
 
-    def __init__(self,input_filename,output_filename=sentinel,species_filename=sentinel,group_name=sentinel,pedestal_points=[]):
+    def __init__(self,input_filename,output_filename=sentinel,species_filename=sentinel,psiN_to_psi_filename=sentinel,group_name=sentinel,pedestal_points=[]):
         
         #description of simulation, for usage as legend in plots, etc.
         self.description=""
@@ -32,38 +32,21 @@ class perfect_simulation(object):
         #relevant field can also be set by chaning self.species_list
         if species_filename is not sentinel:
             self.species=species_filename
-        
 
-        #getting input
-        self.input=input_filename
-        #self.input_filename=input_filename
-        #self.inputs=perfectInput(self.input_filename)
-        #self.input_dir = "." + "/" + self.input_filename.rsplit('/',1)[:-1][0]
-
-        #having no output is acceptable,
-        #it just means that simulation has yet to be run
-        self.output=output_filename
-
-        #where the pedestal starts and stops
-        self.pedestal_points=pedestal_points
 
         #Output intepretation and group specification
         #Different group in the same output can in principle
         #be handled by different simulation objects
-        self.version_group="/"
-        self.program_mode_group="/"
-        if group_name!=sentinel:
-            self.group_name=group_name
-        else:
-            self.group_name="/run  1/"
-
         #hiding implementation details
         self.psi_name="psi"
         self.psiAHat_name="psiAHat"
         self.theta_name="theta"
         self.particle_flux_name="particleFlux"
+        self.particle_flux_before_theta_integral_name="particleFluxBeforeThetaIntegral"
         self.heat_flux_name="heatFlux"
+        self.heat_flux_before_theta_integral_name="heatFluxBeforeThetaIntegral"
         self.momentum_flux_name="momentumFlux"
+        self.momentum_flux_before_theta_integral_name="momentumFluxBeforeThetaIntegral"
         self.VPrimeHat_name="VPrimeHat"
         self.Delta_name="Delta"
         self.omega_name="omega"
@@ -86,6 +69,8 @@ class perfect_simulation(object):
         self.flow_name="flow"
         self.toroidal_flow_name="toroidalFlow"
         self.poloidal_flow_name="poloidalFlow"
+        self.FSA_toroidal_flow_name="FSAToroidalFlow"
+        self.FSA_poloidal_flow_name="FSAPoloidalFlow"
         self.magnetization_flow_perturbation_name="magnetizationFlowPerturbation"
         self.magnetization_perturbation_name="magnetizationPerturbation"
         self.kPar_name="kPar"
@@ -110,6 +95,29 @@ class perfect_simulation(object):
         self.pressure_perturbation_name="pressurePerturbation"
 
         self.local_name="makeLocalApproximation"
+        
+        self.version_group="/"
+        self.program_mode_group="/"
+        if group_name!=sentinel:
+            self.group_name=group_name
+        else:
+            self.group_name="/run  1/"
+            
+        #getting input
+        self.input=input_filename
+        
+        #having no output is acceptable,
+        #it just means that simulation has yet to be run
+        self.output=output_filename
+
+        #can have no psiN_to_psi, if uniform grid.
+        self.psiN_to_psi = psiN_to_psi_filename
+        
+        #where the pedestal starts and stops
+        self.pedestal_points=pedestal_points
+
+        
+        
 
         #print "Total source charge in domain:" + str(self.total_source_charge)
         #print "final j:" + str(self.jHat[-1])
@@ -170,6 +178,39 @@ class perfect_simulation(object):
                 self.output_dir = self.output_filename.rsplit('/',1)[:-1][0]
                 self.output_filename_nodir = "." + "/" + self.output_filename.rsplit('/',1)[-1]
 
+    @property
+    def psiN_to_psi(self):
+        return self.psiN_to_psi_filename
+
+    @psiN_to_psi.setter
+    def psiN_to_psi(self,psiN_to_psi_filename):
+        if self.inputs.psiGridType==1:
+            if (psiN_to_psi_filename==sentinel) or (psiN_to_psi_filename==None):
+                self.psiN_to_psi_filename=None
+                self.psiN_to_psi_profiles=None
+                self.psiN_to_psi_dir=self.input_dir
+                self.psiN_to_psi_filename_nodir =None
+            else:
+                self.psiN_to_psi_filename="." + "/" + psiN_to_psi_filename
+                self.psiN_to_psi_dir = self.psiN_to_psi_filename.rsplit('/',1)[:-1][0]
+                self.psiN_to_psi_filename_nodir = "." + "/" + self.psiN_to_psi_filename.rsplit('/',1)[-1]
+                self.psiN_to_psi_groupname="/Npsi"+str(self.inputs.Npsi)+"/"
+                if os.path.isfile(self.psiN_to_psi_filename):
+                    self.psiN_to_psi_profiles=h5py.File(psiN_to_psi_filename,'r')
+                    self.psiAHatArray = self.psiN_to_psi_profiles[self.psiN_to_psi_groupname+"psiAHatArray"][()]
+                    self.actual_psi = self.psiN_to_psi_profiles[self.psiN_to_psi_groupname+"psiArray"][()]
+                    self.actual_psiN = self.psiN_to_psi_profiles[self.psiN_to_psi_groupname+"psiArray"][()]/self.psiAHat
+                else:
+                    print "Error, psiN_to_psi cannot be read, file "+ psiN_to_psi_filename +" does not exist!"
+                    sys.exit(1)
+        elif self.inputs.psiGridType==0:
+            self.psiAHatArray = numpy.array([self.psiAHat]*self.Npsi)
+            self.actual_psi = self.psiAHat*self.psi
+            self.actual_psiN = self.psi
+            
+            
+                
+
     def always_run_simulation(self,cmdline):
         print "Starting:\n>>"+cmdline+"\nin directory '"+self.input_dir+"'"      
         simulation = subprocess.Popen(
@@ -191,8 +232,68 @@ class perfect_simulation(object):
             self.always_run_simulation(cmdline)
 
 
+    def FSA(self,attrib,jacobian=True,periodic=True):
+        if type(attrib) == str:
+            a=getattr(self,attrib)
+        else:
+            a=attrib
+        rank=arraylist_rank(a)
+        if rank==3:
+            #sanity check
+            if len(a[1]) == self.Ntheta:
+                axis = 1
+                VPH=numpy.expand_dims(numpy.fabs(self.VPrimeHat),axis=1)
+            else:
+                print "psi, theta, species dependent quantity has axis in wrong order?? Or v-space dependence?"
+            if jacobian==True:
+                j=numpy.expand_dims(1/numpy.fabs(self.JHat),axis=2)
+            else:
+                j=1 
+        elif rank==2:
+            if len(a[1]) == self.Ntheta:
+                #psi, theta dependence
+                axis = 1
+                if jacobian==True:
+                    j=1/numpy.fabs(self.JHat)
+                else:
+                    j=1
+            elif len(a[0]) == self.Ntheta:
+                #theta, species dependence
+                #add psi dimension since jHat can be psi dependent
+                axis = 1
+                a=numpy.expand_dims(a,axis=0)
+                if jacobian==True:
+                    j=numpy.expand_dims(1/numpy.fabs(self.JHat),axis=2)
+                else:
+                    j=1
+            else:
+                #psi, species dependence (or weird thigns)
+                return a
+            VPH=numpy.fabs(self.VPrimeHat)
+            
+        elif rank==1:
+            if len(a) == self.Ntheta:
+                axis = 0
+                a=numpy.expand_dims(a,axis=0) #since VPrime can depend on psi
+                VPH=numpy.fabs(self.VPrimeHat)
+            else:
+                return a
+            if jacobian==True:
+                j=1/numpy.fabs(self.JHat)
+            else:
+                j=1
+        else:
+            print "Error, FSA can only take things with 3 indices."
+        if periodic==False:
+            #NOTE: should not be used, only to compare new with old buggy
+            #for documentation purposes.
+            #Would be approriate for non-periodic subintervals
+            return numpy.trapz(a*j,dx=self.dtheta,axis=axis)/VPH
+        return numpy.sum(a*j*self.dtheta,axis=axis)/VPH
+         
+        
     def attrib_at_psi_of_theta(self,attrib,psiN):
-        indices=get_index_range(self.psi,[psiN,psiN],ret_range=False)
+        indices=get_index_range(self.actual_psiN,[psiN,psiN],ret_range=False)
         a=getattr(self,attrib)
         rank=arraylist_rank(a)
         if rank==3:
@@ -211,10 +312,10 @@ class perfect_simulation(object):
         #for each given theta
         if xlim != None:
             #print "xlim: " + str(xlim)
-            indices=get_index_range(self.psi,xlim,ret_range=True)
-            psi=self.psi
+            indices=get_index_range(self.actual_psiN,xlim,ret_range=True)
+            psi=self.actual_psiN
         else:
-            psi=self.psi
+            psi=self.actual_psiN
             indices=range(len(psi))
         #print [psi[indices[0]],psi[indices[-1]]]
         data=getattr(self,attrib)
@@ -233,9 +334,16 @@ class perfect_simulation(object):
     
     @property
     def local(self):
-        if self.outputs[self.group_name+self.local_name][()] == 1:
+        try:
+            local=self.outputs[self.group_name+self.local_name][()]
+        except KeyError:
+            if self.inputs.makeLocalApproximation:
+                local = 1
+            else:
+                local = -1
+        if local == 1:
             return True
-        elif self.outputs[self.group_name+self.local_name][()] == -1:
+        elif local == -1:
             return False
         else:
             print "perfect_simulation: error: makeLocalApproximation is neither true nor false!?"
@@ -251,6 +359,20 @@ class perfect_simulation(object):
         return self.outputs[self.group_name+self.particle_flux_name][()]*signOfVPrimeHat
 
     @property
+    def particle_flux_before_theta_integral(self):
+        return self.outputs[self.group_name+self.particle_flux_before_theta_integral_name][()]
+    
+    @property
+    def particle_flux_test(self):
+        #tests the external FSA routine by calculating the particle flux from the non-integrated value.
+        return numpy.expand_dims(self.VPrimeHat,axis=1)*self.FSA("particle_flux_before_theta_integral",jacobian=False)
+
+    @property
+    def particle_flux_psi_unit_vector(self):
+        #divide \nabla \psi with |\nabla \psi| =|RB_p| (assumes BBar, RBar positive)
+        return numpy.expand_dims(self.VPrimeHat,axis=1)*self.FSA(self.particle_flux_before_theta_integral/(numpy.fabs(numpy.expand_dims(self.RHat*self.Bp,axis=2))),jacobian=False)
+        
+    @property
     def momentum_flux(self):
         VPrimeHat=[self.VPrimeHat]
         VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
@@ -258,12 +380,36 @@ class perfect_simulation(object):
         return self.outputs[self.group_name+self.momentum_flux_name][()]*signOfVPrimeHat
 
     @property
+    def momentum_flux_before_theta_integral(self):
+        return self.outputs[self.group_name+self.momentum_flux_before_theta_integral_name][()]
+
+    
+    @property
+    def momentum_flux_test(self):
+        return numpy.expand_dims(self.VPrimeHat,axis=1)*self.FSA("momentum_flux_before_theta_integral",jacobian=False)
+
+    
+    @property
+    def momentum_flux_psi_unit_vector(self):
+        #divide \nabla \psi with |\nabla \psi| =|RB_p| (assumes BBar, RBar positive)
+        return numpy.expand_dims(self.VPrimeHat,axis=1)*self.FSA(self.momentum_flux_before_theta_integral/(numpy.fabs(numpy.expand_dims(self.RHat*self.Bp,axis=2))),jacobian=False)
+
+    
+    @property
     def m_momentum_flux(self):
         return self.momentum_flux*self.masses
 
     @property
+    def m_momentum_flux_psi_unit_vector(self):
+        return self.momentum_flux_psi_unit_vector*self.masses
+
+    @property
     def sum_m_momentum_flux(self):
         return numpy.sum(self.masses*self.momentum_flux,axis=1)
+
+    @property
+    def sum_m_momentum_flux_psi_unit_vector(self):
+        return numpy.sum(self.m_momentum_flux_psi_unit_vector,axis=1)
     
     @property
     def heat_flux(self):
@@ -272,15 +418,27 @@ class perfect_simulation(object):
         signOfVPrimeHat=numpy.sign(VPrimeHat)
         return self.outputs[self.group_name+self.heat_flux_name][()]*signOfVPrimeHat
 
+    @property
+    def heat_flux_before_theta_integral(self):
+        return self.outputs[self.group_name+self.heat_flux_before_theta_integral_name][()]
+
+    @property
+    def heat_flux_psi_unit_vector(self):
+        #divide \nabla \psi with |\nabla \psi| =|RB_p| (assumes BBar, RBar positive)
+        return numpy.expand_dims(self.VPrimeHat,axis=1)*self.FSA(self.heat_flux_before_theta_integral/(numpy.fabs(numpy.expand_dims(self.RHat*self.Bp,axis=2))),jacobian=False)
 
     @property
     def conductive_heat_flux(self):        
         return self.heat_flux-(5.0/2.0)*self.THat*self.particle_flux
 
     @property
+    def conductive_heat_flux_psi_unit_vector(self):        
+        return self.heat_flux_psi_unit_vector-(5.0/2.0)*self.THat*self.particle_flux_psi_unit_vector
+
+    @property
     def particle_flux_over_nPed(self):
         psiN_point=0.9
-        psiN_index=get_index_range(self.psi,[psiN_point,psiN_point])[1]
+        psiN_index=get_index_range(self.actual_psiN,[psiN_point,psiN_point])[1]
         npeds=[self.nHat[psiN_index,i] for i in range(self.num_species)]
         return self.particle_flux/npeds
     
@@ -288,28 +446,28 @@ class perfect_simulation(object):
     @property
     def momentum_flux_over_nPed(self):
         psiN_point=0.9
-        psiN_index=get_index_range(self.psi,[psiN_point,psiN_point])[1]
+        psiN_index=get_index_range(self.actual_psiN,[psiN_point,psiN_point])[1]
         npeds=[self.nHat[psiN_index,i] for i in range(self.num_species)]
         return self.momentum_flux/npeds
 
     @property
     def m_momentum_flux_over_nPed(self):
         psiN_point=0.9
-        psiN_index=get_index_range(self.psi,[psiN_point,psiN_point])[1]
+        psiN_index=get_index_range(self.actual_psiN,[psiN_point,psiN_point])[1]
         npeds=[self.nHat[psiN_index,i] for i in range(self.num_species)]
         return self.m_momentum_flux/npeds
 
     @property
     def heat_flux_over_nPed(self):
         psiN_point=0.9
-        psiN_index=get_index_range(self.psi,[psiN_point,psiN_point])[1]
+        psiN_index=get_index_range(self.actual_psiN,[psiN_point,psiN_point])[1]
         npeds=[self.nHat[psiN_index,i] for i in range(self.num_species)]
         return self.heat_flux/npeds
 
     @property
     def conductive_heat_flux_over_nPed(self):
         psiN_point=0.9
-        psiN_index=get_index_range(self.psi,[psiN_point,psiN_point])[1]
+        psiN_index=get_index_range(self.actual_psiN,[psiN_point,psiN_point])[1]
         npeds=[self.nHat[psiN_index,i] for i in range(self.num_species)]
         return self.conductive_heat_flux/npeds
     
@@ -349,14 +507,14 @@ class perfect_simulation(object):
     @property
     def particle_source_over_m2nPed(self):
         psiN_point=0.9
-        psiN_index=get_index_range(self.psi,[psiN_point,psiN_point])[1]
+        psiN_index=get_index_range(self.actual_psiN,[psiN_point,psiN_point])[1]
         npeds=[self.nHat[psiN_index,i] for i in range(self.num_species)]
         return self.particle_source_over_m2/npeds
 
     @property
     def heat_source_over_m2nPed(self):
         psiN_point=0.9
-        psiN_index=get_index_range(self.psi,[psiN_point,psiN_point])[1]
+        psiN_index=get_index_range(self.actual_psiN,[psiN_point,psiN_point])[1]
         npeds=[self.nHat[psiN_index,i] for i in range(self.num_species)]
         return self.heat_source_over_m2/npeds
     
@@ -444,8 +602,8 @@ class perfect_simulation(object):
 
     @property
     def toroidal_flow(self):
-        #return self.toroidal_flow_test
-        return self.outputs[self.group_name+self.toroidal_flow_name][()]
+        return self.toroidal_flow_test
+        #return self.outputs[self.group_name+self.toroidal_flow_name][()]
 
     @property
     def toroidal_flow_at_psi_of_theta(self):
@@ -458,6 +616,14 @@ class perfect_simulation(object):
     @property
     def toroidal_flow_inboard(self):
         return self.attrib_at_theta_of_psi("toroidal_flow",numpy.pi)
+
+    @property
+    def FSA_toroidal_flow(self):
+        return self.outputs[self.group_name+self.FSA_toroidal_flow_name][()]
+
+    @property
+    def FSA_toroidal_flow_test(self):
+        return self.FSA("toroidal_flow",jacobian=True)
     
     @property
     def toroidal_flow_over_vT(self):
@@ -476,8 +642,9 @@ class perfect_simulation(object):
     
     @property
     def poloidal_flow(self):
-        #return self.poloidal_flow_test
-        return self.outputs[self.group_name+self.poloidal_flow_name][()]
+        #next line commented out since Bp seem to have the wrong sign in the code, and since we want to use higher order stencil:
+        #return self.outputs[self.group_name+self.poloidal_flow_name][()]
+        return self.poloidal_flow_test
         
     @property
     def poloidal_flow_at_psi_of_theta(self):
@@ -492,8 +659,25 @@ class perfect_simulation(object):
         return self.attrib_at_theta_of_psi("poloidal_flow",numpy.pi)
 
     @property
+    def poloidal_flow_inboard_ExB(self):
+        return self.attrib_at_theta_of_psi("poloidal_flow_ExB",numpy.pi)
+
+    @property
+    def poloidal_flow_inboard_gradP(self):
+        return self.attrib_at_theta_of_psi("poloidal_flow_gradP",numpy.pi)
+
+    
+    @property
+    def poloidal_flow_inboard_inputs_parallel(self):
+        return self.attrib_at_theta_of_psi("poloidal_flow_inputs_parallel",numpy.pi)
+
+    @property
+    def poloidal_flow_to_k_poloidal_factor(self):
+        return 2*self.psiAHat*self.Z*self.FSABHat2[:,numpy.newaxis,numpy.newaxis]/(numpy.expand_dims(self.Bp*self.IHat,axis=2)*numpy.expand_dims(self.dTHatdpsiN,axis=1))
+    
+    @property
     def k_poloidal(self):
-        return self.poloidal_flow*2*self.psiAHat*self.Z*self.FSABHat2[:,numpy.newaxis,numpy.newaxis]/(numpy.expand_dims(self.Bp*self.IHat,axis=2)*numpy.expand_dims(self.dTHatdpsiN,axis=1))
+        return self.poloidal_flow*self.poloidal_flow_to_k_poloidal_factor
         #return self.k_poloidal_test
 
     @property
@@ -729,7 +913,7 @@ class perfect_simulation(object):
     @property
     def dTHatdpsiN(self):
         try:
-            return self.input_profiles[self.input_profiles_groupname+"dTHatdpsis"][()]
+            return numpy.true_divide(self.psiAHat,self.psiAHatArray)[:,numpy.newaxis]*self.input_profiles[self.input_profiles_groupname+"dTHatdpsis"][()]
         except AttributeError:
             pass
         try:
@@ -752,7 +936,7 @@ class perfect_simulation(object):
     @property
     def dnHatdpsiN(self):
         try:
-            return self.input_profiles[self.input_profiles_groupname+"dnHatdpsis"][()]
+            return numpy.true_divide(self.psiAHat,self.psiAHatArray)[:,numpy.newaxis]*self.input_profiles[self.input_profiles_groupname+"dnHatdpsis"][()]
         except AttributeError:
             pass
         try:
@@ -774,7 +958,7 @@ class perfect_simulation(object):
     @property
     def detaHatdpsiN(self):
         try:
-            return self.input_profiles[self.input_profiles_groupname+"detaHatdpsis"][()]
+            return (self.psiAHat/self.psiAHatArray)[:,numpy.newaxis]*self.input_profiles[self.input_profiles_groupname+"detaHatdpsis"][()]
         except AttributeError:
             pass
         try:
@@ -804,7 +988,7 @@ class perfect_simulation(object):
     @property
     def dPhiHatdpsiN(self):
         try:
-            return self.input_profiles[self.input_profiles_groupname+"dPhiHatdpsi"][()]
+            return (self.psiAHat/self.psiAHatArray)*self.input_profiles[self.input_profiles_groupname+"dPhiHatdpsi"][()]
         except AttributeError:
             pass
         try:
@@ -815,7 +999,7 @@ class perfect_simulation(object):
     @property
     def dPhiHat_dpsiN(self):
         #intentionally "crude" to use same deriv approx as dGamma_dpsiN
-        psiN=self.psi
+        psiN=self.actual_psiN
         PhiHat=self.PhiHat
         ret=numpy.zeros([len(psiN)-1,self.num_species])
         for i in range(1,len(psiN)):
@@ -825,25 +1009,27 @@ class perfect_simulation(object):
             ret[i-1]=dPhiHat/dpsiN
         return ret
 
-   
-
-    @property
-    def dpsiN(self):
-        return self.psi[1]-self.psi[0]
-
     @property
     def dtheta(self):
+        #corresponding dpsiN does not exist atm, since non-uniform grid.
         return self.theta[1]-self.theta[0]
 
     @property
     def Npsi(self):
         return len(self.psi)
-    
+
+    @property
+    def Ntheta(self):
+        return len(self.theta)
+
+    @property
+    def Nspecies(self):
+        return len(self.masses)
     
     @property
     def dTHat_dpsiN(self):
         #intentionally "crude" to use same deriv approx as dGamma_dpsiN
-        psiN=self.psi
+        psiN=self.actual_psiN
         THat=self.THat
         ret=numpy.zeros([len(psiN)-1,self.num_species])
         for i in range(1,len(psiN)):
@@ -874,7 +1060,8 @@ class perfect_simulation(object):
     def total_source_charge(self):
         final_i=-30
         source_charge=numpy.sum(self.Z*self.GammaHat_source,axis=1)
-        return scipy.integrate.simps(source_charge[0:final_i],self.psi[0:final_i])
+        #probably OK with non-uniform grid...
+        return scipy.integrate.simps(source_charge[0:final_i],self.actual_psiN[0:final_i])
     
     @property
     def Delta(self):
@@ -890,18 +1077,27 @@ class perfect_simulation(object):
 
     @property
     def psi(self):
-        return self.outputs[self.group_name+self.psi_name][()]
-        #self.inputs.psi
+        try:
+            return self.outputs[self.group_name+self.psi_name][()]
+        except KeyError:
+            #print "cannot get internal psi from output, will generate uniform from input."
+            return self.inputs.psi
 
     @property
+    def psi_index(self):
+        return numpy.array(range(self.Npsi))
+        
+    @property
     def sqrtpsi(self):
-        return numpy.sqrt(self.psi)
+        return numpy.sqrt(self.actual_psi)
 
     @property
     def psiAHat(self):
-        return self.outputs[self.group_name+self.psiAHat_name][()]
-        #self.inputs.psi
-
+        try:
+            return self.outputs[self.group_name+self.psiAHat_name][()]
+        except KeyError:
+            return self.inputs.psiAHat
+            
     @property
     def theta(self):
         return self.outputs[self.group_name+self.theta_name][()]
@@ -933,7 +1129,7 @@ class perfect_simulation(object):
 
     @property
     def dGammaHat_dpsiN(self):
-        psiN=self.psi
+        psiN=self.actual_psiN
         GammaHat=self.particle_flux
         ret=numpy.zeros([len(psiN),self.num_species])
         for i in range(1,len(psiN)-1):
@@ -945,7 +1141,7 @@ class perfect_simulation(object):
 
     @property
     def jprefac_dPi_dpsiN(self):
-        psiN=self.psi
+        psiN=self.actual_psiN
         Pi=self.sum_m_momentum_flux
         ret=numpy.zeros(len(psiN))
         for i in range(1,len(psiN)-1):
@@ -964,7 +1160,7 @@ class perfect_simulation(object):
     @property
     def dqHat_dpsiN(self):
         #non-adiabatic part
-        psiN=self.psi
+        psiN=self.actual_psiN
         qHat=self.conductive_heat_flux
         ret=numpy.zeros([len(psiN),self.num_species])
         for i in range(1,len(psiN)):
@@ -1037,6 +1233,7 @@ class perfect_simulation(object):
 
     @property
     def orbit_width(self):
+        # orbit width in psiN
         # uses hardcoded numerical values for RBar dpsiN/dr...
         print "###################################"
         print "...          WARNING            ..."
@@ -1060,7 +1257,7 @@ class perfect_simulation(object):
 
     @property
     def poloidal_flow_ExB(self):
-        return self.omega/(self.Delta*self.psiAHat)*numpy.expand_dims(self.Bp*self.IHat/self.BHat**2,axis=2)*self.density_perturbation*numpy.expand_dims(numpy.expand_dims(self.dPhiHatdpsiN,axis=1),axis=2)
+        return (self.omega/self.Delta*self.psiAHat)*numpy.expand_dims(self.Bp*self.IHat/self.BHat**2,axis=2)*self.density_perturbation*numpy.expand_dims(numpy.expand_dims(self.dPhiHatdpsiN,axis=1),axis=2)
 
     @property
     def poloidal_flow_gradP(self):
@@ -1075,9 +1272,9 @@ class perfect_simulation(object):
         if order == 1:
             #forward except at the first point, where it is backward
             mp=self.magnetization_perturbation
-            dpsiN=self.dpsiN
-            psiN=self.psi
+            psiN=self.actual_psiN
             for i in range(0,len(psiN)):
+                dpsiN=psiN[i]-psiN[i-1]
                 if i==0:
                     mpf=[(mp[i+1]-mp[i])/dpsiN]
                 else:
@@ -1089,12 +1286,12 @@ class perfect_simulation(object):
             #centered 3-point, forward/backward 3-point at the ends
             mp=self.magnetization_perturbation
             ddpsiN=diff_matrix(self.psi[0],self.psi[-1],self.Npsi,order=2)
-            return numpy.tensordot(ddpsiN,mp,([1],[0])) 
+            return (psiAHat/self.psiAHatArray)[:,numpy.newaxis,numpy.newaxis]*numpy.tensordot(ddpsiN,mp,([1],[0])) 
         elif order == 4:
             #centered 5-point, forward/backward 5-point at the ends
             mp=self.magnetization_perturbation
             ddpsiN=diff_matrix(self.psi[0],self.psi[-1],self.Npsi,order=4)
-            return numpy.tensordot(ddpsiN,mp,([1],[0]))
+            return (psiAHat/self.psiAHatArray)[:,numpy.newaxis,numpy.newaxis]*numpy.tensordot(ddpsiN,mp,([1],[0]))
         
     
     @property
@@ -1104,7 +1301,7 @@ class perfect_simulation(object):
     
     @property
     def poloidal_flow_inputs(self):
-        return (1/(2*self.psiAHat))*(numpy.expand_dims(self.THat,axis=1)/self.Z)*numpy.expand_dims(self.Bp*self.IHat/(self.BHat**2),axis=2)*numpy.expand_dims(self.dnHatdpsiN/self.nHat + self.dTHatdpsiN/self.THat +(2*self.omega*self.Z/(self.Delta*self.THat))*numpy.expand_dims(self.dPhiHatdpsiN,axis=1),axis=1)
+        return (1/2*self.psiAHat)*(numpy.expand_dims(self.THat,axis=1)/self.Z)*numpy.expand_dims(self.Bp*self.IHat/(self.BHat**2),axis=2)*numpy.expand_dims(self.dnHatdpsiN/self.nHat + self.dTHatdpsiN/self.THat +(2*self.omega*self.Z/(self.Delta*self.THat))*numpy.expand_dims(self.dPhiHatdpsiN,axis=1),axis=1)
 
     @property
     def poloidal_flow_inputs_parallel(self):
@@ -1116,26 +1313,25 @@ class perfect_simulation(object):
 
     @property
     def k_poloidal_parallel(self):
-        return self.poloidal_flow_parallel*2*self.psiAHat*self.Z*self.FSABHat2[:,numpy.newaxis,numpy.newaxis]/(numpy.expand_dims(self.Bp*self.IHat,axis=2)*numpy.expand_dims(self.dTHatdpsiN,axis=1))
+        return self.poloidal_flow_parallel*self.poloidal_flow_to_k_poloidal_factor
         
     @property
     def k_poloidal_ExB(self):
-        return self.poloidal_flow_ExB*2*self.psiAHat*self.Z*self.FSABHat2[:,numpy.newaxis,numpy.newaxis]/(numpy.expand_dims(self.Bp*self.IHat,axis=2)*numpy.expand_dims(self.dTHatdpsiN,axis=1))
-        
+        return self.poloidal_flow_ExB*self.poloidal_flow_to_k_poloidal_factor
     
     @property
     def k_poloidal_gradP(self):
-        return self.poloidal_flow_gradP*2*self.psiAHat*self.Z*self.FSABHat2[:,numpy.newaxis,numpy.newaxis]/(numpy.expand_dims(self.Bp*self.IHat,axis=2)*numpy.expand_dims(self.dTHatdpsiN,axis=1))
+        return self.poloidal_flow_gradP*self.poloidal_flow_to_k_poloidal_factor
+    
 
     @property
     def k_poloidal_gradP_test(self):
-        return self.poloidal_flow_gradP_test*2*self.psiAHat*self.Z*self.FSABHat2[:,numpy.newaxis,numpy.newaxis]/(numpy.expand_dims(self.Bp*self.IHat,axis=2)*numpy.expand_dims(self.dTHatdpsiN,axis=1))
-    
+        return self.poloidal_flow_gradP_test*self.poloidal_flow_to_k_poloidal_factor
     
     @property
     def k_poloidal_inputs(self):
-        return self.poloidal_flow_inputs*2*self.psiAHat*self.Z*self.FSABHat2[:,numpy.newaxis,numpy.newaxis]/(numpy.expand_dims(self.Bp*self.IHat,axis=2)*numpy.expand_dims(self.dTHatdpsiN,axis=1))
-
+        return self.poloidal_flow_inputs*self.poloidal_flow_to_k_poloidal_factor
+    
     @property
     def k_poloidal_inputs_parallel(self):
         return self.k_poloidal_inputs + self.k_poloidal_parallel
@@ -1248,8 +1444,8 @@ class perfect_simulation(object):
 #####################################
 
 class normalized_perfect_simulation(perfect_simulation):
-    def __init__(self,input_filename,norm_filename,species_filename=sentinel,output_filename=sentinel,group_name=sentinel,pedestal_points=[]):
-        perfect_simulation.__init__(self,input_filename,output_filename,species_filename,group_name,pedestal_points)
+    def __init__(self,input_filename,norm_filename,species_filename=sentinel,output_filename=sentinel,psiN_to_psi_filename=sentinel,group_name=sentinel,pedestal_points=[]):
+        perfect_simulation.__init__(self,input_filename,output_filename,species_filename,psiN_to_psi_filename,group_name,pedestal_points)
 
         self.norm=norm_filename
 
@@ -1354,6 +1550,19 @@ class normalized_perfect_simulation(perfect_simulation):
     def Phi(self):
         return self.ePhiBar*self.PhiHat/self.eBar
 
+    @property
+    def p(self):
+        return self.n*self.T
+
+    @property
+    def vT(self):
+        return self.vBar*numpy.sqrt(self.THat/self.masses)
+         
+        
+    @property
+    def rho_p(self):
+        return self.mBar*self.masses*self.vT/(self.eBar*self.Z*numpy.expand_dims(self.FSABp,axis=1)*self.BBar)
+
 
     @property
     def normed_particle_flux(self):
@@ -1364,12 +1573,40 @@ class normalized_perfect_simulation(perfect_simulation):
         return (self.particle_flux/VPrimeHat)*signOfVPrimeHat*(numpy.pi*self.Delta**2)*self.RBar*self.BBar*self.nBar*self.vBar
 
     @property
+    def normed_particle_flux_psi_unit_vector(self):
+        VPrimeHat=[self.VPrimeHat]
+        VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
+        signOfVPrimeHat=numpy.sign(VPrimeHat)
+        return (self.particle_flux_psi_unit_vector/VPrimeHat)*signOfVPrimeHat*(numpy.pi*self.Delta**2)*self.nBar*self.vBar
+
+    @property
     def normed_momentum_flux(self):
-        #to make appropriate size to divide the particle flux with
         VPrimeHat=[self.VPrimeHat]
         VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
         signOfVPrimeHat=numpy.sign(VPrimeHat)
         return (self.momentum_flux/VPrimeHat)*signOfVPrimeHat*(numpy.pi*self.Delta**2)*(self.RBar**2)*self.BBar*self.nBar*self.vBar**2
+
+    @property
+    def normed_momentum_flux_psi_unit_vector(self):
+        VPrimeHat=[self.VPrimeHat]
+        VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
+        signOfVPrimeHat=numpy.sign(VPrimeHat)
+        return (self.momentum_flux_psi_unit_vector/VPrimeHat)*signOfVPrimeHat*(numpy.pi*self.Delta**2)*self.RBar*self.nBar*self.vBar**2
+
+    @property
+    def normed_m_momentum_flux(self):
+        #to make appropriate size to divide the particle flux with
+        VPrimeHat=[self.VPrimeHat]
+        VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
+        signOfVPrimeHat=numpy.sign(VPrimeHat)
+        return (self.mBar*self.m_momentum_flux/VPrimeHat)*signOfVPrimeHat*(numpy.pi*self.Delta**2)*(self.RBar**2)*self.BBar*self.nBar*self.vBar**2
+
+    @property
+    def normed_m_momentum_flux_psi_unit_vector(self):
+        VPrimeHat=[self.VPrimeHat]
+        VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
+        signOfVPrimeHat=numpy.sign(VPrimeHat)
+        return (self.mBar*self.m_momentum_flux_psi_unit_vector/VPrimeHat)*signOfVPrimeHat*(numpy.pi*self.Delta**2)*self.RBar*self.nBar*self.vBar**2
 
     @property
     def normed_heat_flux(self):
@@ -1380,11 +1617,27 @@ class normalized_perfect_simulation(perfect_simulation):
         return (self.heat_flux/VPrimeHat)*signOfVPrimeHat*self.TBar*(numpy.pi*self.Delta**2)*self.RBar*self.BBar*self.nBar*self.vBar
 
     @property
+    def normed_heat_flux_psi_unit_vector(self):
+        #to make appropriate size to divide the particle flux with
+        VPrimeHat=[self.VPrimeHat]
+        VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
+        signOfVPrimeHat=numpy.sign(VPrimeHat)
+        return (self.heat_flux_psi_unit_vector/VPrimeHat)*signOfVPrimeHat*self.TBar*(numpy.pi*self.Delta**2)*self.nBar*self.vBar
+
+    @property
     def normed_conductive_heat_flux(self):
         VPrimeHat=[self.VPrimeHat]
         VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
-        return (self.conductive_heat_flux/VPrimeHat)*self.TBar*(numpy.pi*self.Delta**2)*self.RBar*self.BBar*self.nBar*self.vBar
+        signOfVPrimeHat=numpy.sign(VPrimeHat)
+        return (self.conductive_heat_flux/VPrimeHat)*signOfVPrimeHat*self.TBar*(numpy.pi*self.Delta**2)*self.RBar*self.BBar*self.nBar*self.vBar
     #self.normed_heat_flux-(5.0/2.0)*self.T*self.normed_particle_flux
+
+    @property
+    def normed_conductive_heat_flux_psi_unit_vector(self):
+        VPrimeHat=[self.VPrimeHat]
+        VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
+        signOfVPrimeHat=numpy.sign(VPrimeHat)
+        return (self.conductive_heat_flux_psi_unit_vector/VPrimeHat)*signOfVPrimeHat*self.TBar*(numpy.pi*self.Delta**2)*self.nBar*self.vBar
 
     @property
     def normed_ambipolariy(self):
@@ -1397,6 +1650,14 @@ class normalized_perfect_simulation(perfect_simulation):
         VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
         signOfVPrimeHat=numpy.sign(VPrimeHat)
         return (self.momentum_flux_sum/VPrimeHat)*signOfVPrimeHat*(numpy.pi*self.Delta**2)*(self.RBar**2)*self.BBar*self.nBar*self.vBar**2
+
+    @property
+    def normed_m_momentum_flux_sum(self):
+        #to make appropriate size to divide the particle flux with
+        VPrimeHat=[self.VPrimeHat]
+        VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
+        signOfVPrimeHat=numpy.sign(VPrimeHat)
+        return (self.mBar*self.m_momentum_flux_sum/VPrimeHat)*signOfVPrimeHat*(numpy.pi*self.Delta**2)*(self.RBar**2)*self.BBar*self.nBar*self.vBar**2
     
     @property
     def normed_heat_source(self):
@@ -1449,5 +1710,91 @@ class normalized_perfect_simulation(perfect_simulation):
     @property
     def normed_perpendicular_flow_outboard(self):
         return self.Delta*self.vBar*self.perpendicular_flow_outboard
+
+    @property
+    def normed_toroidal_flow(self):
+        return self.Delta*self.vBar*self.toroidal_flow
+
+    @property
+    def normed_FSA_toroidal_flow(self):
+        return self.Delta*self.vBar*self.FSA_toroidal_flow
+
+    @property
+    def normed_n_FSA_toroidal_flow(self):
+        return self.n*self.normed_FSA_toroidal_flow
+
+    @property
+    def normed_n_FSA_toroidal_mass_flow(self):
+        return self.mBar*self.masses*self.normed_n_FSA_toroidal_flow
+
+    @property
+    def sum_normed_n_FSA_toroidal_mass_flow(self):
+        return numpy.sum(self.normed_n_FSA_toroidal_mass_flow,axis=1)
+
+    @property
+    def Pradtl_proxy1(self):
+        #over Delta(massflow_toroidal)/Delta(psi)
+        return self.normed_m_momentum_flux_psi_unit_vector/(self.RBar*2.54*numpy.expand_dims(numpy.fabs(self.FSABp*self.BBar*self.RBar),axis=1))/(2**(3.0/2.0)*self.T**(3.0/2.0)*(self.masses*self.mBar)**(1.0/2.0)/(self.eBar**2*self.BBar**2*0.7))
+
+    @property
+    def Pradtl_proxy2(self):
+        #assume \nabla n_a V_t = \delta_n n_a V_ta/\rho_pa
+        nabla_toroidal_mass_flow=numpy.sum(numpy.expand_dims(self.sum_normed_n_FSA_toroidal_mass_flow,axis=1)*self.deltaN/self.rho_p,axis=1)
+        return self.normed_m_momentum_flux_psi_unit_vector/(self.RBar*numpy.expand_dims(nabla_toroidal_mass_flow,axis=1))/(2**(3.0/2.0)*self.T**(3.0/2.0)*(self.masses*self.mBar)**(1.0/2.0)/(self.eBar**2*self.BBar**2*0.7))
+
+    @property
+    def Pradtl_proxy2_1(self):
+        #assume \nabla n_a V_t = \delta_n n_a V_ta/\rho_pa
+        nabla_toroidal_mass_flow=numpy.max(numpy.sum(numpy.expand_dims(self.sum_normed_n_FSA_toroidal_mass_flow,axis=1)*self.deltaN/self.rho_p,axis=1))
+        return self.normed_m_momentum_flux_psi_unit_vector/(self.RBar*numpy.expand_dims(nabla_toroidal_mass_flow,axis=1))/(2**(3.0/2.0)*self.T**(3.0/2.0)*(self.masses*self.mBar)**(1.0/2.0)/(self.eBar**2*self.BBar**2*0.7))
+
     
+    @property
+    def Pradtl_proxy3(self):
+        print numpy.fabs(self.FSABp*self.BBar*self.RBar)
+        #over Delta(massflow_toroidal)/Delta(psi)
+        q_max=numpy.max(numpy.sum(self.normed_conductive_heat_flux_psi_unit_vector,axis=1))
+        #print "q_max in keV: " + str(q_max/(1000*self.eBar))
+        return self.normed_m_momentum_flux_psi_unit_vector/(self.RBar*2.54*numpy.expand_dims(numpy.fabs(self.FSABp*self.BBar*self.RBar),axis=1))/(q_max/(self.p*self.deltaT/self.rho_p))
+
+    @property
+    def Pradtl_proxy3_1(self):
+        print numpy.fabs(self.FSABp*self.BBar*self.RBar)
+        #over Delta(massflow_toroidal)/Delta(psi)
+        q_max=numpy.max(numpy.sum(self.normed_conductive_heat_flux_psi_unit_vector,axis=1))
+        #print "q_max in keV: " + str(q_max/(1000*self.eBar))
+        return self.normed_m_momentum_flux_psi_unit_vector/(self.RBar*2.54*numpy.expand_dims(numpy.fabs(self.FSABp*self.BBar*self.RBar),axis=1))/numpy.expand_dims(q_max/(numpy.sum(self.p*self.deltaT/self.rho_p,axis=1)),axis=1)
+
+    @property
+    def Pradtl_proxy4(self):
+        return (self.normed_m_momentum_flux_psi_unit_vector/numpy.max(self.normed_conductive_heat_flux_psi_unit_vector,axis=0))*(self.TBar/(self.mBar*self.masses))**(1.0/2.0)/numpy.max(self.deltaN,axis=0)
+
+    @property
+    def Pradtl_proxy4_1(self):
+        chi_pi = self.normed_m_momentum_flux_psi_unit_vector/(self.RBar*self.normed_n_FSA_toroidal_mass_flow*self.deltaN/self.rho_p)
+        chi_q = self.normed_conductive_heat_flux_psi_unit_vector/(self.p*self.deltaT/self.rho_p)
+        return chi_pi/chi_q
+
+    @property
+    def Pradtl_proxy4_2(self):
+        ion_index=0
+        return self.normed_m_momentum_flux_psi_unit_vector*numpy.expand_dims((1/self.normed_conductive_heat_flux_psi_unit_vector[:,ion_index])*(self.p[:,ion_index])/(self.RBar*self.normed_n_FSA_toroidal_mass_flow[:,ion_index])*(self.deltaT[:,ion_index]/self.deltaN[:,ion_index]),axis=1)
+
+    @property
+    def Pradtl_proxy4_3(self):
+        ion_index=0
+        psi_index=90
+        return self.normed_m_momentum_flux_psi_unit_vector*((1/self.normed_conductive_heat_flux_psi_unit_vector[:,ion_index])*(self.p[:,ion_index])/(self.RBar*self.normed_n_FSA_toroidal_mass_flow[:,ion_index])*(self.deltaT[:,ion_index]/self.deltaN[:,ion_index]))[psi_index]
+
+    @property
+    def Pradtl_proxy4_4(self):
+        ion_index=0
+        psi_index=90
+        dpsi_index=1
+        dmnVtdr=numpy.fabs((self.normed_n_FSA_toroidal_mass_flow[psi_index+dpsi_index,ion_index]-self.normed_n_FSA_toroidal_mass_flow[psi_index-dpsi_index,ion_index])/(self.actual_psi[psi_index+dpsi_index] - self.actual_psi[psi_index-dpsi_index])*numpy.fabs(self.FSABp[psi_index]/self.RBar))
+        print "dmnVtdr: " + str(dmnVtdr)
+        print "mVtn deltaN/rho_p " + str(self.deltaN[psi_index,ion_index]*self.normed_n_FSA_toroidal_mass_flow[psi_index,ion_index]/self.rho_p[psi_index,ion_index])
+        print "mVtn/n dn/dr " + str((self.normed_n_FSA_toroidal_mass_flow[psi_index,ion_index]/self.n[psi_index,ion_index])*(self.n[psi_index+dpsi_index,ion_index] - self.n[psi_index-dpsi_index,ion_index])/(self.actual_psi[psi_index+dpsi_index] - self.actual_psi[psi_index-dpsi_index])*numpy.fabs(self.FSABp[psi_index]/self.RBar))
+        
+        return self.normed_m_momentum_flux_psi_unit_vector*((1/self.normed_conductive_heat_flux_psi_unit_vector[:,ion_index])*(self.p[:,ion_index])/(self.RBar)*(self.deltaT[:,ion_index]/(dmnVtdr*self.rho_p[:,ion_index])))[psi_index]
 

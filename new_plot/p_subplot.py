@@ -156,6 +156,7 @@ class perfect_subplot:
             self.hidden_xticklabels=kwarg_default("hidden_xticklabels",[],**kwargs)
             self.hidden_yticklabels=kwarg_default("hidden_yticklabels",[0,-1],**kwargs)
             self.linestyles=kwarg_default("linestyles",["solid"]*len(x),**kwargs)
+            self.markers=kwarg_default("markers",[""]*len(x),**kwargs)
             self.linewidths=kwarg_default("linewidths",[1]*len(x),**kwargs)
             self.colors=kwarg_default("colors",["k"]*len(x),**kwargs)
 

@@ -4,7 +4,7 @@
 from perfect_simulation import perfect_simulation,normalized_perfect_simulation #to get info about simulation
 import h5py #to write profiles
 import numpy #matrix things, etc
-from bezier_transition import bezier_transition #for smooth transition between 2 functions
+from bezier_transition import bezier_transition,derivative_bezier_transition #for smooth transition between 2 functions
 import scipy.constants #constants
 import scipy.optimize
 import os
@@ -31,6 +31,12 @@ def generate_compatible_profiles(simul,**kwargs):
     else:
         allflat=False
 
+    if "nonuniform" in kwargs.keys():
+        nonuniform=kwargs["nonuniform"]
+    else:
+        nonuniform=False
+
+        
     if "sameflux" in kwargs.keys():
         sameflux=kwargs["sameflux"]
     else:
@@ -119,13 +125,13 @@ def generate_compatible_profiles(simul,**kwargs):
     
     simul.inputs.read(simul.input_filename)
 
-    #print "psiMid:"
-    #print psiMid
-    
     #get new psi coordinate from input
     psi=simul.inputs.psi
-    #print "psi:"
-    #print psi
+    if nonuniform:
+        psiAHat= simul.psiAHat
+        nonuniform_psi = simul.actual_psi
+        d_nonuniform_psi_dpsiN = simul.psiAHatArray
+    
     Npsi=simul.inputs.Npsi
     psiMin = simul.inputs.psiMin
     psiMax = simul.inputs.psiMax
@@ -199,12 +205,15 @@ def generate_compatible_profiles(simul,**kwargs):
     THatPre=[0]*Nspecies
     THatPed=[0]*Nspecies
     THatAft=[0]*Nspecies
+
+    dTHatPredpsi=[0]*Nspecies
+    dTHatPeddpsi=[0]*Nspecies
+    dTHatAftdpsi=[0]*Nspecies
     if allflat==True:
         THatinner=[0]*Nspecies
         THatouter=[0]*Nspecies
-
-    
-
+        dTHatinnerdpsi=[0]*Nspecies
+        dTHatouterdpsi=[0]*Nspecies
     
     for i in range(Nspecies):
         if "TScale_"+species[i] in kwargs.keys():
@@ -251,31 +260,52 @@ def generate_compatible_profiles(simul,**kwargs):
         THatPre[i] =(lambda psiN: (Tpeds[i] + TCoreGrads[i]*(psiN-psiMinPed)))
         THatPed[i] =(lambda psiN: (Tpeds[i] + TpedGrads[i]*(psiN-psiMinPed)))
         THatAft[i] =(lambda psiN: (Tpeds[i] + TpedGrads[i]*(psiMaxPed-psiMinPed) + TSOLGrads[i]*(psiN-psiMaxPed)))
+        dTHatPredpsi[i] = (lambda psiN: TCoreGrads[i])
+        dTHatPeddpsi[i] = (lambda psiN: TpedGrads[i])
+        dTHatAftdpsi[i] = (lambda psiN: TSOLGrads[i])
         Tlist=[THatPre[i],THatPed[i],THatAft[i]]
+        dTdpsiList = [dTHatPredpsi[i],dTHatPeddpsi[i],dTHatAftdpsi[i]]
         if allflat==True:
             THatinner[i]=(lambda psiN: (Tpeds[i] + TCoreGrads[i]*(psiMinNotFlat-psiMinPed)) + TinnerGrad[i]*(psiN - psiMinNotFlat))
             THatouter[i]=(lambda psiN: (Tpeds[i] + TpedGrads[i]*(psiMaxPed-psiMinPed) + TSOLGrads[i]*(psiMaxNotFlat-psiMaxPed)) + TouterGrad[i]*(psiN - psiMaxNotFlat))
+            dTHatinnerdpsi[i] = (lambda psiN: TouterGrad[i])
+            dTHatouterdpsi[i]=(lambda psiN: TouterGrad[i])
             Tlist=[THatinner[i],THatPre[i],THatPed[i],THatAft[i],THatouter[i]]
-        THats[i]=bezier_transition(Tlist,psiList,pairList,psi)
-        #THats[i] = interp1d(psi, THats[i], kind='cubic')
-        #tck = interpolate.splrep(psi, THats[i], s=3)
-        #THats[i] = interpolate.splev(psi, tck, der=0)
+            dTdpsiList = [dTHatinnerdpsi[i],dTHatPredpsi[i],dTHatPeddpsi[i],dTHatAftdpsi[i],dTHatouterdpsi[i]]
 
-        dTHatdpsis[i]=simul.inputs.ddpsi_accurate(THats[i])
+        if nonuniform:
+            THats[i]=bezier_transition(Tlist,psiList,pairList,nonuniform_psi/psiAHat)
+            dTHatdpsis[i]=derivative_bezier_transition(Tlist,dTdpsiList,psiList,pairList,nonuniform_psi/psiAHat)*d_nonuniform_psi_dpsiN/psiAHat
+        else:
+            THats[i]=bezier_transition(Tlist,psiList,pairList,psi)
+            dTHatdpsis[i]=simul.inputs.ddpsi_accurate(THats[i])
         
     print "THat pedestal heights:" +str(Tpeds)
     print "THat inner boundary value:" +str(THats[:,0])
     niHatPre =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
     niHatPed =(lambda psiN: (niPed +  nipedGrad* (psiN-psiMinPed)))
     niHatAft =(lambda psiN: (niPed+nipedGrad*(psiMaxPed-psiMinPed) +  niSOLGrad* (psiN-psiMaxPed)))
+    
+    dniHatPredpsi = (lambda psiN:  niCoreGrad)
+    dniHatPeddpsi = (lambda psiN:  nipedGrad)
+    dniHatAftdpsi = (lambda psiN:  niSOLGrad)
+    
     nilist=[niHatPre,niHatPed,niHatAft]
+    dnidpsiList = [dniHatPredpsi,dniHatPeddpsi,dniHatAftdpsi] 
     if allflat==True:
         niHatinner =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiMinNotFlat-psi[0])) + niinnerGrad*(psiN - psiMinNotFlat))
         niHatouter =(lambda psiN: (niPed+nipedGrad*(psiMaxPed-psiMinPed) +  niSOLGrad* (psiMaxNotFlat-psiMaxPed)) + niouterGrad*(psiN - psiMaxNotFlat))
+        dniHatinnerdpsi = (lambda psiN: niinnerGrad)
+        dniHatouterdpsi = (lambda psiN: niouterGrad)
         nilist=[niHatinner,niHatPre,niHatPed,niHatAft,niHatouter]
-    nHats[main_index]=bezier_transition(nilist,psiList,pairList,psi)
-    #nHats[mI] = interp1d(psi, nHats[mI], kind='cubic')
-    dnHatdpsis[main_index] =simul.inputs.ddpsi_accurate(nHats[main_index])
+        dnidpsiList = [dniHatinnerdpsi,dniHatPredpsi,dniHatPeddpsi,dniHatAftdpsi,dniHatouterdpsi]
+    if nonuniform:
+        nHats[main_index]=bezier_transition(nilist,psiList,pairList,nonuniform_psi/psiAHat)
+        dnHatdpsis[main_index]=derivative_bezier_transition(nilist,dnidpsiList,psiList,pairList,nonuniform_psi/psiAHat)*d_nonuniform_psi_dpsiN/psiAHat
+    else:
+        nHats[main_index]=bezier_transition(nilist,psiList,pairList,psi)
+        dnHatdpsis[main_index] =simul.inputs.ddpsi_accurate(nHats[main_index])
+
     print "Ion nHat pedestal heights:" +str(niPed)
     print "Ion nHat inner boundary value:" +str(nHats[main_index][0])
    
@@ -296,30 +326,27 @@ def generate_compatible_profiles(simul,**kwargs):
         print "Tp: " + str(Tp)
         print "dTdpsi: " + str(dTdpsi)
         print "Delta0: " + str(Delta0)
-
-        #f=lambda x : x*(Tp-2*Delta0*x)**(3.0/2.0) - (nb*1.0/nt)*(Tp + (5*dTdpsi-2*x)*Delta0)**(3.0/2.0)*((5.0/3.0)*dTdpsi-(2.0/3.0)*x)
-        #dTdpsiTop=scipy.optimize.fsolve(f,0)
-        #dTdpsiTop=scipy.optimize.fsolve(f,0)
         
         f=lambda x : x*(Tp-2*Delta0*x)**(3.0/2.0) - (nb*1.0/nt)*(Tp + 3*dTdpsi*Delta0)**(3.0/2.0)*dTdpsi
         dTdpsiTop=scipy.optimize.fsolve(f,0)
         dTdpsiBot=dTdpsi
         
-        #f=lambda x : (dTdpsi+x)*(Tp-2*Delta0*(dTdpsi+x))**(3.0/2.0) - (nb*1.0/nt)*(Tp + 3*(dTdpsi-x)*Delta0)**(3.0/2.0)*(dTdpsi-x)
-        #diff=scipy.optimize.fsolve(f,0)
-        #print "diff: " + str(diff)
-        #dTdpsiTop=dTdpsi+diff
-        #dTdpsiBot=dTdpsi-diff
-        
-        #print "dTdpsiTop: " + str(dTdpsiTop)
-        #dTdpsiBot=(5.0/3.0)*dTdpsi-(2.0/3.0)*dTdpsiTop
-        
         THatPre[main_index] =(lambda psiN: (Tpeds[main_index] + dTdpsiTop*(psiN-breakpoint)))
         THatPed[main_index] =(lambda psiN: (Tpeds[main_index] + dTdpsiBot*(psiN-breakpoint)))
         THatAft[main_index] =(lambda psiN: (Tpeds[main_index] + dTdpsiBot*(psiN-breakpoint)))
+        dTHatPredpsi[main_index] =(lambda psiN: dTdpsiTop)
+        dTHatPeddpsi[main_index] =(lambda psiN: dTdpsiBot)
+        dTHatAftdpsi[main_index] =(lambda psiN: dTdpsiBot)
+        
         Tlist=[THatPre[main_index],THatPed[main_index]]
-        THats[main_index]=bezier_transition(Tlist,[breakpoint],pairList[:-1],psi)
-        dTHatdpsis[main_index]=simul.inputs.ddpsi_accurate(THats[main_index])
+        dTdpsilist=[dTHatPredpsi[main_index],dTHatPeddpsi[main_index]]
+
+        if nonuniform:
+            THats[main_index]=bezier_transition(Tlist,[breakpoint],pairList[:-1],nonuniform_psi/psiAHat)
+            dTHatdpsis[main_index]=derivative_bezier_transition(Tlist,dTdpsilist,[breakpoint],pairList[:-1],nonuniform_psi/psiAHat)*d_nonuniform_psi_dpsiN/psiAHat
+        else:
+            THats[main_index]=bezier_transition(Tlist,[breakpoint],pairList[:-1],psi)
+            dTHatdpsis[main_index]=simul.inputs.ddpsi_accurate(THats[main_index])
 
         if twoSpecies==False:
             THats[imp_index]=THats[main_index]
@@ -346,45 +373,46 @@ def generate_compatible_profiles(simul,**kwargs):
         print "Only SI units are currently supported"
     print "Delta after:" + str(simul.Delta)
 
-
-    #eta profiles that satisfy the orderings
-    #setting eta_i=n_i at the pedestal top makes Phi=0 there
-    #etaHats[main_index] = nHats[main_index][psiMinPedIndex]
-    #etaHats[main_index] =niPed
-    #detaHatdpsis[main_index] = 0
-    #etaHats[main_index] =niPed+niCoreGrad*(psi-psiMinPed)
-    #detaHatdpsis[main_index] = niCoreGrad
-
     etaiHatPre =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
+    detaiHatPredpsi =(lambda psiN: niCoreGrad)
+    
+    
     if specialEta:
-       etaiHatPed =(lambda psiN: (niPed+2*niCoreGrad* (psiN-psiMinPed))) 
+       etaiHatPed =(lambda psiN: (niPed+2*niCoreGrad* (psiN-psiMinPed)))
+       detaiHatPeddpsi =(lambda psiN: 2*niCoreGrad)
     else:
         etaiHatPed =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
-    i=main_index
+        detaiHatPeddpsi =(lambda psiN: niCoreGrad)
+
+    i=main_index #to get the right lambda functions
     PhiTopPoint=psiMaxPed
-    #if samefluxshift==True:
-    #     prefactor=0.6
-    #else:
-    #    prefactor=1.0
+
     prefactor=1.0
     PhiTop=prefactor*(THatPed[main_index](PhiTopPoint)/Zs[main_index])*numpy.log(etaiHatPed(PhiTopPoint)*1.0/niHatPed(PhiTopPoint))*(2.0*simul.omega/simul.Delta)
-    
-    #for i in [0,1,2]:
-    #    print "THat aft "+str(i)+" : " +str(THatAft[i](1))
-    #print "main index: "+str(main_index)
+
     i=main_index #to get the right lambda functions
-    #print "THat aft: " +str(THatAft[main_index](1))
-    #print "nHat aft: " +str(niHatAft(1)*simul.nBar)
     etaiHatAft =(lambda psiN: niHatAft(psiN)*numpy.exp(PhiTop*Zs[main_index]/THatAft[main_index](psiN)))
+    detaiHatAftdpsi = (lambda psiN: (dniHatAftdpsi(psiN) - niHatAft(psiN)*PhiTop*Zs[main_index]*dTHatAftdpsi[main_index](psiN)/(THatAft[main_index](psiN))**2)*numpy.exp(PhiTop*Zs[main_index]/THatAft[main_index](psiN)))
+    
     etailist=[etaiHatPre,etaiHatPed,etaiHatAft]
+    detaidpsilist=[detaiHatPredpsi,detaiHatPeddpsi,detaiHatAftdpsi]
+    
     if allflat==True:
         etaiHatinner =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiMinNotFlat-psi[0]) + niinnerGrad*(psiN - psiMinNotFlat)))
         etaiHatouter = (lambda psiN: (niHatouter(psiN)*numpy.exp(PhiTop*Zs[main_index]/THatouter[main_index](psiN))))
+        detaiHatinnerdpsi =(lambda psiN: niinnerGrad)
+        
+        detaiHatouterdpsi = (lambda psiN: (dniHatouterdpsi(psiN) - niHatouter(psiN)*PhiTop*Zs[main_index]*dTHatouterdpsi[main_index](psiN)/(THatouter[main_index](psiN))**2)*numpy.exp(PhiTop*Zs[main_index]/THatouter[main_index](psiN)))
+        
         etailist=[etaiHatinner,etaiHatPre,etaiHatPed,etaiHatAft,etaiHatouter]
+        detaidpsilist=[detaiHatinnerdpsi,detaiHatPredpsi,detaiHatPeddpsi,detaiHatAftdpsi,detaiHatouterdpsi]
     
-    etaHats[main_index]=bezier_transition(etailist,psiList,pairList,psi)
-    #nHats[mI] = interp1d(psi, nHats[mI], kind='cubic')
-    detaHatdpsis[main_index] =simul.inputs.ddpsi_accurate(etaHats[main_index])
+    if nonuniform:
+        etaHats[main_index]=bezier_transition(etailist,psiList,pairList,nonuniform_psi/psiAHat)
+        detaHatdpsis[main_index] =derivative_bezier_transition(etailist,detaidpsilist,psiList,pairList,nonuniform_psi/psiAHat)*d_nonuniform_psi_dpsiN/psiAHat
+    else:
+        etaHats[main_index]=bezier_transition(etailist,psiList,pairList,psi)
+        detaHatdpsis[main_index] =simul.inputs.ddpsi_accurate(etaHats[main_index])
     
 
     
@@ -400,17 +428,39 @@ def generate_compatible_profiles(simul,**kwargs):
             etazHatInner=(lambda psiN: imp_conc*(niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiMinNotFlat-psi[0]) + niinnerGrad*(psiN - psiMinNotFlat)))
             etazHatMiddle=(lambda psiN: imp_conc*(niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
             etazHatOuter=(lambda psiN: imp_conc*(niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiMaxNotFlat-psi[0])))
+
+            detazHatInnerdpsi=(lambda psiN: imp_conc*niinnerGrad)
+            detazHatMiddledpsi=(lambda psiN: imp_conc*niCoreGrad)
+            detazHatOuterdpsi=(lambda psiN: 0)
+            
+            
             etailist=[etazHatInner,etazHatMiddle,etazHatOuter]
-            etaHats[imp_index]=bezier_transition(etailist,psiList[:1]+psiList[-1:],pairList[:1]+pairList[-1:],psi)
-            detaHatdpsis[imp_index] =simul.inputs.ddpsi_accurate(etaHats[imp_index])
+            detaidpsilist=[detazHatInnerdpsi,detazHatMiddledpsi,detazHatOuterdpsi]
+
+            if nonuniform:
+                etaHats[imp_index]=bezier_transition(etailist,psiList[:1]+psiList[-1:],pairList[:1]+pairList[-1:],nonuniform_psi/psiAHat)
+                detaHatdpsis[imp_index] = derivative_bezier_transition(etailist,detaidpsilist,psiList[:1]+psiList[-1:],pairList[:1]+pairList[-1:],nonuniform_psi/psiAHat)*d_nonuniform_psi_dpsiN/psiAHat
+            else:
+                etaHats[imp_index]=bezier_transition(etailist,psiList[:1]+psiList[-1:],pairList[:1]+pairList[-1:],psi)
+                detaHatdpsis[imp_index] =simul.inputs.ddpsi_accurate(etaHats[imp_index])
         if specialEta==True:
             gradScale=4.0725
             etazHatInner=(lambda psiN: imp_conc*(niPed+niCoreGrad*(psiN-psiMinPed)))
             etazHatMiddle=(lambda psiN: imp_conc*(niPed-gradScale*niCoreGrad*(psiN-psiMinPed)))
             etazHatOuter=(lambda psiN: imp_conc*(niPed-gradScale*niCoreGrad*(psiMaxPed-psiMinPed) +  niCoreGrad* (psiN-psiMaxPed)))
+
+            detazHatInnerdpsi=(lambda psiN: imp_conc*niCoreGrad)
+            detazHatMiddledpsi=(lambda psiN: -imp_conc*gradScale*niCoreGrad)
+            detazHatOuterdpsi=(lambda psiN: imp_conc*niCoreGrad)
+            
             etailist=[etazHatInner,etazHatMiddle,etazHatOuter]
-            etaHats[imp_index]=bezier_transition(etailist,psiList[:1]+psiList[-1:],pairList[:1]+pairList[-1:],psi)
-            detaHatdpsis[imp_index] =simul.inputs.ddpsi_accurate(etaHats[imp_index])
+            detaidpsilist = [detazHatInnerdpsi,detazHatMiddledpsi,detazHatOuterdpsi]
+            if nonuniform:
+                etaHats[imp_index]=bezier_transition(etailist,psiList[:1]+psiList[-1:],pairList[:1]+pairList[-1:],nonuniform_psi/psiAHat)
+                detaHatdpsis[imp_index] = derivative_bezier_transition(etailist,psiList[:1]+psiList[-1:],pairList[:1]+pairList[-1:],nonuniform_psi/psiAHat)*d_nonuniform_psi_dpsiN/psiAHat
+            else:
+                etaHats[imp_index]=bezier_transition(etailist,psiList[:1]+psiList[-1:],pairList[:1]+pairList[-1:],psi)
+                detaHatdpsis[imp_index] =simul.inputs.ddpsi_accurate(etaHats[imp_index])
 
     if sameeta==True:
         etaHats[imp_index]=etaHats[main_index]
