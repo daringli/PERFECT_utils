@@ -1095,7 +1095,7 @@ class perfect_simulation(object):
     def psiAHat(self):
         try:
             return self.outputs[self.group_name+self.psiAHat_name][()]
-        except KeyError:
+        except (KeyError,TypeError):
             return self.inputs.psiAHat
             
     @property
