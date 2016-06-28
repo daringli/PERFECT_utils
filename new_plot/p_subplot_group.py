@@ -16,7 +16,7 @@ class perfect_subplot_group:
         for p_subplot in self.p_subplot_list:
             setattr(p_subplot,attr_name,value)
         
-    def getattrs(self,attr_name,range=False):
+    def getattrs(self,attr_name,range=True):
         #returns a list of the attribute for all members in the list
         if range:
             # we only return the plotted part of the array attribute

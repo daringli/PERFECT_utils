@@ -4,14 +4,16 @@ from perfect_simulation import perfect_simulation,normalized_perfect_simulation
 
 sentinel=object()
 
-def perfect_simulations_from_dirs(dirlist,normlist,species,psiN_to_psi):
+def perfect_simulations_from_dirs(dirlist,normlist,species,psiN_to_psi=sentinel):
     #for now, assumes that the simulations have been previously finished
     if type(normlist) is not list:
         normlist=[normlist]*len(dirlist)
     if type(species) is not list:
         species=[species]*len(dirlist)
-    if type(psiN_to_psi) is not list:
-        psiN_to_psi=[psiN_to_psi]*len(dirlist)
+    if psiN_to_psi != sentinel:
+        if type(psiN_to_psi) is not list:
+            psiN_to_psi=[psiN_to_psi]*len(dirlist)
+            
 
     input="input.namelist"
     output="perfectOutput.h5"
@@ -23,8 +25,10 @@ def perfect_simulations_from_dirs(dirlist,normlist,species,psiN_to_psi):
         output_filename=dir+"/"+output
         norm_filename=normlist[i]
         species_filename=species[i]
-        psiN_to_psi_filename = psiN_to_psi[i]
-        
+        if psiN_to_psi != sentinel:
+            psiN_to_psi_filename = psiN_to_psi[i]
+        else:
+            psiN_to_psi_filename = sentinel
         simuls.append(normalized_perfect_simulation(input_filename,norm_filename,species_filename,output_filename,psiN_to_psi_filename))
         simuls[i].description=dir
         #simuls[i].species=species

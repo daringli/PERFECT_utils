@@ -143,7 +143,6 @@ class perfect_subplot:
                 print "perfect_subplot: 1D: error: some data and x have different lengths"
                 exit(1)
 
-                
             self.subplot_coordinates=subplot_coordinates
 
             #aesthetic kwargs

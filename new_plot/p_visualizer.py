@@ -109,7 +109,7 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
                 ax.axvline(x=p,color='k',linestyle=':')
         if p_subplot.hlines is not None:
             for p in p_subplot.hlines:
-                ax.axhline(y=p,color='k',linestyle=':')
+                ax.axhline(y=p,color='silver',linestyle=':')
         
         if p_subplot.show_xaxis_ticklabel == False:
             plt.setp(ax.get_xticklabels(), visible=False)
@@ -154,6 +154,8 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
             for i in range(len(y)):
                 try:
                     ax.plot(x[i],y[i],linestyle=p_subplot.linestyles[i],color=p_subplot.colors[i],linewidth=p_subplot.linewidths[i],marker=p_subplot.markers[i])
+                    #print x[i]
+                    #print y[i]
                 except IndexError:
                     print "Index error in ax.plot(). Most likely, linestyles, linewidths and colors have the wrong lengths."
                     print "len(colors): " + str(len(p_subplot.colors))

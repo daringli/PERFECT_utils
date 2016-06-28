@@ -201,7 +201,7 @@ class perfect_simulation(object):
                     self.actual_psi = self.psiN_to_psi_profiles[self.psiN_to_psi_groupname+"psiArray"][()]
                     self.actual_psiN = self.psiN_to_psi_profiles[self.psiN_to_psi_groupname+"psiArray"][()]/self.psiAHat
                 else:
-                    print "Error, psiN_to_psi cannot be read, file "+ psiN_to_psi_filename +" does not exist!"
+                    print "Error: perfect_simulation: psiN_to_psi cannot be read, file "+ psiN_to_psi_filename +" does not exist!"
                     sys.exit(1)
         elif self.inputs.psiGridType==0:
             self.psiAHatArray = numpy.array([self.psiAHat]*self.Npsi)
@@ -232,6 +232,11 @@ class perfect_simulation(object):
             self.always_run_simulation(cmdline)
 
 
+    def dimension_check(self,arr):
+        #check whether an array has appropriate dimensions
+        
+        pass
+            
     def FSA(self,attrib,jacobian=True,periodic=True):
         if type(attrib) == str:
             a=getattr(self,attrib)
@@ -290,11 +295,50 @@ class perfect_simulation(object):
             #Would be approriate for non-periodic subintervals
             return numpy.trapz(a*j,dx=self.dtheta,axis=axis)/VPH
         return numpy.sum(a*j*self.dtheta,axis=axis)/VPH
-         
-        
+
+    def ddpsiN(self,attrib,order=4,scale=False):
+        #derivative on uniform grid. supported orders are 2 and 4 (2016-06-27)
+        dds=diff_matrix(self.psi[0],self.psi[-1],self.Npsi,order=order)
+        if scale:
+            scale_factor=(self.psiAHat/self.psiAHatArray)
+        else:
+            scale_factor=numpy.ones(self.Npsi)*(self.psiAHat/self.psiAHatArray[0])
+        #get attribute array
+        if type(attrib) == str:
+            a = getattr(self,attrib)
+        else:
+            a = attrib
+        # convert from dds to ddpsiN for different array ranks
+        rank=arraylist_rank(a)
+        if rank == 3:
+            #sanity check. Should have shape Npsi,Ntheta,Nspecies
+            if a.shape == (self.Npsi,self.Ntheta,self.Nspecies):
+                return scale_factor[:,numpy.newaxis,numpy.newaxis]*numpy.tensordot(dds,a,([1],[0]))
+            else:
+                print "ERROR: perfect_simulation.ddpsiN: rank 3 array badly shaped."
+                sys.exit(1)
+        if rank == 2:
+            #sanity check. Either (Npsi,Nspecies) or (Npsi,Ntheta) shaped
+            if (a.shape == (self.Npsi,self.Ntheta)) or (a.shape == (self.Npsi,self.Nspecies)):
+                return scale_factor[:,numpy.newaxis]*numpy.tensordot(dds,a,([1],[0]))
+            else:
+                print "ERROR: perfect_simulation.ddpsiN: rank 2 array badly shaped."
+                sys.exit(1)
+        if rank == 1:
+            #sanity check. (Npsi,) shaped
+            if a.shape == (self.Npsi,):
+                return scale_factor*numpy.tensordot(dds,a,([1],[0]))
+            else:
+                print "ERROR: perfect_simulation.ddpsiN: rank 1 array badly shaped."
+                sys.exit(1)
+            
+            
     def attrib_at_psi_of_theta(self,attrib,psiN):
         indices=get_index_range(self.actual_psiN,[psiN,psiN],ret_range=False)
-        a=getattr(self,attrib)
+        if type(attrib) == str:
+            a=getattr(self,attrib)
+        else:
+            a=attrib
         rank=arraylist_rank(a)
         if rank==3:
             return a[indices[0],:,:]
@@ -305,7 +349,28 @@ class perfect_simulation(object):
 
     def attrib_at_theta_of_psi(self,attrib,theta):
         indices=get_index_range(self.theta,[theta,theta],ret_range=False)
-        return getattr(self,attrib)[:,indices[0],:]
+        if type(attrib) == str:
+            a=getattr(self,attrib)
+        else:
+            a=attrib
+        rank=arraylist_rank(a)
+        if rank==3:  
+            return a[:,indices[0],:]
+        elif rank==2:
+            if a.shape == (self.Npsi,self.Ntheta):
+                return a[:,indices[0]]
+            elif a.shape == (self.Npsi,self.Nspecies):
+                return a[indices[0],:]
+            else:
+                print "ERROR: perfect_simulation.attrib_at_theta_of_psi: rank 2 array badly shaped."
+                sys.exit(1)
+        elif rank==1:
+            if a.shape == (self.Ntheta,):
+                return a[indices[0]]
+            else:
+                print "ERROR: perfect_simulation.attrib_at_theta_of_psi: rank 1 array badly shaped."
+                sys.exit(1)
+
                 
     def attrib_max_psi_of_theta(self,attrib,xlim=None):
         #help function to return the value of psiN that maximizes an attribute
@@ -336,7 +401,7 @@ class perfect_simulation(object):
     def local(self):
         try:
             local=self.outputs[self.group_name+self.local_name][()]
-        except KeyError:
+        except (KeyError,TypeError):
             if self.inputs.makeLocalApproximation:
                 local = 1
             else:
@@ -530,22 +595,20 @@ class perfect_simulation(object):
     @property
     def GammaHat_source(self):
         #for comparrison with dGammaHat/dPsiN
-        VPrimeHat=[self.VPrimeHat]
-        VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
-        VPrimeHat=numpy.fabs(VPrimeHat)
-        return 2*(numpy.sqrt(numpy.pi)/2)*self.THat**(3./2.)*self.psiAHat*VPrimeHat/(self.Delta)*self.particle_source/(self.masses**2)
+        VPrimeHat=numpy.fabs(self.VPrimeHat)
+        return 2*(numpy.sqrt(numpy.pi)/2)*self.THat**(3./2.)*self.psiAHat*numpy.expand_dims(VPrimeHat,axis=1)/(self.Delta)*self.particle_source/(self.masses**2)
 
     @property
+    def QHat_source(self):
+        #for comparrison with dQHat/dPsiN
+        VPrimeHat=numpy.fabs(self.VPrimeHat)
+        return -self.THat**(5./2.)*self.psiAHat*numpy.expand_dims(VPrimeHat,axis=1)*numpy.sqrt(numpy.pi)/(2*self.Delta*self.masses**2)*(3*self.heat_source) -((2*self.omega/self.Delta)*self.Z*numpy.expand_dims(self.dPhiHatdpsiN,axis=1))*self.particle_flux*self.masses**(1.0/2.0)
+    
+    @property
     def qHat_source(self):
-        #for comparrison with dGammaHat/dPsiN
-        VPrimeHat=[self.VPrimeHat]
-        VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
-        VPrimeHat=numpy.fabs(VPrimeHat)
-        dPhiHatdpsiN=[self.dPhiHatdpsiN]
-        dPhiHatdpsiN=numpy.dot(numpy.transpose(dPhiHatdpsiN),[numpy.array([1]*self.num_species)])
-        
-        
-        return -2.0*self.THat**(5./2.)*self.psiAHat*VPrimeHat/(self.Delta)*((5*numpy.sqrt(numpy.pi)/4)*self.particle_source + (3.0*numpy.sqrt(numpy.pi)/4.0)*self.heat_source)/(self.masses**2) -((2*self.omega/self.Delta)*self.Z*dPhiHatdpsiN + (5./2.)*self.dTHatdpsiN)*self.particle_flux
+        #for comparrison with dQHat/dPsiN
+        VPrimeHat=numpy.fabs(self.VPrimeHat)
+        return -self.THat**(5./2.)*self.psiAHat*numpy.expand_dims(VPrimeHat,axis=1)*numpy.sqrt(numpy.pi)/(2*self.Delta*self.masses**2)*(5*self.particle_source + 3*self.heat_source) -((2*self.omega/self.Delta)*self.Z*numpy.expand_dims(self.dPhiHatdpsiN,axis=1) + (5./2.)*self.dTHatdpsiN)*self.particle_flux
 
     @property
     def FSAFlow(self):
@@ -999,15 +1062,16 @@ class perfect_simulation(object):
     @property
     def dPhiHat_dpsiN(self):
         #intentionally "crude" to use same deriv approx as dGamma_dpsiN
-        psiN=self.actual_psiN
-        PhiHat=self.PhiHat
-        ret=numpy.zeros([len(psiN)-1,self.num_species])
-        for i in range(1,len(psiN)):
-            dpsiN=psiN[i]-psiN[i-1]
-            dPhiHat=PhiHat[i]-PhiHat[i-1]
-            #print dPhiHat/dpsiN
-            ret[i-1]=dPhiHat/dpsiN
-        return ret
+        #psiN=self.actual_psiN
+        #PhiHat=self.PhiHat
+        #ret=numpy.zeros([len(psiN)-1,self.num_species])
+        #for i in range(1,len(psiN)):
+        #    dpsiN=psiN[i]-psiN[i-1]
+        #    dPhiHat=PhiHat[i]-PhiHat[i-1]
+        #    #print dPhiHat/dpsiN
+        #    ret[i-1]=dPhiHat/dpsiN
+        #return ret
+        return self.ddpsiN(self.PhiHat,order=4)
 
     @property
     def dtheta(self):
@@ -1029,15 +1093,15 @@ class perfect_simulation(object):
     @property
     def dTHat_dpsiN(self):
         #intentionally "crude" to use same deriv approx as dGamma_dpsiN
-        psiN=self.actual_psiN
-        THat=self.THat
-        ret=numpy.zeros([len(psiN)-1,self.num_species])
-        for i in range(1,len(psiN)):
-            dpsiN=psiN[i]-psiN[i-1]
-            dTHat=THat[i]-THat[i-1]
-            #print dTHat/dpsiN
-            ret[i-1]=dTHat/dpsiN
-        return ret
+        #psiN=self.actual_psiN
+        #THat=self.THat
+        #ret=numpy.zeros([len(psiN)-1,self.num_species])
+        #for i in range(1,len(psiN)):
+        #    dpsiN=psiN[i]-psiN[i-1]
+        #    dTHat=THat[i]-THat[i-1]
+        #    #print dTHat/dpsiN
+        #    ret[i-1]=dTHat/dpsiN
+        return self.ddpsiN(self.THat,order=4)
 
     @property
     def alpha(self):
@@ -1129,27 +1193,22 @@ class perfect_simulation(object):
 
     @property
     def dGammaHat_dpsiN(self):
-        psiN=self.actual_psiN
         GammaHat=self.particle_flux
-        ret=numpy.zeros([len(psiN),self.num_species])
-        for i in range(1,len(psiN)-1):
-            dpsiN=psiN[i]-psiN[i-1]
-            dGammaHat=GammaHat[i+1]-GammaHat[i-1]     
-            #print dGammaHat/dpsiN
-            ret[i]=dGammaHat/(2.0*dpsiN) 
-        return ret
+        return self.ddpsiN(GammaHat,order=4)
 
     @property
     def jprefac_dPi_dpsiN(self):
-        psiN=self.actual_psiN
+        #psiN=self.actual_psiN
+        #Pi=self.sum_m_momentum_flux
+        #ret=numpy.zeros(len(psiN))
+        #for i in range(1,len(psiN)-1):
+        #    dpsiN=psiN[i]-psiN[i-1]
+        #    dPi=Pi[i+1]-Pi[i-1]     
+        #    #print dGammaHat/dpsiN
+        #    ret[i]=dPi/(2.0*dpsiN)
         Pi=self.sum_m_momentum_flux
-        ret=numpy.zeros(len(psiN))
-        for i in range(1,len(psiN)-1):
-            dpsiN=psiN[i]-psiN[i-1]
-            dPi=Pi[i+1]-Pi[i-1]     
-            #print dGammaHat/dpsiN
-            ret[i]=dPi/(2.0*dpsiN) 
-        return ret*self.Delta/self.psiAHat
+        return self.ddpsiN(Pi,order=4)*self.Delta/self.psiAHat
+    
 
     @property
     def djHat_dpsiN(self):
@@ -1160,16 +1219,23 @@ class perfect_simulation(object):
     @property
     def dqHat_dpsiN(self):
         #non-adiabatic part
-        psiN=self.actual_psiN
+        #psiN=self.actual_psiN
+        #qHat=self.conductive_heat_flux
+        #ret=numpy.zeros([len(psiN),self.num_species])
+        #for i in range(1,len(psiN)):
+        #    dpsiN=psiN[i]-psiN[i-1]
+        #    dqHat=qHat[i]-qHat[i-1]
+        #    #print dGammaHat/dpsiN
+        #    ret[i-1]=dqHat/dpsiN
+        #ret[0]=0
+        #return ret
         qHat=self.conductive_heat_flux
-        ret=numpy.zeros([len(psiN),self.num_species])
-        for i in range(1,len(psiN)):
-            dpsiN=psiN[i]-psiN[i-1]
-            dqHat=qHat[i]-qHat[i-1]
-            #print dGammaHat/dpsiN
-            ret[i-1]=dqHat/dpsiN
-        ret[0]=0
-        return ret
+        return self.ddpsiN(qHat,order=4)
+
+    @property
+    def dQHat_dpsiN(self):
+        QHat=self.heat_flux
+        return self.ddpsiN(QHat,order=4)
 
     @property
     def IHat(self):
@@ -1266,6 +1332,13 @@ class perfect_simulation(object):
     @property
     def magnetization_flow_perturbation_test(self):
         return self.magnetization_flow_perturbation_test_order(order=4)
+
+    @property
+    def magnetization_flow_perturbation_test_new(self):
+        #to test new external derivative routine
+        return self.ddpsiN(self.magnetization_perturbation,order=4)
+
+    
     
     def magnetization_flow_perturbation_test_order(self,order=4):
         #for testing different derivative approximations
@@ -1286,12 +1359,12 @@ class perfect_simulation(object):
             #centered 3-point, forward/backward 3-point at the ends
             mp=self.magnetization_perturbation
             ddpsiN=diff_matrix(self.psi[0],self.psi[-1],self.Npsi,order=2)
-            return (psiAHat/self.psiAHatArray)[:,numpy.newaxis,numpy.newaxis]*numpy.tensordot(ddpsiN,mp,([1],[0])) 
+            return (self.psiAHat/self.psiAHatArray)[:,numpy.newaxis,numpy.newaxis]*numpy.tensordot(ddpsiN,mp,([1],[0])) 
         elif order == 4:
             #centered 5-point, forward/backward 5-point at the ends
             mp=self.magnetization_perturbation
             ddpsiN=diff_matrix(self.psi[0],self.psi[-1],self.Npsi,order=4)
-            return (psiAHat/self.psiAHatArray)[:,numpy.newaxis,numpy.newaxis]*numpy.tensordot(ddpsiN,mp,([1],[0]))
+            return (self.psiAHat/self.psiAHatArray)[:,numpy.newaxis,numpy.newaxis]*numpy.tensordot(ddpsiN,mp,([1],[0]))
         
     
     @property
@@ -1301,7 +1374,7 @@ class perfect_simulation(object):
     
     @property
     def poloidal_flow_inputs(self):
-        return (1/2*self.psiAHat)*(numpy.expand_dims(self.THat,axis=1)/self.Z)*numpy.expand_dims(self.Bp*self.IHat/(self.BHat**2),axis=2)*numpy.expand_dims(self.dnHatdpsiN/self.nHat + self.dTHatdpsiN/self.THat +(2*self.omega*self.Z/(self.Delta*self.THat))*numpy.expand_dims(self.dPhiHatdpsiN,axis=1),axis=1)
+        return 1/(2*self.psiAHat)*(numpy.expand_dims(self.THat,axis=1)/self.Z)*numpy.expand_dims(self.Bp*self.IHat/(self.BHat**2),axis=2)*numpy.expand_dims(self.dnHatdpsiN/self.nHat + self.dTHatdpsiN/self.THat +(2*self.omega*self.Z/(self.Delta*self.THat))*numpy.expand_dims(self.dPhiHatdpsiN,axis=1),axis=1)
 
     @property
     def poloidal_flow_inputs_parallel(self):
@@ -1359,7 +1432,7 @@ class perfect_simulation(object):
 
     @property
     def toroidal_flow_inputs(self):
-        return (1/(2*self.psiAHat))*(numpy.expand_dims(self.THat,axis=1)/self.Z)*numpy.expand_dims(self.Bp**2*self.RHat/(self.BHat**2),axis=2)*numpy.expand_dims(self.dnHatdpsiN/self.nHat + self.dTHatdpsiN/self.THat +(2*self.omega*self.Z/(self.Delta*self.THat))*numpy.expand_dims(self.dPhiHatdpsiN,axis=1),axis=1)
+        return 1/(2*self.psiAHat)*(numpy.expand_dims(self.THat,axis=1)/self.Z)*numpy.expand_dims(self.Bp**2*self.RHat/(self.BHat**2),axis=2)*numpy.expand_dims(self.dnHatdpsiN/self.nHat + self.dTHatdpsiN/self.THat +(2*self.omega*self.Z/(self.Delta*self.THat))*numpy.expand_dims(self.dPhiHatdpsiN,axis=1),axis=1)
     
     @property
     def toroidal_flow_test(self):
@@ -1376,7 +1449,7 @@ class perfect_simulation(object):
 
     @property
     def perpendicular_flow_inputs_diamagnetic(self):
-        return (1/(2*self.psiAHat))*(numpy.expand_dims(self.THat,axis=1)/self.Z)*numpy.expand_dims(self.Bp*self.RHat/self.BHat,axis=2)*numpy.expand_dims(self.dnHatdpsiN/self.nHat + self.dTHatdpsiN/self.THat,axis=1)
+        return 1/(2*self.psiAHat)*(numpy.expand_dims(self.THat,axis=1)/self.Z)*numpy.expand_dims(self.Bp*self.RHat/self.BHat,axis=2)*numpy.expand_dims(self.dnHatdpsiN/self.nHat + self.dTHatdpsiN/self.THat,axis=1)
 
     @property
     def perpendicular_flow_inputs_test(self):
