@@ -296,7 +296,7 @@ class perfect_simulation(object):
             return numpy.trapz(a*j,dx=self.dtheta,axis=axis)/VPH
         return numpy.sum(a*j*self.dtheta,axis=axis)/VPH
 
-    def ddpsiN(self,attrib,order=4,scale=False):
+    def ddpsiN(self,attrib,order=4,scale=True):
         #derivative on uniform grid. supported orders are 2 and 4 (2016-06-27)
         dds=diff_matrix(self.psi[0],self.psi[-1],self.Npsi,order=order)
         if scale:
@@ -1143,7 +1143,7 @@ class perfect_simulation(object):
     def psi(self):
         try:
             return self.outputs[self.group_name+self.psi_name][()]
-        except KeyError:
+        except (KeyError,TypeError):
             #print "cannot get internal psi from output, will generate uniform from input."
             return self.inputs.psi
 
