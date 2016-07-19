@@ -340,8 +340,8 @@ if __name__ == "__main__":
         axarr[0,0].set_title("Varying transition")
         axarr[0,1].set_title("Varying density")
 
-        axarr[0,0].set_ylabel(r"$\psi/(\hat{\psi}_A\bar{R}^2\bar{B})$")
-        axarr[1,0].set_ylabel(r"$d_s (\psi/(\hat{\psi}_A \bar{R}^2\bar{B}))$")
+        axarr[0,0].set_ylabel(r"$h/\hat{\psi}_A$")
+        axarr[1,0].set_ylabel(r"$d_s h/\hat{\psi}_A$")
 
         axarr[1,0].set_xlabel(r"$s$")
         axarr[1,1].set_xlabel(r"$s$")

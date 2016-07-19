@@ -317,7 +317,7 @@ def generate_compatible_profiles(simul,**kwargs):
     else:
         nHats[main_index]=bezier_transition(nilist,psiList,pairList,psi)
         dnHatdpsis[main_index] =simul.inputs.ddpsi_accurate(nHats[main_index])
-
+    n2=simul.nBar*bezier_transition(nilist,psiList,pairList,numpy.array([(psiMinPed + psiMaxPed)/2.0]))[0]
     print "Ion nHat pedestal heights:" +str(niPed)
     print "Ion nHat inner boundary value:" +str(nHats[main_index][0])
    
@@ -359,7 +359,7 @@ def generate_compatible_profiles(simul,**kwargs):
         else:
             THats[main_index]=bezier_transition(Tlist,[breakpoint],pairList[:-1],psi)
             dTHatdpsis[main_index]=simul.inputs.ddpsi_accurate(THats[main_index])
-
+        T2=simul.TBar*bezier_transition(Tlist,[breakpoint],pairList[:-1],numpy.array([(psiMinPed + psiMaxPed)/2.0]))[0]
         if (twoSpecies==False and oneSpecies==False):
             THats[imp_index]=THats[main_index]
             dTHatdpsis[imp_index]=dTHatdpsis[main_index]
@@ -370,11 +370,13 @@ def generate_compatible_profiles(simul,**kwargs):
     n=simul.nBar*nHats[main_index][point]
     print "T: "+str(T)
     print "n: "+str(n)
+    print "T2: "+str(T2)
+    print "n2: "+str(n2)
 
     
     print "Delta before:" + str(simul.Delta)
     if simul.units=="SI":
-        logLambda=coulombLog(n,T)
+        logLambda=coulombLog(n2,T2)
         print "logLambda: "+str(logLambda)
         nur=nu_r(simul.RBar,simul.nBar,simul.TBar,logLambda)
         simul.inputs.changevar("physicsParameters","nu_r",nur)
@@ -434,8 +436,8 @@ def generate_compatible_profiles(simul,**kwargs):
     #etaHats[imp_index] = 0.01*nHats[main_index][psiMinPedIndex]
     if ((twoSpecies==False) and (oneSpecies==False)) and (sameeta==False):
         imp_conc=kwargs["imp_conc"]
-        etaHats[imp_index]=imp_conc*(niPed+niCoreGrad*(psi-psiMinPed))
-        detaHatdpsis[imp_index] = imp_conc*niCoreGrad
+        etaHats[imp_index]=imp_conc*(niPed+niCoreGrad*(nonuniform_psi/psiAHat-psiMinPed))
+        detaHatdpsis[imp_index] = imp_conc*niCoreGrad*d_nonuniform_psi_dpsiN/psiAHat
         if allflat==True:
             etazHatInner=(lambda psiN: imp_conc*(niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiMinNotFlat-psi[0]) + niinnerGrad*(psiN - psiMinNotFlat)))
             etazHatMiddle=(lambda psiN: imp_conc*(niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))

@@ -297,12 +297,13 @@ class perfect_simulation(object):
         return numpy.sum(a*j*self.dtheta,axis=axis)/VPH
 
     def ddpsiN(self,attrib,order=4,scale=True):
-        #derivative on uniform grid. supported orders are 2 and 4 (2016-06-27)
+        #dds: derivative on uniform grid. supported orders are 2 and 4 (2016-06-27)
         dds=diff_matrix(self.psi[0],self.psi[-1],self.Npsi,order=order)
         if scale:
             scale_factor=(self.psiAHat/self.psiAHatArray)
         else:
-            scale_factor=numpy.ones(self.Npsi)*(self.psiAHat/self.psiAHatArray[0])
+            #scale_factor=numpy.ones(self.Npsi) #for derivatives on internal grid
+            scale_factor=(self.psiAHat/self.psiAHatArray[0])*numpy.ones(self.Npsi)
         #get attribute array
         if type(attrib) == str:
             a = getattr(self,attrib)
@@ -546,6 +547,11 @@ class perfect_simulation(object):
         return self.jHat
 
     @property
+    def conductive_heat_flux_sum(self):
+        return numpy.sum(self.conductive_heat_flux,axis=1)
+
+    
+    @property
     def momentum_flux_sum(self):
         return numpy.sum(self.masses*self.momentum_flux,axis=1)
 
@@ -596,7 +602,9 @@ class perfect_simulation(object):
     def GammaHat_source(self):
         #for comparrison with dGammaHat/dPsiN
         VPrimeHat=numpy.fabs(self.VPrimeHat)
-        return 2*(numpy.sqrt(numpy.pi)/2)*self.THat**(3./2.)*self.psiAHat*numpy.expand_dims(VPrimeHat,axis=1)/(self.Delta)*self.particle_source/(self.masses**2)
+        prefact=1#(self.psiAHatArray[:,numpy.newaxis]/self.psiAHat)
+        print self.psiAHat
+        return prefact*2*(numpy.sqrt(numpy.pi)/2)*self.THat**(3./2.)*self.psiAHat*numpy.expand_dims(VPrimeHat,axis=1)/(self.Delta)*self.particle_source/(self.masses**2)
 
     @property
     def QHat_source(self):
@@ -737,6 +745,14 @@ class perfect_simulation(object):
     @property
     def poloidal_flow_to_k_poloidal_factor(self):
         return 2*self.psiAHat*self.Z*self.FSABHat2[:,numpy.newaxis,numpy.newaxis]/(numpy.expand_dims(self.Bp*self.IHat,axis=2)*numpy.expand_dims(self.dTHatdpsiN,axis=1))
+
+    @property
+    def toroidal_flow_to_k_toroidal_factor(self):
+        return 2*self.psiAHat*self.Z*self.FSABHat2[:,numpy.newaxis,numpy.newaxis]/(numpy.expand_dims(self.Bt*self.IHat,axis=2)*numpy.expand_dims(self.dTHatdpsiN,axis=1))
+
+    @property
+    def k_toroidal(self):
+        return self.toroidal_flow*self.toroidal_flow_to_k_toroidal_factor
     
     @property
     def k_poloidal(self):
@@ -960,6 +976,7 @@ class perfect_simulation(object):
 
     @property
     def masses(self):
+        print repr(self.inputs.masses)
         return numpy.array(self.inputs.masses)
     
     @property
@@ -1088,7 +1105,8 @@ class perfect_simulation(object):
 
     @property
     def Nspecies(self):
-        return len(self.masses)
+        #stupidity wrapper since I did not realise I had a num_species and made a new one.
+        return self.num_species 
     
     @property
     def dTHat_dpsiN(self):
@@ -1323,7 +1341,7 @@ class perfect_simulation(object):
 
     @property
     def poloidal_flow_ExB(self):
-        return (self.omega/self.Delta*self.psiAHat)*numpy.expand_dims(self.Bp*self.IHat/self.BHat**2,axis=2)*self.density_perturbation*numpy.expand_dims(numpy.expand_dims(self.dPhiHatdpsiN,axis=1),axis=2)
+        return self.omega/(self.Delta*self.psiAHat)*numpy.expand_dims(self.Bp*self.IHat/self.BHat**2,axis=2)*self.density_perturbation*numpy.expand_dims(numpy.expand_dims(self.dPhiHatdpsiN,axis=1),axis=2)
 
     @property
     def poloidal_flow_gradP(self):
