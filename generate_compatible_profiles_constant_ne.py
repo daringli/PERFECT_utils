@@ -199,8 +199,8 @@ def generate_compatible_profiles_constant_ne(simul,**kwargs):
     dnHatdpsis[e_index] = simul.inputs.ddpsi_accurate(nHats[e_index])
 
     # generate ion etas
-    c=kwargs["imp_conc"]
-    eta_1=1/(Z_1*(1+2*c))*neHatPre(psi)
+    c=float(kwargs["imp_conc"])
+    eta_1=neHatPre(psi)/(Z_1*(1+2*c))
     eta_2=c*eta_1
 
     etaHats[main_index] = eta_1
