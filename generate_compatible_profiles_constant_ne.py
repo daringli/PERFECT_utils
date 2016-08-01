@@ -64,14 +64,8 @@ def generate_compatible_profiles_constant_ne(simul,**kwargs):
     else:
         offset_frac=0.2
 
-    #this modifies the charge and mass of the species in the simulation
-    species_filename= os.path.join(os.path.dirname(__file__), 'species_database.namelist')
-    set_species_param(simul.species,species_filename,simul.norm,simul)
-    simul.inputs.read(simul.input_filename)
-
-        
+    
     Npsi=simul.inputs.Npsi
-    psi=simul.inputs.psi
     psiMin = simul.inputs.psiMin
     psiMax = simul.inputs.psiMax
 
@@ -93,6 +87,10 @@ def generate_compatible_profiles_constant_ne(simul,**kwargs):
     else:
         upShift=-psiN_width/kwargs["upShift_denom"]
 
+    if "sameflux" in kwargs.keys():
+        sameflux=kwargs["sameflux"]
+    else:
+        sameflux=False
 
     
     #calculate new psiMid and diameter for this profile
@@ -116,6 +114,20 @@ def generate_compatible_profiles_constant_ne(simul,**kwargs):
     
     offset=(psiMaxPed-psiMinPed)*offset_frac
     pairList=[[offset,offset],[offset,offset]]
+
+    #already here, the simulation object changes
+    simul.inputs.changevar("resolutionParameters","psiDiameter",psiDiameter)
+    simul.inputs.changevar("physicsParameters","psiMid",psiMid)
+    simul.inputs.changevar("physicsParameters","leftBoundaryShift",leftBoundaryShift)
+    #this modifies the charge and mass of the species in the simulation
+    species_filename= os.path.join(os.path.dirname(__file__), 'species_database.namelist')
+    set_species_param(simul.species,species_filename,simul.norm,simul)
+    
+    simul.inputs.read(simul.input_filename)
+
+    #get new psi coordinate from input
+    psi=simul.inputs.psi
+    
     
     #allocate arrays
     THats = numpy.zeros((Nspecies,Npsi))
@@ -224,10 +236,69 @@ def generate_compatible_profiles_constant_ne(simul,**kwargs):
     
     nHats[imp_index] = n_2
     dnHatdpsis[imp_index] = simul.inputs.ddpsi_accurate(nHats[imp_index])
-    
+
+    if (sameflux==True) or (samefluxshift==True):
+        nt=nHats[main_index][0]
+        nb=nHats[main_index][-1]
+        Tp=Tpeds[main_index]
+        breakpoint=psiMinPed
+        dTdpsi=TCoreGrads[main_index]
+        Delta0=psiN_width #pedestal width proper
+        
+        print "nt: " + str(nt)
+        print "nb: " + str(nb)
+        print "Tp: " + str(Tp)
+        print "dTdpsi: " + str(dTdpsi)
+        print "Delta0: " + str(Delta0)
+        
+        f=lambda x : x*(Tp-2*Delta0*x)**(3.0/2.0) - (nb*1.0/nt)*(Tp + 3*dTdpsi*Delta0)**(3.0/2.0)*dTdpsi
+        dTdpsiTop=scipy.optimize.fsolve(f,0)
+        dTdpsiBot=dTdpsi
+        
+        THatPre[main_index] =(lambda psiN: (Tpeds[main_index] + dTdpsiTop*(psiN-breakpoint)))
+        THatPed[main_index] =(lambda psiN: (Tpeds[main_index] + dTdpsiBot*(psiN-breakpoint)))
+        THatAft[main_index] =(lambda psiN: (Tpeds[main_index] + dTdpsiBot*(psiN-breakpoint)))
+        dTHatPredpsi[main_index] =(lambda psiN: dTdpsiTop)
+        dTHatPeddpsi[main_index] =(lambda psiN: dTdpsiBot)
+        dTHatAftdpsi[main_index] =(lambda psiN: dTdpsiBot)
+        
+        Tlist=[THatPre[main_index],THatPed[main_index]]
+        dTdpsilist=[dTHatPredpsi[main_index],dTHatPeddpsi[main_index]]
+
+        THats[main_index]=bezier_transition(Tlist,[breakpoint],pairList[:-1],psi)
+        dTHatdpsis[main_index]=simul.inputs.ddpsi_accurate(THats[main_index])
+
+        T2=simul.TBar*bezier_transition(Tlist,[breakpoint],pairList[:-1],numpy.array([(psiMinPed + psiMaxPed)/2.0]))[0]
+        THats[imp_index]=THats[main_index]
+        dTHatdpsis[imp_index]=dTHatdpsis[main_index]
+
+        
     # generate electron eta
     etaHats[e_index] = n_e*exp(-Zs[e_index]*PhiHat/THats[e_index])
     detaHatdpsis[e_index] = simul.inputs.ddpsi_accurate(etaHats[e_index])
+
+    #with n_i and T_i generated, we can evaluate logLambda at a suitable point
+    point=numpy.floor((psiMinPedIndex+psiMaxPedIndex)/2.0) # middle of the pedestal
+    T=simul.TBar*THats[main_index][point]
+    n=simul.nBar*nHats[main_index][point]
+    print "T: "+str(T)
+    print "n: "+str(n)
+    print "T2: "+str(T2)
+    print "n2: "+str(n2)
+
+    
+    print "Delta before:" + str(simul.Delta)
+    if simul.units=="SI":
+        logLambda=coulombLog(n2,T2)
+        print "logLambda: "+str(logLambda)
+        nur=nu_r(simul.RBar,simul.nBar,simul.TBar,logLambda)
+        simul.inputs.changevar("physicsParameters","nu_r",nur)
+        simul.inputs.changevar("physicsParameters","Delta",simul.mBar*simul.vBar/(simul.eBar*simul.BBar*simul.RBar))
+        simul.inputs.changevar("physicsParameters","omega",simul.ePhiBar/(simul.eBar*simul.BBar*simul.RBar*simul.vBar))
+        simul.inputs.read(simul.input_filename)
+    else:
+        print "Only SI units are currently supported"
+    print "Delta after:" + str(simul.Delta)
 
     
     #tranpose
