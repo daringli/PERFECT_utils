@@ -43,6 +43,7 @@ def const_builder(c):
     
 
 def generate_compatible_profiles_constant_ne(simul,**kwargs):
+    species=simul.species
     Nspecies=3
     main_index=kwargs["mI"]
     imp_index=kwargs["zI"]
@@ -51,16 +52,65 @@ def generate_compatible_profiles_constant_ne(simul,**kwargs):
     Zs=simul.inputs.charges
     Z_1=Zs[main_index]
 
+    #width of simulation region expressed in terms of pedestal width
+    if "psiDiamFact" in kwargs.keys():
+        psiDiamFact=kwargs["psiDiamFact"]
+    else:
+        psiDiamFact=5
+    
     #how sharp bezier transition between region is compared to pedestal width
     if "transitionFact" in kwargs.keys():
         offset_frac=kwargs["transitionFact"]
     else:
         offset_frac=0.2
 
+    #this modifies the charge and mass of the species in the simulation
+    species_filename= os.path.join(os.path.dirname(__file__), 'species_database.namelist')
+    set_species_param(simul.species,species_filename,simul.norm,simul)
+    simul.inputs.read(simul.input_filename)
+
+        
     Npsi=simul.inputs.Npsi
     psi=simul.inputs.psi
     psiMin = simul.inputs.psiMin
     psiMax = simul.inputs.psiMax
+
+    if "dxdpsiN" in kwargs.keys():
+        print "Intepreting gradients as being given in x space"
+        print "Will use function specified by dx_dpsi to convert" 
+        dxdpsiN_at_a=kwargs["dxdpsiN"]
+    else:
+        print "Intepreting gradients as being given in psi_N."
+        dxdpsiN_at_a=1 #trivial x=psi_N case
+
+        
+    x_width=kwargs["xwidth"]
+    psiN_width=x_width/dxdpsiN_at_a
+
+    #2015-12-16: -psiN_width/3.0 was the old default.
+    if "upShift_denom" not in kwargs.keys():
+        upShift=-psiN_width/3.0
+    else:
+        upShift=-psiN_width/kwargs["upShift_denom"]
+
+
+    
+    #calculate new psiMid and diameter for this profile
+    if "midShift" not in kwargs.keys():
+        midShift=0
+    else:
+        midShift=kwargs["midShift"]*psiN_width
+    
+    psiMid=1-psiN_width/2.0+midShift
+    psiDiameter=psiDiamFact*psiN_width
+    
+    psiMinPedIndex=numpy.argmin(numpy.abs(psi-(psiMid-psiN_width/2.0)))
+    psiMaxPedIndex=numpy.argmin(numpy.abs(psi-(psiMid+psiN_width/2.0+upShift)))
+    #psiMinPed=psi[psiMinPedIndex]
+    #psiMaxPed=psi[psiMaxPedIndex]
+    psiMinPed=psiMid-psiN_width/2.0
+    psiMaxPed=psiMid+psiN_width/2.0+upShift
+    
     
     psiList=[psiMinPed,psiMaxPed]
     
@@ -121,7 +171,7 @@ def generate_compatible_profiles_constant_ne(simul,**kwargs):
 
         THats[i]=bezier_transition(Tlist,psiList,pairList,psi)
         dTHatdpsis[i]=simul.inputs.ddpsi_accurate(THats[i])
-    T=T[main_index]
+    T=THats[main_index]*simul.TBar
 
 
     
@@ -158,11 +208,12 @@ def generate_compatible_profiles_constant_ne(simul,**kwargs):
     eta1=const_builder(eta1)(psi)
     eta2=const_builder(eta2)(psi)
     c=const_builder(c)(psi)
-    PhiHat=-T/(e*Z_1)*log(sqrt(1/(16*c**2) + n_e/(2*c*Z_1))-1/(4*c(x)))
+    ePhi=-T/(Z_1)*log(sqrt(1/(16*c**2) + n_e/(2*c*Z_1*eta1))-1/(4*c))
+    PhiHat=ePhi/simul.ePhiBar
     dPhiHatdpsi = simul.inputs.ddpsi_accurate(PhiHat)
 
-    n_1=eta1*exp(-Z_1*Phi/T)
-    n_2=eta2*exp(-2*Z_1*Phi/T)
+    n_1=eta1*exp(-Z_1*ePhi/T)
+    n_2=eta2*exp(-2*Z_1*ePhi/T)
     
     nHats[main_index] = n_1
     dnHatdpsis[main_index] = simul.inputs.ddpsi_accurate(nHats[main_index])
@@ -178,7 +229,7 @@ def generate_compatible_profiles_constant_ne(simul,**kwargs):
     etaHats[imp_index] = eta2
     detaHatdpsis[imp_index] = simul.inputs.ddpsi_accurate(etaHats[imp_index])
     
-    etaHats[e_index] = n_e*exp(-Zs[e_index]*Phi/THats[e_index])
+    etaHats[e_index] = n_e*exp(-Zs[e_index]*PhiHat/THats[e_index])
     detaHatdpsis[e_index] = simul.inputs.ddpsi_accurate(etaHats[e_index])
 
     
