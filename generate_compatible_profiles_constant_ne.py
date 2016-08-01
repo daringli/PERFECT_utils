@@ -198,37 +198,34 @@ def generate_compatible_profiles_constant_ne(simul,**kwargs):
     nHats[e_index] = bezier_transition(nelist,psiList,pairList,psi)
     dnHatdpsis[e_index] = simul.inputs.ddpsi_accurate(nHats[e_index])
 
-    # generate Phi
-    
-    n_e=nHats[e_index]    
-    eta1=kwargs["nped_"+species[main_index]]
+    # generate ion etas
     c=kwargs["imp_conc"]
-    eta2=c*eta1
-    #arrays
-    eta1=const_builder(eta1)(psi)
-    eta2=const_builder(eta2)(psi)
-    c=const_builder(c)(psi)
-    ePhi=-T/(Z_1)*log(sqrt(1/(16*c**2) + n_e/(2*c*Z_1*eta1))-1/(4*c))
+    eta_1=1/(Z_1*(1+2*c))*neHatPre(psi)
+    eta_2=c*eta_1
+
+    etaHats[main_index] = eta_1
+    detaHatdpsis[main_index] = simul.inputs.ddpsi_accurate(etaHats[main_index])
+
+    etaHats[imp_index] = eta_2
+    detaHatdpsis[imp_index] = simul.inputs.ddpsi_accurate(etaHats[imp_index])
+      
+    # generate Phi
+    n_e=nHats[e_index] 
+    ePhi=-T/(Z_1)*log(sqrt(1/(16*c**2) + n_e/(2*c*Z_1*eta_1))-1/(4*c))
     PhiHat=ePhi/simul.ePhiBar
     dPhiHatdpsi = simul.inputs.ddpsi_accurate(PhiHat)
 
-    n_1=eta1*exp(-Z_1*ePhi/T)
-    n_2=eta2*exp(-2*Z_1*ePhi/T)
+    # generate ion densities
+    n_1=eta_1*exp(-Z_1*ePhi/T)
+    n_2=eta_2*exp(-2*Z_1*ePhi/T)
     
     nHats[main_index] = n_1
     dnHatdpsis[main_index] = simul.inputs.ddpsi_accurate(nHats[main_index])
-
+    
     nHats[imp_index] = n_2
     dnHatdpsis[imp_index] = simul.inputs.ddpsi_accurate(nHats[imp_index])
-
-
-    #generate eta profiles
-    etaHats[main_index] = eta1
-    detaHatdpsis[main_index] = simul.inputs.ddpsi_accurate(etaHats[main_index])
-
-    etaHats[imp_index] = eta2
-    detaHatdpsis[imp_index] = simul.inputs.ddpsi_accurate(etaHats[imp_index])
     
+    # generate electron eta
     etaHats[e_index] = n_e*exp(-Zs[e_index]*PhiHat/THats[e_index])
     detaHatdpsis[e_index] = simul.inputs.ddpsi_accurate(etaHats[e_index])
 
