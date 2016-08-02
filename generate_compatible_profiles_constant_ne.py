@@ -91,7 +91,7 @@ def generate_compatible_profiles_constant_ne(simul,**kwargs):
         sameflux=kwargs["sameflux"]
     else:
         sameflux=False
-
+    
     
     #calculate new psiMid and diameter for this profile
     if "midShift" not in kwargs.keys():
@@ -101,6 +101,19 @@ def generate_compatible_profiles_constant_ne(simul,**kwargs):
     
     psiMid=1-psiN_width/2.0+midShift
     psiDiameter=psiDiamFact*psiN_width
+
+    #already here, the simulation object changes
+    simul.inputs.changevar("resolutionParameters","psiDiameter",psiDiameter)
+    simul.inputs.changevar("physicsParameters","psiMid",psiMid)
+    #this modifies the charge and mass of the species in the simulation
+    species_filename= os.path.join(os.path.dirname(__file__), 'species_database.namelist')
+    set_species_param(simul.species,species_filename,simul.norm,simul)
+    
+    simul.inputs.read(simul.input_filename)
+
+    #get new psi coordinate from input
+    psi=simul.inputs.psi
+    
     
     psiMinPedIndex=numpy.argmin(numpy.abs(psi-(psiMid-psiN_width/2.0)))
     psiMaxPedIndex=numpy.argmin(numpy.abs(psi-(psiMid+psiN_width/2.0+upShift)))
@@ -115,18 +128,6 @@ def generate_compatible_profiles_constant_ne(simul,**kwargs):
     offset=(psiMaxPed-psiMinPed)*offset_frac
     pairList=[[offset,offset],[offset,offset]]
 
-    #already here, the simulation object changes
-    simul.inputs.changevar("resolutionParameters","psiDiameter",psiDiameter)
-    simul.inputs.changevar("physicsParameters","psiMid",psiMid)
-    simul.inputs.changevar("physicsParameters","leftBoundaryShift",leftBoundaryShift)
-    #this modifies the charge and mass of the species in the simulation
-    species_filename= os.path.join(os.path.dirname(__file__), 'species_database.namelist')
-    set_species_param(simul.species,species_filename,simul.norm,simul)
-    
-    simul.inputs.read(simul.input_filename)
-
-    #get new psi coordinate from input
-    psi=simul.inputs.psi
     
     
     #allocate arrays
@@ -237,7 +238,9 @@ def generate_compatible_profiles_constant_ne(simul,**kwargs):
     nHats[imp_index] = n_2
     dnHatdpsis[imp_index] = simul.inputs.ddpsi_accurate(nHats[imp_index])
 
-    if (sameflux==True) or (samefluxshift==True):
+    T2=simul.TBar*THats
+    n2=simul.nBar*nHats
+    if (sameflux==True):
         nt=nHats[main_index][0]
         nb=nHats[main_index][-1]
         Tp=Tpeds[main_index]
@@ -269,6 +272,7 @@ def generate_compatible_profiles_constant_ne(simul,**kwargs):
         dTHatdpsis[main_index]=simul.inputs.ddpsi_accurate(THats[main_index])
 
         T2=simul.TBar*bezier_transition(Tlist,[breakpoint],pairList[:-1],numpy.array([(psiMinPed + psiMaxPed)/2.0]))[0]
+        n2=simul.nBar*bezier_transition(nilist,psiList,pairList,numpy.array([(psiMinPed + psiMaxPed)/2.0]))[0]
         THats[imp_index]=THats[main_index]
         dTHatdpsis[imp_index]=dTHatdpsis[main_index]
 
@@ -283,6 +287,8 @@ def generate_compatible_profiles_constant_ne(simul,**kwargs):
     n=simul.nBar*nHats[main_index][point]
     print "T: "+str(T)
     print "n: "+str(n)
+    T2=T2[0][point]
+    n2=n2[0][point]
     print "T2: "+str(T2)
     print "n2: "+str(n2)
 
@@ -290,8 +296,9 @@ def generate_compatible_profiles_constant_ne(simul,**kwargs):
     print "Delta before:" + str(simul.Delta)
     if simul.units=="SI":
         logLambda=coulombLog(n2,T2)
-        print "logLambda: "+str(logLambda)
+        #print "logLambda: "+str(logLambda)
         nur=nu_r(simul.RBar,simul.nBar,simul.TBar,logLambda)
+        print "nu_r: "+str(nur)
         simul.inputs.changevar("physicsParameters","nu_r",nur)
         simul.inputs.changevar("physicsParameters","Delta",simul.mBar*simul.vBar/(simul.eBar*simul.BBar*simul.RBar))
         simul.inputs.changevar("physicsParameters","omega",simul.ePhiBar/(simul.eBar*simul.BBar*simul.RBar*simul.vBar))
