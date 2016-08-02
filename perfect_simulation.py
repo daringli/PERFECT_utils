@@ -184,6 +184,11 @@ class perfect_simulation(object):
 
     @psiN_to_psi.setter
     def psiN_to_psi(self,psiN_to_psi_filename):
+        try:
+            self.inputs.psiGridType
+        except AttributeError:
+            self.inputs.psiGridType=0
+            
         if self.inputs.psiGridType==1:
             if (psiN_to_psi_filename==sentinel) or (psiN_to_psi_filename==None):
                 self.psiN_to_psi_filename=None
