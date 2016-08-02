@@ -271,8 +271,8 @@ def generate_compatible_profiles_constant_ne(simul,**kwargs):
         THats[main_index]=bezier_transition(Tlist,[breakpoint],pairList[:-1],psi)
         dTHatdpsis[main_index]=simul.inputs.ddpsi_accurate(THats[main_index])
 
-        T2=simul.TBar*bezier_transition(Tlist,[breakpoint],pairList[:-1],numpy.array([(psiMinPed + psiMaxPed)/2.0]))[0]
-        n2=simul.nBar*bezier_transition(nilist,psiList,pairList,numpy.array([(psiMinPed + psiMaxPed)/2.0]))[0]
+        #T2=simul.TBar*bezier_transition(Tlist,[breakpoint],pairList[:-1],numpy.array([(psiMinPed + psiMaxPed)/2.0]))[0]
+        #n2=simul.nBar*bezier_transition(nilist,psiList,pairList,numpy.array([(psiMinPed + psiMaxPed)/2.0]))[0]
         THats[imp_index]=THats[main_index]
         dTHatdpsis[imp_index]=dTHatdpsis[main_index]
 
