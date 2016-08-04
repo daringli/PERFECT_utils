@@ -12,6 +12,7 @@ def calc_species_param(species_list,species_filename,norm_filename):
     return [Z,mHat]
 
 def list_to_str(l,delim=' '):
+    #Not used, as this is now built into the PERFECT input class
     ret=''
     for entry in l:
         ret=ret+str(entry)+delim
@@ -20,8 +21,8 @@ def list_to_str(l,delim=' '):
 
 def set_species_param(species_list,species_filename,norm_filename,simulation):
     [Z,mHat]=calc_species_param(species_list,species_filename,norm_filename)
-    simulation.inputs.changevar("speciesParameters","charges",list_to_str(Z))
-    simulation.inputs.changevar("speciesParameters","masses",list_to_str(mHat))
+    simulation.inputs.charges=Z
+    simulation.inputs.masses=mHat
 
 
 if __name__=="__main__":
