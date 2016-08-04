@@ -429,8 +429,10 @@ def generate_T_profiles(**kwargs):
         
     global TiHatPed
     global TiHatAft
+    global dTiHatAftdpsi
     TiHatPed = THatPed[main_index]
     TiHatAft = THatAft[main_index]
+    dTiHatAftdpsi = dTHatAftdpsi[main_index]
     
     return (THats,dTHatdss)
 
