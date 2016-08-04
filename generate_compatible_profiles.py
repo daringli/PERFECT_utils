@@ -408,19 +408,19 @@ def generate_T_profiles(**kwargs):
 
     #Generating functions from the parameters
     for i in range(Nspecies):
-        THatPre[i] =(lambda psiN: (Tpeds[i] + TCoreGrads[i]*(psiN-psiMinPed)))
-        THatPed[i] =(lambda psiN: (Tpeds[i] + TpedGrads[i]*(psiN-psiMinPed)))
-        THatAft[i] =(lambda psiN: (Tpeds[i] + TpedGrads[i]*(psiMaxPed-psiMinPed) + TSOLGrads[i]*(psiN-psiMaxPed)))
-        dTHatPredpsi[i] = (lambda psiN: TCoreGrads[i])
-        dTHatPeddpsi[i] = (lambda psiN: TpedGrads[i])
-        dTHatAftdpsi[i] = (lambda psiN: TSOLGrads[i])
+        THatPre[i] =(lambda psiN,i=i: (Tpeds[i] + TCoreGrads[i]*(psiN-psiMinPed)))
+        THatPed[i] =(lambda psiN,i=i: (Tpeds[i] + TpedGrads[i]*(psiN-psiMinPed)))
+        THatAft[i] =(lambda psiN,i=i: (Tpeds[i] + TpedGrads[i]*(psiMaxPed-psiMinPed) + TSOLGrads[i]*(psiN-psiMaxPed)))
+        dTHatPredpsi[i] = (lambda psiN,i=i: TCoreGrads[i])
+        dTHatPeddpsi[i] = (lambda psiN,i=i: TpedGrads[i])
+        dTHatAftdpsi[i] = (lambda psiN,i=i: TSOLGrads[i])
         Tlist=[THatPre[i],THatPed[i],THatAft[i]]
         dTdpsiList = [dTHatPredpsi[i],dTHatPeddpsi[i],dTHatAftdpsi[i]]
         if allflat==True:
-            THatinner[i]=(lambda psiN: (Tpeds[i] + TCoreGrads[i]*(psiMinNotFlat-psiMinPed)) + TinnerGrad[i]*(psiN - psiMinNotFlat))
-            THatouter[i]=(lambda psiN: (Tpeds[i] + TpedGrads[i]*(psiMaxPed-psiMinPed) + TSOLGrads[i]*(psiMaxNotFlat-psiMaxPed)) + TouterGrad[i]*(psiN - psiMaxNotFlat))
-            dTHatinnerdpsi[i] = (lambda psiN: TouterGrad[i])
-            dTHatouterdpsi[i]=(lambda psiN: TouterGrad[i])
+            THatinner[i]=(lambda psiN,i=i: (Tpeds[i] + TCoreGrads[i]*(psiMinNotFlat-psiMinPed)) + TinnerGrad[i]*(psiN - psiMinNotFlat))
+            THatouter[i]=(lambda psiN,i=i: (Tpeds[i] + TpedGrads[i]*(psiMaxPed-psiMinPed) + TSOLGrads[i]*(psiMaxNotFlat-psiMaxPed)) + TouterGrad[i]*(psiN - psiMaxNotFlat))
+            dTHatinnerdpsi[i] = (lambda psiN,i=i: TouterGrad[i])
+            dTHatouterdpsi[i]=(lambda psiN,i=i: TouterGrad[i])
             Tlist=[THatinner[i],THatPre[i],THatPed[i],THatAft[i],THatouter[i]]
             dTdpsiList = [dTHatinnerdpsi[i],dTHatPredpsi[i],dTHatPeddpsi[i],dTHatAftdpsi[i],dTHatouterdpsi[i]]
 
