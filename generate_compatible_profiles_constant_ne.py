@@ -278,7 +278,7 @@ def generate_compatible_profiles_constant_ne(simul,**kwargs):
 
         
     # generate electron eta
-    etaHats[e_index] = n_e*exp(-Zs[e_index]*PhiHat/THats[e_index])
+    etaHats[e_index] = n_e*exp(Zs[e_index]*PhiHat/THats[e_index])
     detaHatdpsis[e_index] = simul.inputs.ddpsi_accurate(etaHats[e_index])
 
     #with n_i and T_i generated, we can evaluate logLambda at a suitable point
