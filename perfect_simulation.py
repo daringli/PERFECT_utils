@@ -365,7 +365,7 @@ class perfect_simulation(object):
         elif rank==2:
             if a.shape == (self.Npsi,self.Ntheta):
                 return a[:,indices[0]]
-            elif a.shape == (self.Npsi,self.Nspecies):
+            elif a.shape == (self.Ntheta,self.Nspecies):
                 return a[indices[0],:]
             else:
                 print "ERROR: perfect_simulation.attrib_at_theta_of_psi: rank 2 array badly shaped."
@@ -377,7 +377,39 @@ class perfect_simulation(object):
                 print "ERROR: perfect_simulation.attrib_at_theta_of_psi: rank 1 array badly shaped."
                 sys.exit(1)
 
-                
+    def shift_theta(self,new_zero,attrib=None):
+        #shifts the theta grid to allow plotting attrib from -\pi,\pi, etc.
+        #returns shifted theta array and attribute in a tuple
+        #new_zero : value of theta to be the new zero index
+        zero_index=get_index_range(self.theta,[new_zero,new_zero],ret_range=False)[0]
+        theta = numpy.concatenate((self.theta[zero_index:]-2*numpy.pi,self.theta[0:zero_index]))
+        if attrib is not None:
+            if type(attrib) == str:
+                a=getattr(self,attrib)
+            else:
+                a=attrib
+            rank=arraylist_rank(a)
+            if rank==3:
+                a =  numpy.concatenate((a[:,zero_index:,:],a[:,0:zero_index,:]),axis=1)
+            elif rank==2:
+                if a.shape == (self.Npsi,self.Ntheta):
+                    a =  numpy.concatenate((a[:,zero_index:],a[:,0:zero_index]),axis=1)
+                elif a.shape == (self.Ntheta,self.Nspecies):
+                    a =  numpy.concatenate((a[zero_index:,:],a[0:zero_index,:]),axis=0)
+                else:
+                    print "ERROR: perfect_simulation.attrib_at_theta_of_psi: rank 2 array badly shaped."
+                    sys.exit(1)
+            elif rank==1:
+                if a.shape == (self.Ntheta,):
+                    a =  numpy.concatenate((a[zero_index:],a[0:zero_index]))
+                else:
+                    print "ERROR: perfect_simulation.attrib_at_theta_of_psi: rank 1 array badly shaped."
+                    sys.exit(1)
+            
+            return (theta,a)
+        else:
+            return theta 
+        
     def attrib_max_psi_of_theta(self,attrib,xlim=None):
         #help function to return the value of psiN that maximizes an attribute
         #for each given theta
@@ -566,10 +598,23 @@ class perfect_simulation(object):
 
     @property
     def heat_source(self):
+        first_i=5
+        last_i=203
+        print self.output_dir
+        S_h = self.outputs[self.group_name+self.heat_source_name][()][first_i:last_i,:]
+        psiN=self.actual_psiN[first_i:last_i]
+        print "Integrated heat sources: " + str(scipy.integrate.simps(S_h,psiN,axis=0))
         return self.outputs[self.group_name+self.heat_source_name][()]
-
+    
+    
     @property
     def particle_source(self):
+        first_i=5
+        last_i=203
+        print self.output_dir
+        S_p = self.outputs[self.group_name+self.particle_source_name][()][first_i:last_i,:]
+        psiN=self.actual_psiN[first_i:last_i]
+        print "Integrated particle sources: " + str(scipy.integrate.simps(S_p,psiN,axis=0))
         return self.outputs[self.group_name+self.particle_source_name][()]
 
     @property
@@ -608,7 +653,7 @@ class perfect_simulation(object):
         #for comparrison with dGammaHat/dPsiN
         VPrimeHat=numpy.fabs(self.VPrimeHat)
         prefact=1#(self.psiAHatArray[:,numpy.newaxis]/self.psiAHat)
-        print self.psiAHat
+        #print self.psiAHat
         return prefact*2*(numpy.sqrt(numpy.pi)/2)*self.THat**(3./2.)*self.psiAHat*numpy.expand_dims(VPrimeHat,axis=1)/(self.Delta)*self.particle_source/(self.masses**2)
 
     @property
@@ -981,7 +1026,7 @@ class perfect_simulation(object):
 
     @property
     def masses(self):
-        print repr(self.inputs.masses)
+        #print repr(self.inputs.masses)
         return numpy.array(self.inputs.masses)
     
     @property
@@ -1190,6 +1235,10 @@ class perfect_simulation(object):
         return self.outputs[self.group_name+self.theta_name][()]
 
     @property
+    def theta_shifted(self,shift=numpy.pi):
+        return self.shift_theta(shift)
+
+    @property
     def num_species(self):
         return self.outputs[self.group_name+self.num_species_name][()]
 
@@ -1202,6 +1251,12 @@ class perfect_simulation(object):
         #non-adiabatic part
         return self.outputs[self.group_name+self.density_perturbation_name][()]
 
+    @property
+    def density_perturbation_shifted(self,shift=numpy.pi):
+        #non-adiabatic part
+        (theta,density_perturbation_shifted) = self.shift_theta(shift,self.density_perturbation)
+        return density_perturbation_shifted
+    
     @property
     def pressure_perturbation(self):
         #non-adiabatic part

@@ -14,7 +14,7 @@ import numpy
 import sys
 
 
-def perfect_2d_plot(dirlist,attribs,normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",cm=cm.rainbow,lg=True,xlims=[90,100],ylims=[0,2],species=True,sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[]):
+def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",cm=cm.rainbow,lg=True,xlims=[90,100],ylims=[0,2],species=True,sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[]):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -97,8 +97,22 @@ def perfect_2d_plot(dirlist,attribs,normname="norms.namelist",speciesname="speci
                     gl_grp="local"
                 else:
                     gl_grp="global"
+
+                if (yattr == "theta") or (yattr == "theta_shifted"):
+                    y_scale = 1/numpy.pi
+                else:
+                    y_scale=1
+                    
+                if (xattr == "theta") or (xattr == "theta_shifted"):
+                    x_scale = 1/numpy.pi
+                elif (xattr == "psi") or (xattr == "actual_psiN"):
+                    x_scale=100
+                else:
+                    x_scale=1
+                x = getattr(simul,xattr)*x_scale
+                y = getattr(simul,yattr)*y_scale
                 #print data
-                psp_list.append(perfect_subplot(data,x=100*simul.psi,y=simul.theta/numpy.pi,subplot_coordinates=subplot_coordinates,show_zaxis_ticklabel=show_zaxis_ticklabel,show_yaxis_ticklabel=show_yaxis_ticklabel,show_xaxis_ticklabel=show_xaxis_ticklabel,title=title,groups=[s,"sim"+str(i),gl_grp,"pair"+str(i/2),species_attrib_groupname],dimensions=2))
+                psp_list.append(perfect_subplot(data,x=x,y=y,subplot_coordinates=subplot_coordinates,show_zaxis_ticklabel=show_zaxis_ticklabel,show_yaxis_ticklabel=show_yaxis_ticklabel,show_xaxis_ticklabel=show_xaxis_ticklabel,title=title,groups=[s,"sim"+str(i),gl_grp,"pair"+str(i/2),species_attrib_groupname],dimensions=2))
         #end simulList loop
         for psp in psp_list:
             print psp.groups

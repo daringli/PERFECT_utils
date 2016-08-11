@@ -530,6 +530,11 @@ def generate_n_from_eta_Phi_profile(etaHat,PhiHat,THat,detaHatdpsi,dPhiHatdpsi,d
     dnHatdpsi=lambda x : (detaHatdpsi(x) - (2*omega/Delta)*(etaHat(x)*Z/THat(x))*(dPhiHatdpsi(x)-PhiHat(x)*dTHatdpsi(x)/THat(x)))*numpy.exp(-(Z*omega*2/Delta)*PhiHat(x)/THat(x))
     return (nHat,dnHatdpsi)
 
+def generate_n_from_eta_X_profile(etaHat,X,detaHatds,dXds,Z):
+    nHat=lambda x : etaHat(x)*X(x)**Z
+    dnHatdpsi=lambda x : detaHatds(x)*X(x)**Z + etaHat(x)*Z*X(x)**(Z-1)*dXds(x)
+    return (nHat,dnHatdpsi)
+
 def generate_compatible_profiles(simul,xwidth,is_allflat=False,nonuniform=False,sameflux=False,sameeta=False,samefluxshift=0,zeroPhi=False,specialEta=False,psiDiamFact=5,transitionFact=0.2,dxdpsiN=1,midShift=0,upShift_denom=3.0,**kwargs):
     #NOTE: uses the dx/dpsi at minor radius for both core and SOL, which assumes that
     #simulated region is small enough that it doesn't change much.
@@ -643,7 +648,7 @@ def generate_compatible_profiles(simul,xwidth,is_allflat=False,nonuniform=False,
     #generate n_i profile
     (nHats[main_index],dnHatdss[main_index]) = generate_ni_profile(**kwargs)
        
-    if (sameflux==True) or (samefluxshift==True):
+    if (sameflux==True):
         nt=nHats[main_index](psi[0])
         nb=nHats[main_index](psi[-1])
         (THats,dTHatdss) = generate_T_profiles_sameflux(nt,nb,samefluxshift,**kwargs)
@@ -703,7 +708,7 @@ def generate_compatible_profiles(simul,xwidth,is_allflat=False,nonuniform=False,
 # generate_compatible_profiles_constant_ne
 #########################################################
 
-def generate_compatible_profiles_constant_ne(simul,xwidth,is_allflat=False,nonuniform=False,sameflux=False,sameeta=False,samefluxshift=0,zeroPhi=False,specialEta=False,psiDiamFact=5,transitionFact=0.2,dxdpsiN=1,midShift=0,upShift_denom=3.0,**kwargs):
+def generate_compatible_profiles_constant_ne(simul,xwidth,is_allflat=False,nonuniform=False,sameflux=False,oldsameflux=False,sameeta=False,samefluxshift=0,zeroPhi=False,specialEta=False,psiDiamFact=5,transitionFact=0.2,dxdpsiN=1,midShift=0,upShift_denom=3.0,**kwargs):
     e=scipy.constants.e
     log=numpy.log
     exp=numpy.exp
@@ -819,17 +824,6 @@ def generate_compatible_profiles_constant_ne(simul,xwidth,is_allflat=False,nonun
 
     #create n_e:
     (nHats[e_index],dnHatdss[e_index]) = generate_ne_profile(simul,**kwargs)
-    
-    if (sameflux==True) or (samefluxshift==True):
-        #DO NOT USE THIS
-        nt=nHats[main_index](psi[0])
-        nb=nHats[main_index](psi[-1])
-        (THats,dTHatdss) = generate_T_profiles_sameflux(nt,nb,samefluxshift,**kwargs)
-    else:
-        #USE THIS
-        (THats,dTHatdss) = generate_T_profiles(**kwargs)
-        
-   
 
     # generate ion etas
     c=float(kwargs["imp_conc"])
@@ -838,17 +832,41 @@ def generate_compatible_profiles_constant_ne(simul,xwidth,is_allflat=False,nonun
     etaHats[imp_index] = lambda x: c*etaHats[main_index](x)
     detaHatdss[imp_index] = lambda x: c*detaHatdss[main_index](x)
 
-      
-    # generate Phi
+    # generate ion densities
     X = lambda x: sqrt(1/(16*c**2) + nHats[e_index](x)/(2*c*Z_1*etaHats[main_index](x)))-1/(4*c)
     dXds = lambda x: 1/(sqrt(1/(16*c**2) + nHats[e_index](x)/(2*c*Z_1*etaHats[main_index](x)))*4*Z_1*c*etaHats[main_index](x))*(dnHatdss[e_index](x) - nHats[e_index](x)*(detaHatdss[main_index](x)/etaHats[main_index](x)))
-    PhiHat = lambda x: -(Delta/(Z_1*2*omega))*THats[main_index](x)*log(sqrt(1/(16*c**2) + nHats[e_index](x)/(2*c*Z_1*etaHats[main_index](x)))-1/(4*c))
-    dPhiHatds = lambda x: -(Delta/(Z_1*2*omega))*(dTHatdss[main_index](x)*log(X(x)) + THats[main_index](x)*dXds(x)/X(x))
+
+    (nHats[main_index],dnHatdss[main_index]) = generate_n_from_eta_X_profile(etaHats[main_index],X,detaHatdss[main_index],dXds,Zs[main_index])
+
+    (nHats[imp_index],dnHatdss[imp_index]) = generate_n_from_eta_X_profile(etaHats[imp_index],X,detaHatdss[imp_index],dXds,Zs[imp_index])
+    
     
 
-    # generate ion densities
-    (nHats[main_index],dnHatdss[main_index]) = generate_n_from_eta_Phi_profile(etaHats[main_index],PhiHat,THats[main_index],detaHatdss[main_index],dPhiHatds,dTHatdss[main_index],Zs[main_index],Delta,omega)
-    (nHats[imp_index],dnHatdss[imp_index]) = generate_n_from_eta_Phi_profile(etaHats[imp_index],PhiHat,THats[imp_index],detaHatdss[imp_index],dPhiHatds,dTHatdss[imp_index],Zs[imp_index],Delta,omega)
+    #generate T
+    if (sameflux==True):
+        nt=nHats[main_index](psi[0])
+        nb=nHats[main_index](psi[-1])
+        (THats,dTHatdss) = generate_T_profiles_sameflux(nt,nb,samefluxshift,**kwargs)
+    elif (oldsameflux==True):
+        #this setting uses the old ni profile generation to generatea  temporary
+        # n_i profile to generate sameflux T profiles that are the same as in
+        # the constant_Phi case.
+        # Useful for comparing const_Phi and const_ne with the same T
+        #NOTE: need inputs specifying n_i to generate the temporary profile
+        # does not really match the heat flux proxy for the actual n_i profiles
+        # used in the const n_e case.
+        (nH,dnHds) = generate_ni_profile(**kwargs)
+        nt=nH(psi[0])
+        nb=nH(psi[-1])
+        (THats,dTHatdss) = generate_T_profiles_sameflux(nt,nb,samefluxshift,**kwargs)
+    else:
+        (THats,dTHatdss) = generate_T_profiles(**kwargs)
+        
+   
+
+    # generate Phi
+    PhiHat = lambda x: -(Delta/(Z_1*2*omega))*THats[main_index](x)*log(sqrt(1/(16*c**2) + nHats[e_index](x)/(2*c*Z_1*etaHats[main_index](x)))-1/(4*c))
+    dPhiHatds = lambda x: -(Delta/(Z_1*2*omega))*(dTHatdss[main_index](x)*log(X(x)) + THats[main_index](x)*dXds(x)/X(x))
     
     T=simul.TBar*THats[main_index](psiMidPed)
     n=simul.nBar*nHats[main_index](psiMidPed)
