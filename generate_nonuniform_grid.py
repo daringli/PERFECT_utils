@@ -57,10 +57,10 @@ def generate_nonuniform_grid_bezier(inputFilename,psi1,psi2,slope12,smoothness):
     derivativeSplineList = [derivativeInner,derivativeMiddle,derivativeOuter]
 
     #calculate nonuniform grid points array
-    psi=bezier_transition(splineList,psiNList,pairList,psiN) 
-    dpsidpsiN=derivative_bezier_transition(splineList,derivativeSplineList,psiNList,pairList,psiN) 
+    #psi=bezier_transition(splineList,psiNList,pairList,psiN) 
+    psi,dpsidpsiN=derivative_bezier_transition(splineList,derivativeSplineList,psiNList,pairList,psiN) 
 
-    create_psiAHat_of_Npsi("psiAHat.h5",Npsi,dpsidpsiN,psi)
+    create_psiAHat_of_Npsi("psiAHat.h5",Npsi,dpsidpsiN(psiN),psi(psiN))
     
     return (psi,dpsidpsiN)
 
@@ -183,8 +183,8 @@ def generate_nonuniform_grid_Int_arctan(inputFilename,a,b,c,psiN1,psiN2):
     #plt.plot(s,-H2(s))
     #plt.show()
     
-    return (s,psi,dpsids,s1,s2)
-
+    #return (s,psi,dpsids,s1,s2)
+    return h,dhds
 
 ##################################
 #    For testing purposes        #

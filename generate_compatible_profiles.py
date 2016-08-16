@@ -1,5 +1,6 @@
 #this class generates n_i, n_z and Phi for a given n_e, T_e, T_i and T_z
 #so that that the orderings in PERFECT are satisfied
+from __future__ import division
 
 from perfect_simulation import perfect_simulation,normalized_perfect_simulation #to get info about simulation
 import h5py #to write profiles
@@ -14,6 +15,8 @@ from perfectProfilesFile import perfectProfiles
 
 from set_species_param import set_species_param
 
+from mtanh import generate_m2tanh_profile, extrapolate_m2tanh_sections, match_heat_flux_proxy
+from generate_nonuniform_grid import generate_nonuniform_grid_Int_arctan
 
 #print things
 verbose=False
@@ -22,12 +25,10 @@ verbose=False
 # GLOBAL VARIABLES
 psiMinPed = None #pedestal start in psiN
 psiMaxPed = None #pedestal end in psiN
-psiMinNotFlat = None #for allflat
-psiMaxNotFlat = None #for allflat
-psi = None
-dpsi_ds = None
+psiMin = None #pedestal start in psiN
+psiMax = None #pedestal end in psiN
 Nspecies = None
-allflat = None
+mtanh = None
 species = None
 dxdpsiN_at_a = None
 psiList = None
@@ -54,6 +55,8 @@ niHatAft = None
 # Needed for constant n_e case
 neHatPre = None
 dneHatPredpsi = None
+
+
 # END GLOBAL VARIABLES
 ##############################
 
@@ -68,7 +71,13 @@ def sample_funclist(f_i,x):
     return numpy.array(f_ij)
     
 
-def write_outputs(simul,THats,dTHatdss,nHats,dnHatdss,etaHats,detaHatdss,PhiHat,dPhiHatds,psi):
+def write_outputs(simul,THats,dTHatdss,nHats,dnHatdss,etaHats,detaHatdss,PhiHat,dPhiHatds,psi,dpsi_ds):
+    s = simul.psi
+    #psi(s)
+    psi = psi(s)
+    #dpsi_ds(s)
+    dhds = dpsi_ds(s)
+    
     #tranpose
     THats = numpy.transpose(sample_funclist(THats,psi))
     dTHatdss = numpy.transpose(sample_funclist(dTHatdss,psi))
@@ -79,6 +88,14 @@ def write_outputs(simul,THats,dTHatdss,nHats,dnHatdss,etaHats,detaHatdss,PhiHat,
     PhiHat = sample_funclist(PhiHat,psi)
     dPhiHatds = sample_funclist(dPhiHatds,psi)
 
+    #convert back to psiN derivatives
+    dPhiHatds =  dPhiHatds * dhds
+    dhds = dhds[:,numpy.newaxis]
+    dTHatdss =dTHatdss * dhds
+    dnHatdss = dnHatdss * dhds
+    detaHatdss = detaHatdss * dhds
+    
+    
     # Write profiles
     #print simul.input_dir+"/"+simul.inputs.profilesFilename
     try:
@@ -100,18 +117,34 @@ def write_outputs(simul,THats,dTHatdss,nHats,dnHatdss,etaHats,detaHatdss,PhiHat,
             print "#######################################################"
  
 
-def get_psiN(nonuniform,simul):
+def get_psiN(nonuniform,simul,**kwargs):
     #get new psiN coordinate from input
     if nonuniform:
-        actual_psi = simul.actual_psi
-        dactual_psi_ds = simul.psiAHatArray
-        #maps between psiN (here: psi) and psi (here: actual_psi)
-        psiAHat= simul.psiAHat
-        psi=actual_psi/psiAHat #nonuniform psiN
-        dpsi_ds = dactual_psi_ds/psiAHat
+        grid_type = kwargs["grid_type"]
+        if grid_type == "Int_arctan":
+            a = kwargs["transition_length"]
+            b = kwargs["pedestal_grid_density"]
+            c=1
+            
+            s = simul.inputs.psi
+            psiAHat=simul.inputs.psiAHat
+        
+            # by design of non-uniform grid, s[0]=psiN[0], s[-1]=psiN[-1]
+            # for the physical psiN. Not true for indices between
+            psiN1= psiMinPed
+            psiN2= psiMaxPed
+
+            actual_psi,dactual_psi_ds = generate_nonuniform_grid_Int_arctan(simul.input,a,b,c,psiN1,psiN2)
+        else:
+            "generate_compatible_profiles: ERROR: unrecognized grid type!"
+            exit(1)
+
+        #function psiN(s) (here: psi) in terms of psi(s) (here: actual_psi)
+        psi=lambda x: actual_psi(x)/psiAHat #nonuniform psiN
+        dpsi_ds = lambda x: dactual_psi_ds(x)/psiAHat
     else:
-        psi=simul.inputs.psi
-        dpsi_ds = 1 #trivial mapping
+        psi= lambda x: x
+        dpsi_ds = lambda x:  1.0 + 0*x #trivial mapping
     return (psi,dpsi_ds)
             
 def update_domain_size(simul,psiN_ped_width,midShift,psiDiamFact,leftBoundaryShift,rightBoundaryShift):
@@ -167,19 +200,27 @@ def generate_ne_profile(simul,**kwargs):
     neCoreGrad=neScale*kwargs["dnCoredx_"+species[e_index]]*dxdpsiN_at_a
     nepedGrad=neScale*kwargs["dnpeddx_"+species[e_index]]*dxdpsiN_at_a
     neSOLGrad=neScale*kwargs["dnSOLdx_"+species[e_index]]*dxdpsiN_at_a
+
+    if mtanh:
+        (neHat,dneHatds) = generate_m2tanh_profile(nePed,neCoreGrad,nepedGrad,neSOLGrad,psiMaxPed-psiMinPed,psiMinPed)
+        (core,ped,sol,ddx_core,ddx_ped,ddx_sol) = extrapolate_m2tanh_sections(neHat,dneHatds,psiMin,psiMinPed,psiMaxPed,psiMax)
+        neHatPre = core
+        dneHatPredpsi = ddx_core
+    else:
+        neHatPre =(lambda psiN: (nePed-neCoreGrad*(psiMinPed-psiMin) +  neCoreGrad* (psiN-psiMin)))
+        neHatPed =(lambda psiN: (nePed +  nepedGrad* (psiN-psiMinPed)))
+        neHatAft =(lambda psiN: (nePed+nepedGrad*(psiMaxPed-psiMinPed) +  neSOLGrad* (psiN-psiMaxPed)))
     
-    neHatPre =(lambda psiN: (nePed-neCoreGrad*(psiMinPed-psi[0]) +  neCoreGrad* (psiN-psi[0])))
-    neHatPed =(lambda psiN: (nePed +  nepedGrad* (psiN-psiMinPed)))
-    neHatAft =(lambda psiN: (nePed+nepedGrad*(psiMaxPed-psiMinPed) +  neSOLGrad* (psiN-psiMaxPed)))
+        dneHatPredpsi = (lambda psiN:  neCoreGrad + psiN*0)
+        dneHatPeddpsi = (lambda psiN:  nepedGrad + psiN*0)
+        dneHatAftdpsi = (lambda psiN:  neSOLGrad + psiN*0)
     
-    dneHatPredpsi = (lambda psiN:  neCoreGrad + psiN*0)
-    dneHatPeddpsi = (lambda psiN:  nepedGrad + psiN*0)
-    dneHatAftdpsi = (lambda psiN:  neSOLGrad + psiN*0)
+        nelist=[neHatPre,neHatPed,neHatAft]
+        dnedpsiList = [dneHatPredpsi,dneHatPeddpsi,dneHatAftdpsi] 
+        (neHat,dneHatdpsi)=derivative_bezier_transition(nelist,dnedpsiList,psiList,pairList)
+        dneHatds = lambda x : dneHatdpsi(x)
+
     
-    nelist=[neHatPre,neHatPed,neHatAft]
-    dnedpsiList = [dneHatPredpsi,dneHatPeddpsi,dneHatAftdpsi] 
-    (neHat,dneHatdpsi)=derivative_bezier_transition(nelist,dnedpsiList,psiList,pairList,psi)
-    dneHatds = lambda x : dneHatdpsi(x)*dpsi_ds
     
     return (neHat,dneHatds)
         
@@ -188,7 +229,7 @@ def generate_ni_profile(**kwargs):
     global niPed
     global niCoreGrad
     global niHatPed
-    global niHatAft
+    global niHatAft 
     global dniHatAftdpsi
     if "nScale_"+species[main_index] in kwargs.keys():
         niScale=kwargs["nScale_"+species[main_index]]
@@ -198,37 +239,36 @@ def generate_ni_profile(**kwargs):
     niCoreGrad=niScale*kwargs["dnCoredx_"+species[main_index]]*dxdpsiN_at_a
     nipedGrad=niScale*kwargs["dnpeddx_"+species[main_index]]*dxdpsiN_at_a
     niSOLGrad=niScale*kwargs["dnSOLdx_"+species[main_index]]*dxdpsiN_at_a
-    if allflat==True:
-        niinnerGrad=niScale*0
-        niouterGrad=niScale*0
+    
 
     # generate n_i
-    niHatPre =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
-    niHatPed =(lambda psiN: (niPed +  nipedGrad* (psiN-psiMinPed)))
-    niHatAft =(lambda psiN: (niPed+nipedGrad*(psiMaxPed-psiMinPed) +  niSOLGrad* (psiN-psiMaxPed)))
+    if mtanh:
+        (niHat,dniHatds) = generate_m2tanh_profile(niPed,niCoreGrad,nipedGrad,niSOLGrad,psiMaxPed-psiMinPed,psiMinPed)
+        (core,ped,sol,ddx_core,ddx_ped,ddx_sol) = extrapolate_m2tanh_sections(niHat,dniHatds,psiMin,psiMinPed,psiMaxPed,psiMax)
+        niHatPed = ped
+        niHatAft = sol
+        dniHatAftdpsi = ddx_sol
+    else:
+        niHatPre =(lambda psiN: (niPed + niCoreGrad*(psiN-psiMinPed)))
+        niHatPed =(lambda psiN: (niPed +  nipedGrad* (psiN-psiMinPed)))
+        niHatAft =(lambda psiN: (niPed+nipedGrad*(psiMaxPed-psiMinPed) +  niSOLGrad* (psiN-psiMaxPed)))
+
+        dniHatPredpsi = (lambda psiN:  niCoreGrad + 0*psiN)
+        dniHatPeddpsi = (lambda psiN:  nipedGrad + 0*psiN)
+        dniHatAftdpsi = (lambda psiN:  niSOLGrad + 0*psiN)
+
+        nilist=[niHatPre,niHatPed,niHatAft]
+        dnidpsiList = [dniHatPredpsi,dniHatPeddpsi,dniHatAftdpsi] 
+        
+        (niHat,dniHatds)=derivative_bezier_transition(nilist,dnidpsiList,psiList,pairList)
     
-    dniHatPredpsi = (lambda psiN:  niCoreGrad)
-    dniHatPeddpsi = (lambda psiN:  nipedGrad)
-    dniHatAftdpsi = (lambda psiN:  niSOLGrad)
-    
-    nilist=[niHatPre,niHatPed,niHatAft]
-    dnidpsiList = [dniHatPredpsi,dniHatPeddpsi,dniHatAftdpsi] 
-    if allflat==True:
-        niHatinner =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiMinNotFlat-psi[0])) + niinnerGrad*(psiN - psiMinNotFlat))
-        niHatouter =(lambda psiN: (niPed+nipedGrad*(psiMaxPed-psiMinPed) +  niSOLGrad* (psiMaxNotFlat-psiMaxPed)) + niouterGrad*(psiN - psiMaxNotFlat))
-        dniHatinnerdpsi = (lambda psiN: niinnerGrad)
-        dniHatouterdpsi = (lambda psiN: niouterGrad)
-        nilist=[niHatinner,niHatPre,niHatPed,niHatAft,niHatouter]
-        dnidpsiList = [dniHatinnerdpsi,dniHatPredpsi,dniHatPeddpsi,dniHatAftdpsi,dniHatouterdpsi]
-
-    (niHat,dniHatdpsi)=derivative_bezier_transition(nilist,dnidpsiList,psiList,pairList,psi)
-    dniHatds = lambda x : dniHatdpsi(x)*dpsi_ds
-
-    #n2=simul.nBar*bezier_transition(nilist,psiList,pairList,numpy.array([psiMidPed]))[0]
-
     return (niHat,dniHatds)
 
 def generate_T_profiles_sameflux(nt,nb,breakpoint_shift,**kwargs):
+    global TiHatPed
+    global TiHatAft
+    global dTiHatAftdpsi
+    
     #THats = numpy.zeros((Nspecies,Npsi))
     #dTHatdpsis = numpy.zeros((Nspecies,Npsi))
     THats = [None]*Nspecies
@@ -240,9 +280,7 @@ def generate_T_profiles_sameflux(nt,nb,breakpoint_shift,**kwargs):
     TCoreGrads=[0]*Nspecies
     TpedGrads=[0]*Nspecies
     TSOLGrads=[0]*Nspecies
-    if allflat==True:
-        TinnerGrad=[0]*Nspecies
-        TouterGrad=[0]*Nspecies
+
     #Pre,Ped,Aft will contain functions describe T in core, ped and outwards.
     THatPre=[0]*Nspecies
     THatPed=[0]*Nspecies
@@ -251,11 +289,7 @@ def generate_T_profiles_sameflux(nt,nb,breakpoint_shift,**kwargs):
     dTHatPredpsi=[0]*Nspecies
     dTHatPeddpsi=[0]*Nspecies
     dTHatAftdpsi=[0]*Nspecies
-    if allflat==True:
-        THatinner=[0]*Nspecies
-        THatouter=[0]*Nspecies
-        dTHatinnerdpsi=[0]*Nspecies
-        dTHatouterdpsi=[0]*Nspecies
+    
     #reading T related parameters
     for i in range(Nspecies):
         if "TScale_"+species[i] in kwargs.keys():
@@ -269,89 +303,94 @@ def generate_T_profiles_sameflux(nt,nb,breakpoint_shift,**kwargs):
         #print "TpedGrads["+str(i)+"] = " + str(TpedGrads[i])
         #print "-------------------------"
         TSOLGrads[i]=TScale[i]*kwargs["dTSOLdx_"+species[i]]*dxdpsiN_at_a
-        TSOLGrads[i]=TScale[i]*kwargs["dTSOLdx_"+species[i]]*dxdpsiN_at_a
-        if allflat==True:
-            TinnerGrad=[0]*Nspecies
-            TouterGrad=[0]*Nspecies
+        
     TScale=numpy.array(TScale)
     Tpeds=numpy.array(Tpeds)
     TCoreGrads=numpy.array(TCoreGrads)
     TSOLGrads=numpy.array(TSOLGrads)
     TpedGrads=numpy.array(TpedGrads)
-    if allflat==True:
-        TinnerGrad=numpy.array(TinnerGrad)
-        TouterGrad=numpy.array(TouterGrad)
-    #############################################
-    #generate T profiles
-    #############################################
     
-    breakpoint=psiMinPed + breakpoint_shift
-    Tp=Tpeds[main_index] + TCoreGrads[main_index] *(breakpoint-psiMinPed)
-
-    if (TCoreGrads[main_index] != TSOLGrads[main_index]) and (TPedGrads[main_index] != TSOLGrads[main_index]):
-        print "generate_compatible_profiles: Warning: sameflux option uses the Core T gradients of the main species everywhere"
-    dTdpsi=TCoreGrads[main_index]
-    d1=breakpoint - psi[0]
-    d2=psi[-1] - breakpoint
-    
-    f=lambda x : x*(Tp-d1*x)**(3.0/2.0) - (nb*1.0/nt)*(Tp + dTdpsi*d2)**(3.0/2.0)*dTdpsi
-    dTdpsiTop=scipy.optimize.fsolve(f,0)[0] #[0] since returns an numpy.ndarray
-    dTdpsiBot=dTdpsi
-
-    THatPre[main_index] =(lambda psiN: (Tpeds[main_index] + dTdpsiTop*(psiN-breakpoint)))
-    THatPed[main_index] =(lambda psiN: (Tpeds[main_index] + dTdpsiBot*(psiN-breakpoint)))
-    THatAft[main_index] =(lambda psiN: (Tpeds[main_index] + dTdpsiBot*(psiN-breakpoint)))
-    dTHatPredpsi[main_index] =(lambda psiN: dTdpsiTop)
-    dTHatPeddpsi[main_index] =(lambda psiN: dTdpsiBot)
-    dTHatAftdpsi[main_index] =(lambda psiN: dTdpsiBot)
-
-    
-    Tlist=[THatPre[main_index],THatPed[main_index]]
-    dTdpsilist=[dTHatPredpsi[main_index],dTHatPeddpsi[main_index]]
-
-    (THats[main_index],dTHatdpsis[main_index])=derivative_bezier_transition(Tlist,dTdpsilist,[breakpoint],pairList[:-1],psi)    
-    dTHatdss[main_index]= lambda x : dTHatdpsis[main_index](x)*dpsi_ds
-
-    #T2=simul.TBar*bezier_transition(Tlist,[breakpoint],pairList[:-1],numpy.array([psiMidPed]))[0]
-
-
-    if Nspecies >= 2:
-        #T_e:
-        THatPre[e_index] =(lambda psiN: (Tpeds[e_index] + TCoreGrads[e_index]*(psiN-psiMinPed)))
-        THatPed[e_index] =(lambda psiN: (Tpeds[e_index] + TpedGrads[e_index]*(psiN-psiMinPed)))
-        THatAft[e_index] =(lambda psiN: (Tpeds[e_index] + TpedGrads[e_index]*(psiMaxPed-psiMinPed) + TSOLGrads[e_index]*(psiN-psiMaxPed)))
-        dTHatPredpsi[e_index] = (lambda psiN: TCoreGrads[e_index])
-        dTHatPeddpsi[e_index] = (lambda psiN: TpedGrads[e_index])
-        dTHatAftdpsi[e_index] = (lambda psiN: TSOLGrads[e_index])
-        Tlist=[THatPre[e_index],THatPed[e_index],THatAft[e_index]]
-        dTdpsiList = [dTHatPredpsi[e_index],dTHatPeddpsi[e_index],dTHatAftdpsi[e_index]]
-        #PROBABLY NOT COMPATIBLE WITH SAMEFLUX
-        #if allflat==True:
-        #    THatinner[e_index]=(lambda psiN: (Tpeds[e_index] + TCoreGrads[e_index]*(psiMinNotFlat-psiMinPed)) + TinnerGrad[e_index]*(psiN - psiMinNotFlat))
-        #    THatouter[e_index]=(lambda psiN: (Tpeds[e_index] + TpedGrads[e_index]*(psiMaxPed-psiMinPed) + TSOLGrads[e_index]*(psiMaxNotFlat-psiMaxPed)) + TouterGrad[e_index]*(psiN - psiMaxNotFlat))
-        #    dTHatinnerdpsi[e_index] = (lambda psiN: TouterGrad[e_index])
-        #    dTHatouterdpsi[e_index]=(lambda psiN: TouterGrad[e_index])
-        #    Tlist=[THatinner[e_index],THatPre[e_index],THatPed[e_index],THatAft[e_index],THatouter[e_index]]
-        #    dTdpsiList = [dTHatinnerdpsi[e_index],dTHatPredpsi[e_index],dTHatPeddpsi[e_index],dTHatAftdpsi[e_index],dTHatouterdpsi[e_index]]
-
-        (THats[e_index],dTHatdpsis[e_index])=derivative_bezier_transition(Tlist,dTdpsiList,psiList,pairList,psi)
-        dTHatdss[e_index]=lambda x : dTHatdpsis[e_index](x)*dpsi_ds
+    if mtanh:
+        (THats[main_index],dTHatdss[main_index]) = match_heat_flux_proxy(Tpeds[main_index],TCoreGrads[main_index],TpedGrads[main_index],TSOLGrads[main_index],psiMaxPed-psiMinPed,psiMinPed,nt,nb,psiMin,psiMax)
+        (core,ped,sol,ddx_core,ddx_ped,ddx_sol) = extrapolate_m2tanh_sections(THats[main_index],dTHatdss[main_index],psiMin,psiMinPed,psiMaxPed,psiMax)
         
+        TiHatPed = ped
+        TiHatAft = sol
+        dTiHatAftdpsi = ddx_sol
+        
+        if Nspecies >= 2:
+            print "-----------------------"
+            print "T_e params mtanh"
+            print Tpeds[e_index],TCoreGrads[e_index],TpedGrads[e_index],TSOLGrads[e_index],psiMaxPed-psiMinPed,psiMinPed
+            print "-----------------------"
+            (THats[e_index],dTHatdss[e_index]) = generate_m2tanh_profile(Tpeds[e_index],TCoreGrads[e_index],TpedGrads[e_index],TSOLGrads[e_index],psiMaxPed-psiMinPed,psiMinPed)
+    else:
+        breakpoint=psiMinPed + breakpoint_shift
+        Tp=Tpeds[main_index] + TCoreGrads[main_index] *(breakpoint-psiMinPed)
+
+        if (TCoreGrads[main_index] != TSOLGrads[main_index]) and (TPedGrads[main_index] != TSOLGrads[main_index]):
+            print "generate_compatible_profiles: Warning: sameflux option uses the Core T gradients of the main species everywhere"
+        dTdpsi=TCoreGrads[main_index]
+        d1=breakpoint - psiMin
+        d2=psiMax - breakpoint
+
+        f=lambda x : x*(Tp-d1*x)**(3.0/2.0) - (nb*1.0/nt)*(Tp + dTdpsi*d2)**(3.0/2.0)*dTdpsi
+        dTdpsiTop=scipy.optimize.fsolve(f,0)[0] #[0] since returns an numpy.ndarray
+        dTdpsiBot=dTdpsi
+
+        THatPre[main_index] =(lambda psiN: (Tpeds[main_index] + dTdpsiTop*(psiN-breakpoint)))
+        THatPed[main_index] =(lambda psiN: (Tpeds[main_index] + dTdpsiBot*(psiN-breakpoint)))
+        THatAft[main_index] =(lambda psiN: (Tpeds[main_index] + dTdpsiBot*(psiN-breakpoint)))
+        dTHatPredpsi[main_index] =(lambda psiN: dTdpsiTop + 0*psiN)
+        dTHatPeddpsi[main_index] =(lambda psiN: dTdpsiBot + 0*psiN)
+        dTHatAftdpsi[main_index] =(lambda psiN: dTdpsiBot + 0*psiN)
+
+
+        Tlist=[THatPre[main_index],THatPed[main_index]]
+        dTdpsilist=[dTHatPredpsi[main_index],dTHatPeddpsi[main_index]]
+
+        (THats[main_index],dTHatdpsis[main_index])=derivative_bezier_transition(Tlist,dTdpsilist,[breakpoint],pairList[:-1])    
+        dTHatdss[main_index]= lambda x : dTHatdpsis[main_index](x)
+
+        #T2=simul.TBar*bezier_transition(Tlist,[breakpoint],pairList[:-1],numpy.array([psiMidPed]))[0]
+
+        TiHatPed = THatPed[main_index]
+        TiHatAft = THatAft[main_index]
+        dTiHatAftdpsi = dTHatAftdpsi[main_index]
+        
+        if Nspecies >= 2:
+            #T_e:
+            print "T_e params bezier"
+            print "-----------------------"
+            print Tpeds[e_index],TCoreGrads[e_index],TpedGrads[e_index],TSOLGrads[e_index],psiMaxPed-psiMinPed,psiMinPed
+            print "-----------------------"
+            THatPre[e_index] =(lambda psiN: (Tpeds[e_index] + TCoreGrads[e_index]*(psiN-psiMinPed)))
+            THatPed[e_index] =(lambda psiN: (Tpeds[e_index] + TpedGrads[e_index]*(psiN-psiMinPed)))
+            THatAft[e_index] =(lambda psiN: (Tpeds[e_index] + TpedGrads[e_index]*(psiMaxPed-psiMinPed) + TSOLGrads[e_index]*(psiN-psiMaxPed)))
+            dTHatPredpsi[e_index] = (lambda psiN: TCoreGrads[e_index] + 0*psiN)
+            dTHatPeddpsi[e_index] = (lambda psiN: TpedGrads[e_index] + 0*psiN)
+            dTHatAftdpsi[e_index] = (lambda psiN: TSOLGrads[e_index] + 0*psiN)
+            Tlist=[THatPre[e_index],THatPed[e_index],THatAft[e_index]]
+            dTdpsiList = [dTHatPredpsi[e_index],dTHatPeddpsi[e_index],dTHatAftdpsi[e_index]]
+
+            (THats[e_index],dTHatdpsis[e_index])=derivative_bezier_transition(Tlist,dTdpsiList,psiList,pairList)
+            dTHatdss[e_index]=lambda x : dTHatdpsis[e_index](x)
+
     if Nspecies == 3:
         THats[imp_index]=THats[main_index]
-        dTHatdpsis[imp_index]=dTHatdpsis[main_index]
+        #dTHatdpsis[imp_index]=dTHatdpsis[main_index]
         dTHatdss[imp_index]=dTHatdss[main_index]
 
 
-    global TiHatPed
-    global TiHatAft
-    global dTiHatAftdpsi
-    TiHatPed = THatPed[main_index]
-    TiHatAft = THatAft[main_index]
-    dTiHatAftdpsi = dTHatAftdpsi[main_index]
+    
+    
     return (THats,dTHatdss)
     
 def generate_T_profiles(**kwargs):
+    global TiHatPed
+    global TiHatAft
+    global dTiHatAftdpsi
+    
     #THats = numpy.zeros((Nspecies,Npsi))
     #dTHatdpsis = numpy.zeros((Nspecies,Npsi))
     THats = [None]*Nspecies
@@ -363,9 +402,7 @@ def generate_T_profiles(**kwargs):
     TCoreGrads=[0]*Nspecies
     TpedGrads=[0]*Nspecies
     TSOLGrads=[0]*Nspecies
-    if allflat==True:
-        TinnerGrad=[0]*Nspecies
-        TouterGrad=[0]*Nspecies
+    
     #Pre,Ped,Aft will contain functions describe T in core, ped and outwards.
     THatPre=[0]*Nspecies
     THatPed=[0]*Nspecies
@@ -374,11 +411,7 @@ def generate_T_profiles(**kwargs):
     dTHatPredpsi=[0]*Nspecies
     dTHatPeddpsi=[0]*Nspecies
     dTHatAftdpsi=[0]*Nspecies
-    if allflat==True:
-        THatinner=[0]*Nspecies
-        THatouter=[0]*Nspecies
-        dTHatinnerdpsi=[0]*Nspecies
-        dTHatouterdpsi=[0]*Nspecies
+    
     #reading T related parameters
     for i in range(Nspecies):
         if "TScale_"+species[i] in kwargs.keys():
@@ -393,59 +426,55 @@ def generate_T_profiles(**kwargs):
         #print "-------------------------"
         TSOLGrads[i]=TScale[i]*kwargs["dTSOLdx_"+species[i]]*dxdpsiN_at_a
         TSOLGrads[i]=TScale[i]*kwargs["dTSOLdx_"+species[i]]*dxdpsiN_at_a
-        if allflat==True:
-            TinnerGrad=[0]*Nspecies
-            TouterGrad=[0]*Nspecies
+        
     TScale=numpy.array(TScale)
     Tpeds=numpy.array(Tpeds)
     TCoreGrads=numpy.array(TCoreGrads)
     TSOLGrads=numpy.array(TSOLGrads)
     TpedGrads=numpy.array(TpedGrads)
-    if allflat==True:
-        TinnerGrad=numpy.array(TinnerGrad)
-        TouterGrad=numpy.array(TouterGrad)
+    
+    if mtanh:
+        for i in range(Nspecies):
+            (THats[i],dTHatdss[i]) = generate_m2tanh_profile(Tpeds[i],TCoreGrads[i],TpedGrads[i],TSOLGrads[i],psiMaxPed-psiMinPed,psiMinPed)
+        (core,ped,sol,ddx_core,ddx_ped,ddx_sol) = extrapolate_m2tanh_sections(THats[main_index],dTHatdss[main_index],psiMin,psiMinPed,psiMaxPed,psiMax)
 
-
-    #Generating functions from the parameters
-    for i in range(Nspecies):
-        THatPre[i] =(lambda psiN,i=i: (Tpeds[i] + TCoreGrads[i]*(psiN-psiMinPed)))
-        THatPed[i] =(lambda psiN,i=i: (Tpeds[i] + TpedGrads[i]*(psiN-psiMinPed)))
-        THatAft[i] =(lambda psiN,i=i: (Tpeds[i] + TpedGrads[i]*(psiMaxPed-psiMinPed) + TSOLGrads[i]*(psiN-psiMaxPed)))
-        dTHatPredpsi[i] = (lambda psiN,i=i: TCoreGrads[i])
-        dTHatPeddpsi[i] = (lambda psiN,i=i: TpedGrads[i])
-        dTHatAftdpsi[i] = (lambda psiN,i=i: TSOLGrads[i])
-        Tlist=[THatPre[i],THatPed[i],THatAft[i]]
-        dTdpsiList = [dTHatPredpsi[i],dTHatPeddpsi[i],dTHatAftdpsi[i]]
-        if allflat==True:
-            THatinner[i]=(lambda psiN,i=i: (Tpeds[i] + TCoreGrads[i]*(psiMinNotFlat-psiMinPed)) + TinnerGrad[i]*(psiN - psiMinNotFlat))
-            THatouter[i]=(lambda psiN,i=i: (Tpeds[i] + TpedGrads[i]*(psiMaxPed-psiMinPed) + TSOLGrads[i]*(psiMaxNotFlat-psiMaxPed)) + TouterGrad[i]*(psiN - psiMaxNotFlat))
-            dTHatinnerdpsi[i] = (lambda psiN,i=i: TouterGrad[i])
-            dTHatouterdpsi[i]=(lambda psiN,i=i: TouterGrad[i])
-            Tlist=[THatinner[i],THatPre[i],THatPed[i],THatAft[i],THatouter[i]]
-            dTdpsiList = [dTHatinnerdpsi[i],dTHatPredpsi[i],dTHatPeddpsi[i],dTHatAftdpsi[i],dTHatouterdpsi[i]]
-
-        (THats[i],dTHatdpsis[i])=derivative_bezier_transition(Tlist,dTdpsiList,psiList,pairList,psi)
-        dTHatdss[i]=lambda x,i=i: dTHatdpsis[i](x)*dpsi_ds
+        TiHatPed = ped
+        TiHatAft = sol
+        dTiHatAftdpsi = ddx_sol
+    else:
+        #Generating functions from the parameters
+        for i in range(Nspecies):
+            THatPre[i] =(lambda psiN,i=i: (Tpeds[i] + TCoreGrads[i]*(psiN-psiMinPed)))
+            THatPed[i] =(lambda psiN,i=i: (Tpeds[i] + TpedGrads[i]*(psiN-psiMinPed)))
+            THatAft[i] =(lambda psiN,i=i: (Tpeds[i] + TpedGrads[i]*(psiMaxPed-psiMinPed) + TSOLGrads[i]*(psiN-psiMaxPed)))
+            dTHatPredpsi[i] = (lambda psiN,i=i: TCoreGrads[i])
+            dTHatPeddpsi[i] = (lambda psiN,i=i: TpedGrads[i])
+            dTHatAftdpsi[i] = (lambda psiN,i=i: TSOLGrads[i])
+            Tlist=[THatPre[i],THatPed[i],THatAft[i]]
+            dTdpsiList = [dTHatPredpsi[i],dTHatPeddpsi[i],dTHatAftdpsi[i]]
+            
+            (THats[i],dTHatdpsis[i])=derivative_bezier_transition(Tlist,dTdpsiList,psiList,pairList)
+            dTHatdss[i]=lambda x,i=i: dTHatdpsis[i](x)
         
-    global TiHatPed
-    global TiHatAft
-    global dTiHatAftdpsi
-    TiHatPed = THatPed[main_index]
-    TiHatAft = THatAft[main_index]
-    dTiHatAftdpsi = dTHatAftdpsi[main_index]
+    
+        TiHatPed = THatPed[main_index]
+        TiHatAft = THatAft[main_index]
+        dTiHatAftdpsi = dTHatAftdpsi[main_index]
     
     return (THats,dTHatdss)
 
 def generate_etai_profile(Delta,omega,**kwargs):
-    etaiHatPre =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
-    detaiHatPredpsi =(lambda psiN: niCoreGrad)
+    #No mtanh option since derivative for mtanh
+    #transition may become very large
     
+    etaiHatPre =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psiMin) +  niCoreGrad* (psiN-psiMin)))
+    detaiHatPredpsi =(lambda psiN: niCoreGrad)
     
     if specialeta:
        etaiHatPed =(lambda psiN: (niPed+2*niCoreGrad* (psiN-psiMinPed)))
        detaiHatPeddpsi =(lambda psiN: 2*niCoreGrad)
     else:
-        etaiHatPed =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
+        etaiHatPed =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psiMin) +  niCoreGrad* (psiN-psiMin)))
         detaiHatPeddpsi =(lambda psiN: niCoreGrad)
 
     i=main_index #to get the right lambda functions
@@ -460,19 +489,10 @@ def generate_etai_profile(Delta,omega,**kwargs):
     
     etailist=[etaiHatPre,etaiHatPed,etaiHatAft]
     detaidpsilist=[detaiHatPredpsi,detaiHatPeddpsi,detaiHatAftdpsi]
-    
-    if allflat==True:
-        etaiHatinner =(lambda psiN: (niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiMinNotFlat-psi[0]) + niinnerGrad*(psiN - psiMinNotFlat)))
-        etaiHatouter = (lambda psiN: (niHatouter(psiN)*numpy.exp(PhiTop*Zs[main_index]/THatouter[main_index](psiN))))
-        detaiHatinnerdpsi =(lambda psiN: niinnerGrad)
-        
-        detaiHatouterdpsi = (lambda psiN: (dniHatouterdpsi(psiN) - niHatouter(psiN)*PhiTop*Zs[main_index]*dTHatouterdpsi[main_index](psiN)/(THatouter[main_index](psiN))**2)*numpy.exp(PhiTop*Zs[main_index]/THatouter[main_index](psiN)))
-        
-        etailist=[etaiHatinner,etaiHatPre,etaiHatPed,etaiHatAft,etaiHatouter]
-        detaidpsilist=[detaiHatinnerdpsi,detaiHatPredpsi,detaiHatPeddpsi,detaiHatAftdpsi,detaiHatouterdpsi]
-    
-    (etaiHat,detaiHatdpsi) =derivative_bezier_transition(etailist,detaidpsilist,psiList,pairList,psi)
-    detaiHatds= lambda x: detaiHatdpsi(x)*dpsi_ds
+
+    print pairList
+    (etaiHat,detaiHatdpsi) =derivative_bezier_transition(etailist,detaidpsilist,psiList,pairList)
+    detaiHatds= lambda x: detaiHatdpsi(x)
 
     return (etaiHat,detaiHatds)
 
@@ -491,28 +511,12 @@ def generate_etaz_profile(Delta,omega,**kwargs):
         etailist=[etazHatInner,etazHatMiddle,etazHatOuter]
         detaidpsilist = [detazHatInnerdpsi,detazHatMiddledpsi,detazHatOuterdpsi]
 
-        (etazHat,detazHatdpsi) = derivative_bezier_transition(etailist,psiList[:1]+psiList[-1:],pairList[:1]+pairList[-1:],psi)
-        detazHatds = lambda x : detazHatdpsi(x) * dpsi_ds
-        
-    elif allflat==True:
-        etazHatInner=(lambda psiN: imp_conc*(niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiMinNotFlat-psi[0]) + niinnerGrad*(psiN - psiMinNotFlat)))
-        etazHatMiddle=(lambda psiN: imp_conc*(niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiN-psi[0])))
-        etazHatOuter=(lambda psiN: imp_conc*(niPed-niCoreGrad*(psiMinPed-psi[0]) +  niCoreGrad* (psiMaxNotFlat-psi[0])))
-
-        detazHatInnerdpsi=(lambda psiN: imp_conc*niinnerGrad)
-        detazHatMiddledpsi=(lambda psiN: imp_conc*niCoreGrad)
-        detazHatOuterdpsi=(lambda psiN: 0)
-
-
-        etailist=[etazHatInner,etazHatMiddle,etazHatOuter]
-        detaidpsilist=[detazHatInnerdpsi,detazHatMiddledpsi,detazHatOuterdpsi]
-
-        (etazHat,detazHatdpsi) = derivative_bezier_transition(etailist,detaidpsilist,psiList[:1]+psiList[-1:],pairList[:1]+pairList[-1:],psi)
-        detazHatds = lambda x : detazHatdpsi(x) * dpsi_ds
+        (etazHat,detazHatdpsi) = derivative_bezier_transition(etailist,psiList[:1]+psiList[-1:],pairList[:1]+pairList[-1:])
+        detazHatds = lambda x : detazHatdpsi(x)
         
     else:
         etazHat=lambda x : imp_conc*(niPed+niCoreGrad*(x-psiMinPed))
-        detazHatds = lambda x: imp_conc*niCoreGrad*dpsi_ds + 0*x #add 0*x to make it return ndarray when x is one.
+        detazHatds = lambda x: imp_conc*niCoreGrad + 0*x #add 0*x to make it return ndarray when x is one.
     return (etazHat,detazHatds)
 
 def generate_Phi_profile(etaiHat,niHat,TiHat,detaiHatdpsi,dniHatdpsi,dTiHatdpsi,Zi,Delta,omega):
@@ -535,17 +539,20 @@ def generate_n_from_eta_X_profile(etaHat,X,detaHatds,dXds,Z):
     dnHatdpsi=lambda x : detaHatds(x)*X(x)**Z + etaHat(x)*Z*X(x)**(Z-1)*dXds(x)
     return (nHat,dnHatdpsi)
 
-def generate_compatible_profiles(simul,xwidth,is_allflat=False,nonuniform=False,sameflux=False,sameeta=False,samefluxshift=0,zeroPhi=False,specialEta=False,psiDiamFact=5,transitionFact=0.2,dxdpsiN=1,midShift=0,upShift_denom=3.0,**kwargs):
+def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,oldsameflux=False,sameeta=False,samefluxshift=0,specialEta=False,psiDiamFact=5,transitionFact=0.2,dxdpsiN=1,midShift=0,upShift_denom=3.0,m2tanh=False,mode="const_Phi",**kwargs):
     #NOTE: uses the dx/dpsi at minor radius for both core and SOL, which assumes that
     #simulated region is small enough that it doesn't change much.
-
+    e=scipy.constants.e
+    log=numpy.log
+    exp=numpy.exp
+    sqrt=numpy.sqrt
+    
     global psiMinPed
     global psiMaxPed
-    global psi
-    global dpsi_ds
+    global psiMin
+    global psiMax
     global Nspecies
     global species
-    global allflat
     global dxdpsiN_at_a
     global psiList
     global pairList
@@ -556,7 +563,8 @@ def generate_compatible_profiles(simul,xwidth,is_allflat=False,nonuniform=False,
     global specialeta
     global Zs
     global ms
-    allflat=is_allflat
+    global mtanh
+    mtanh = m2tanh
     specialeta = specialEta
 
     species=simul.species
@@ -574,7 +582,6 @@ def generate_compatible_profiles(simul,xwidth,is_allflat=False,nonuniform=False,
         main_index=kwargs["mI"]
         imp_index=kwargs["zI"]
         e_index=kwargs["eI"]
-
     else:
         print "Script is too poor to handle an arbitrary number of species!"
         return -1
@@ -595,44 +602,38 @@ def generate_compatible_profiles(simul,xwidth,is_allflat=False,nonuniform=False,
     #2015-12-16: -psiN_ped_width/3.0 was the old default.
     upShift=-psiN_ped_width/upShift_denom
 
-    if allflat==True:
-        leftBoundaryShift=-psiN_ped_width
-    else:
-        leftBoundaryShift=0
-        
-    update_domain_size(simul,psiN_ped_width,midShift,psiDiamFact,leftBoundaryShift,rightBoundaryShift=0)
+    leftBoundaryShift=0.0
+    rightBoundaryShift=0.0
+
+    update_domain_size(simul,psiN_ped_width,midShift,psiDiamFact,leftBoundaryShift,rightBoundaryShift=rightBoundaryShift)
     (Delta,omega) = update_Delta_omega(simul)
-    psiMid = simul.inputs.psiMid
-    
-    #get new psiN coordinate from input
-    (psi,dpsi_ds) = get_psiN(nonuniform,simul)
-    
+
+    #these things do not depend on whether the grid is uniform or nonuniform
+    # if intepreted as midpoint of physical psiN coordinate, etc.
+    # this is by design, since s[0] and s[-1] coincide with psiN start and stop
     Npsi=simul.inputs.Npsi
+    psiMid = simul.inputs.psiMid
     psiMin = simul.inputs.psiMin
     psiMax = simul.inputs.psiMax
 
-    #determine gridpoints to start and stop pedestal
+    #start and stop pedestal in physical psiN
     psiMinPed=psiMid-psiN_ped_width/2.0
     psiMaxPed=psiMid+psiN_ped_width/2.0+upShift
     psiMidPed=(psiMinPed+psiMaxPed)/2.0
     
-    if allflat==True:
-        global psiMinNotFlat
-        global psiMaxNotFlat
-        psiMinNotFlat=psiMid-2.5*psiN_ped_width
-        psiMaxNotFlat=psiMid+1.5*psiN_ped_width
+    
     #list of psi where our profiles change slope
     psiList=[psiMinPed,psiMaxPed]
     print "pedestal start,stop: " + str(psiList)
-    
-    if allflat==True:
-        psiList=[psiMinNotFlat,psiMinPed,psiMaxPed,psiMaxNotFlat]
-    #distance in psi until our smooth transition between gradients is finished
+
+
+    if specialEta and (mode == "const_ne"):
+        print "generate_compatible_profiles: WARNING: specialEta and mode == const_ne is incompatible. specialEta will be ignored"
+
+    # not too relevant for mtanh
     offset=(psiMaxPed-psiMinPed)*transitionFact
     pairList=[[offset,offset],[offset,offset]]
-    if allflat==True:
-        pairList=[[offset,offset],[offset,offset],[offset,offset],[offset,offset]]
-
+        
     #allocate arrays
     THats = [None]*Nspecies
     dTHatdss = [None]*Nspecies
@@ -645,12 +646,45 @@ def generate_compatible_profiles(simul,xwidth,is_allflat=False,nonuniform=False,
     species_filename= os.path.join(os.path.dirname(__file__), 'species_database.namelist')
     (Zs,ms)=update_species_parameters(simul.species,species_filename,simul.norm,simul) 
 
-    #generate n_i profile
-    (nHats[main_index],dnHatdss[main_index]) = generate_ni_profile(**kwargs)
-       
+    if mode == "const_Phi":
+        #generate n_i profile
+        (nHats[main_index],dnHatdss[main_index]) = generate_ni_profile(**kwargs)
+        
+    elif mode == "const_ne":
+        #create n_e:
+        (nHats[e_index],dnHatdss[e_index]) = generate_ne_profile(simul,**kwargs)
+        # generate ion etas
+        c=float(kwargs["imp_conc"])
+        etaHats[main_index] = lambda x: neHatPre(x)/(Zs[main_index]*(1+2*c))
+        detaHatdss[main_index] =  lambda x: dneHatPredpsi(x)/(Zs[main_index]*(1+2*c))
+        etaHats[imp_index] = lambda x: c*etaHats[main_index](x)
+        detaHatdss[imp_index] = lambda x: c*detaHatdss[main_index](x)
+
+        # generate ion densities
+        X = lambda x: sqrt(1/(16*c**2) + nHats[e_index](x)/(2*c*Zs[main_index]*etaHats[main_index](x)))-1/(4*c)
+        dXds = lambda x: 1/(sqrt(1/(16*c**2) + nHats[e_index](x)/(2*c*Zs[main_index]*etaHats[main_index](x)))*4*Zs[main_index]*c*etaHats[main_index](x))*(dnHatdss[e_index](x) - nHats[e_index](x)*(detaHatdss[main_index](x)/etaHats[main_index](x)))
+
+        (nHats[main_index],dnHatdss[main_index]) = generate_n_from_eta_X_profile(etaHats[main_index],X,detaHatdss[main_index],dXds,Zs[main_index])
+
+        (nHats[imp_index],dnHatdss[imp_index]) = generate_n_from_eta_X_profile(etaHats[imp_index],X,detaHatdss[imp_index],dXds,Zs[imp_index])
+
+    
+        
     if (sameflux==True):
-        nt=nHats[main_index](psi[0])
-        nb=nHats[main_index](psi[-1])
+        nt=nHats[main_index](psiMin)
+        nb=nHats[main_index](psiMax)
+        (THats,dTHatdss) = generate_T_profiles_sameflux(nt,nb,samefluxshift,**kwargs)
+    elif (oldsameflux==True):
+        #this setting uses the old ni profile generation to generatea  temporary
+        # n_i profile to generate sameflux T profiles that are the same as in
+        # the constant_Phi case.
+        # Useful for comparing const_Phi and const_ne with the same T
+        #NOTE: need inputs specifying n_i to generate the temporary profile
+        # does not really match the heat flux proxy for the actual n_i profiles
+        # used in the const n_e case.
+        (nH,dnHds) = generate_ni_profile(**kwargs)
+        nt=nH(psiMin)
+        nb=nH(psiMax)
         (THats,dTHatdss) = generate_T_profiles_sameflux(nt,nb,samefluxshift,**kwargs)
     else:
         (THats,dTHatdss) = generate_T_profiles(**kwargs)
@@ -664,220 +698,71 @@ def generate_compatible_profiles(simul,xwidth,is_allflat=False,nonuniform=False,
     nu_r=update_nu_r(simul,n,T)
     print "nu_r: " + str(nu_r)
 
-    (etaHats[main_index],detaHatdss[main_index]) = generate_etai_profile(Delta,omega,**kwargs)
+    if mode == "const_Phi":
+        (etaHats[main_index],detaHatdss[main_index]) = generate_etai_profile(Delta,omega,**kwargs)
 
-    if zeroPhi:
-        PhiHat= lambda x : 0*x
-        dPhiHatds= lambda x : 0*x
-    else:
         (PhiHat,dPhiHatds) = generate_Phi_profile(etaHats[main_index],nHats[main_index],THats[main_index],detaHatdss[main_index],dnHatdss[main_index],dTHatdss[main_index],Zs[main_index],Delta,omega)
-    
-    #if Phi=0 at top of the pedestal, this gives the top of the n_z pedestal.
-    #To make n_z and n_i same at points, those points should satisfy
-    # eta_z=n_i (n_i/eta_i)^(-[Zz/Zi] Ti/Tz)
-    #etaHats[imp_index] = 0.01*nHats[main_index][psiMinPedIndex]
-    if (Nspecies>2) and (sameeta==False):
-        if sameeta==True:
-            etaHats[imp_index]=etaHats[main_index]
-            detaHatdss[imp_index]=detaHatdss[main_index]
-        else:
-            (etaHats[imp_index],detaHatdss[imp_index]) = generate_etaz_profile(Delta,omega,**kwargs)
-    
-    if (Nspecies > 2):
-        (nHats[imp_index],dnHatdss[imp_index]) = generate_n_from_eta_Phi_profile(etaHats[imp_index],PhiHat,THats[imp_index],detaHatdss[imp_index],dPhiHatds,dTHatdss[imp_index],Zs[imp_index],Delta,omega)
 
-        # KEPT SINCE A PAIN TO CALCULATE
-        #nHats[imp_index] = etaHats[imp_index] *(nHats[main_index]/etaHats[main_index])**((Zs[imp_index]/Zs[main_index])*(THats[main_index]/THats[imp_index]))
-        #derivative calculate from sympy
-        #dnHatdpsis[imp_index]=(nHats[main_index]/etaHats[main_index])**(Zs[imp_index]*THats[main_index]/(Zs[main_index]*THats[imp_index]))*((-Zs[imp_index]*THats[main_index]*dTHatdpsis[imp_index]/(Zs[main_index]*THats[imp_index]**2) + Zs[imp_index]*dTHatdpsis[main_index]/(Zs[main_index]*THats[imp_index]))*numpy.log(nHats[main_index]/etaHats[main_index]) + Zs[imp_index]*(dnHatdpsis[main_index]/etaHats[main_index] - nHats[main_index]*detaHatdpsis[main_index]/etaHats[main_index]**2)*THats[main_index]*etaHats[main_index]/(Zs[main_index]*THats[imp_index]*nHats[main_index]))*etaHats[imp_index] + (nHats[main_index]/etaHats[main_index])**(Zs[imp_index]*THats[main_index]/(Zs[main_index]*THats[imp_index]))*detaHatdpsis[imp_index]
-    
-    if (Nspecies > 1):
-        #n_e from quasi-neutrality
-        if (Nspecies == 2):
-            nHats[e_index]=lambda x : Zs[main_index]*nHats[main_index](x)
-            dnHatdss[e_index]= lambda x : Zs[main_index]*dnHatdss[main_index](x)
-        elif (Nspecies == 3):
-            nHats[e_index]=lambda x : Zs[imp_index]*nHats[imp_index](x) + Zs[main_index]*nHats[main_index](x)
-            dnHatdss[e_index]=lambda x: Zs[imp_index]*dnHatdss[imp_index](x) + Zs[main_index]*dnHatdss[main_index](x)
-        #eta_e from n_e
-        (etaHats[e_index], detaHatdss[e_index]) = generate_eta_from_n_Phi_profile(nHats[e_index],PhiHat,THats[e_index],dnHatdss[e_index],dPhiHatds,dTHatdss[e_index],Zs[e_index],Delta,omega)
+        print "!!!!!!!!!!!!!!!!!!!!"
+        print etaHats[main_index](psiMin)
+        print nHats[main_index](psiMin)
+        print PhiHat(psiMin)
+        print "!!!!!!!!!!!!!!!!!!!!"
+
+        #if Phi=0 at top of the pedestal, this gives the top of the n_z pedestal.
+        #To make n_z and n_i same at points, those points should satisfy
+        # eta_z=n_i (n_i/eta_i)^(-[Zz/Zi] Ti/Tz)
+        #etaHats[imp_index] = 0.01*nHats[main_index][psiMinPedIndex]
+        if (Nspecies>2) and (sameeta==False):
+            if sameeta==True:
+                etaHats[imp_index]=etaHats[main_index]
+                detaHatdss[imp_index]=detaHatdss[main_index]
+            else:
+                (etaHats[imp_index],detaHatdss[imp_index]) = generate_etaz_profile(Delta,omega,**kwargs)
+
+        if (Nspecies > 2):
+            (nHats[imp_index],dnHatdss[imp_index]) = generate_n_from_eta_Phi_profile(etaHats[imp_index],PhiHat,THats[imp_index],detaHatdss[imp_index],dPhiHatds,dTHatdss[imp_index],Zs[imp_index],Delta,omega)
+
+            
+        if (Nspecies > 1):
+            #n_e from quasi-neutrality
+            if (Nspecies == 2):
+                nHats[e_index]=lambda x : Zs[main_index]*nHats[main_index](x)
+                dnHatdss[e_index]= lambda x : Zs[main_index]*dnHatdss[main_index](x)
+            elif (Nspecies == 3):
+                nHats[e_index]=lambda x : Zs[imp_index]*nHats[imp_index](x) + Zs[main_index]*nHats[main_index](x)
+                dnHatdss[e_index]=lambda x: Zs[imp_index]*dnHatdss[imp_index](x) + Zs[main_index]*dnHatdss[main_index](x)
+
+    elif mode == "const_ne":
+        # generate Phi
+        PhiHat = lambda x: -(Delta/(Zs[main_index]*2*omega))*THats[main_index](x)*log(sqrt(1/(16*c**2) + nHats[e_index](x)/(2*c*Zs[main_index]*etaHats[main_index](x)))-1/(4*c))
+        dPhiHatds = lambda x: -(Delta/(Zs[main_index]*2*omega))*(dTHatdss[main_index](x)*log(X(x)) + THats[main_index](x)*dXds(x)/X(x))
         
-    write_outputs(simul,THats,dTHatdss,nHats,dnHatdss,etaHats,detaHatdss,PhiHat,dPhiHatds,psi)
+    #eta_e from n_e
+    (etaHats[e_index], detaHatdss[e_index]) = generate_eta_from_n_Phi_profile(nHats[e_index],PhiHat,THats[e_index],dnHatdss[e_index],dPhiHatds,dTHatdss[e_index],Zs[e_index],Delta,omega)
+
+    #get psiN, dpsiN_ds that maps from uniform grid to physical psi
+    (psi,dpsi_ds) = get_psiN(nonuniform,simul,**kwargs)
+
+    #sample profiles at physical psi
+    #rescale derivatives from physical psi to internal uniform grid
+    write_outputs(simul,THats,dTHatdss,nHats,dnHatdss,etaHats,detaHatdss,PhiHat,dPhiHatds,psi,dpsi_ds)
 
 ##########################################################
 # generate_compatible_profiles_constant_ne
 #########################################################
 
-def generate_compatible_profiles_constant_ne(simul,xwidth,is_allflat=False,nonuniform=False,sameflux=False,oldsameflux=False,sameeta=False,samefluxshift=0,zeroPhi=False,specialEta=False,psiDiamFact=5,transitionFact=0.2,dxdpsiN=1,midShift=0,upShift_denom=3.0,**kwargs):
-    e=scipy.constants.e
-    log=numpy.log
-    exp=numpy.exp
-    sqrt=numpy.sqrt
+def generate_compatible_profiles_constant_ne(simul,xwidth,nonuniform=False,sameflux=False,oldsameflux=False,sameeta=False,samefluxshift=0,specialEta=False,psiDiamFact=5,transitionFact=0.2,dxdpsiN=1,midShift=0,upShift_denom=3.0,m2tanh=False,**kwargs):
+    generate_compatible_profiles(simul,xwidth,nonuniform,sameflux,oldsameflux,sameeta,samefluxshift,specialEta,psiDiamFact,transitionFact,dxdpsiN,midShift,upShift_denom,m2tanh,mode="const_ne",**kwargs)
 
-    global psiMinPed
-    global psiMaxPed
-    global psi
-    global dpsi_ds
-    global Nspecies
-    global species
-    global allflat
-    global dxdpsiN_at_a
-    global psiList
-    global pairList
-    global Npsi
-    global main_index
-    global e_index
-    global imp_index
-    global specialeta
-    global Zs
-    global ms
-    allflat=is_allflat
-    specialeta = specialEta
 
-    species=simul.species
-    Nspecies=len(species)
-
-    #intepret possible keywords in the keyword-argument dict kwargs
-    if Nspecies == 1:
-        main_index=kwargs["mI"]
-    
-    elif Nspecies == 2:
-        main_index=kwargs["mI"]
-        e_index=kwargs["eI"]
-    
-    elif Nspecies == 3:
-        main_index=kwargs["mI"]
-        imp_index=kwargs["zI"]
-        e_index=kwargs["eI"]
-
-    else:
-        print "Script is too poor to handle an arbitrary number of species!"
-        return -1
-
-    if dxdpsiN == 1:
-        print "Intepreting gradients as being given in psi_N."
-    else:
-        print "Intepreting gradients as being given in x space"
-        print "Will use function specified by dx_dpsi to convert" 
-
-    dxdpsiN_at_a = dxdpsiN
-    x_ped_width=xwidth
-    psiN_ped_width=x_ped_width/dxdpsiN_at_a
-    
-    #calculate new psiMid and diameter for this profile
-    midShift=midShift*psiN_ped_width
-
-    #2015-12-16: -psiN_ped_width/3.0 was the old default.
-    upShift=-psiN_ped_width/upShift_denom
-
-    if allflat==True:
-        leftBoundaryShift=-psiN_ped_width
-    else:
-        leftBoundaryShift=0
-        
-    update_domain_size(simul,psiN_ped_width,midShift,psiDiamFact,leftBoundaryShift,rightBoundaryShift=0)
-    (Delta,omega) = update_Delta_omega(simul)
-    psiMid = simul.inputs.psiMid
-    
-    #get new psiN coordinate from input
-    (psi,dpsi_ds) = get_psiN(nonuniform,simul)
-    
-    Npsi=simul.inputs.Npsi
-    psiMin = simul.inputs.psiMin
-    psiMax = simul.inputs.psiMax
-
-    #determine gridpoints to start and stop pedestal
-    psiMinPed=psiMid-psiN_ped_width/2.0
-    psiMaxPed=psiMid+psiN_ped_width/2.0+upShift
-    psiMidPed=(psiMinPed+psiMaxPed)/2.0
-    
-    if allflat==True:
-        global psiMinNotFlat
-        global psiMaxNotFlat
-        psiMinNotFlat=psiMid-2.5*psiN_ped_width
-        psiMaxNotFlat=psiMid+1.5*psiN_ped_width
-    #list of psi where our profiles change slope
-    psiList=[psiMinPed,psiMaxPed]
-    print "pedestal start,stop: " + str(psiList)
-    
-    if allflat==True:
-        psiList=[psiMinNotFlat,psiMinPed,psiMaxPed,psiMaxNotFlat]
-    #distance in psi until our smooth transition between gradients is finished
-    offset=(psiMaxPed-psiMinPed)*transitionFact
-    pairList=[[offset,offset],[offset,offset]]
-    if allflat==True:
-        pairList=[[offset,offset],[offset,offset],[offset,offset],[offset,offset]]
-
-    #allocate arrays
-    THats = [None]*Nspecies
-    dTHatdss = [None]*Nspecies
-    nHats = [None]*Nspecies
-    dnHatdss = [None]*Nspecies
-    etaHats = [None]*Nspecies
-    detaHatdss = [None]*Nspecies
-
-    #this modifies the charge and mass of the species in the simulation to match species file, and reads the new parameters back
-    species_filename= os.path.join(os.path.dirname(__file__), 'species_database.namelist')
-    (Zs,ms)=update_species_parameters(simul.species,species_filename,simul.norm,simul)
-    Z_1=Zs[main_index]
-    Z_2=Zs[imp_index]
-
-    #create n_e:
-    (nHats[e_index],dnHatdss[e_index]) = generate_ne_profile(simul,**kwargs)
-
-    # generate ion etas
-    c=float(kwargs["imp_conc"])
-    etaHats[main_index] = lambda x: neHatPre(x)/(Z_1*(1+2*c))
-    detaHatdss[main_index] =  lambda x: dpsi_ds*dneHatPredpsi(x)/(Z_1*(1+2*c))
-    etaHats[imp_index] = lambda x: c*etaHats[main_index](x)
-    detaHatdss[imp_index] = lambda x: c*detaHatdss[main_index](x)
-
-    # generate ion densities
-    X = lambda x: sqrt(1/(16*c**2) + nHats[e_index](x)/(2*c*Z_1*etaHats[main_index](x)))-1/(4*c)
-    dXds = lambda x: 1/(sqrt(1/(16*c**2) + nHats[e_index](x)/(2*c*Z_1*etaHats[main_index](x)))*4*Z_1*c*etaHats[main_index](x))*(dnHatdss[e_index](x) - nHats[e_index](x)*(detaHatdss[main_index](x)/etaHats[main_index](x)))
-
-    (nHats[main_index],dnHatdss[main_index]) = generate_n_from_eta_X_profile(etaHats[main_index],X,detaHatdss[main_index],dXds,Zs[main_index])
-
-    (nHats[imp_index],dnHatdss[imp_index]) = generate_n_from_eta_X_profile(etaHats[imp_index],X,detaHatdss[imp_index],dXds,Zs[imp_index])
     
     
-
-    #generate T
-    if (sameflux==True):
-        nt=nHats[main_index](psi[0])
-        nb=nHats[main_index](psi[-1])
-        (THats,dTHatdss) = generate_T_profiles_sameflux(nt,nb,samefluxshift,**kwargs)
-    elif (oldsameflux==True):
-        #this setting uses the old ni profile generation to generatea  temporary
-        # n_i profile to generate sameflux T profiles that are the same as in
-        # the constant_Phi case.
-        # Useful for comparing const_Phi and const_ne with the same T
-        #NOTE: need inputs specifying n_i to generate the temporary profile
-        # does not really match the heat flux proxy for the actual n_i profiles
-        # used in the const n_e case.
-        (nH,dnHds) = generate_ni_profile(**kwargs)
-        nt=nH(psi[0])
-        nb=nH(psi[-1])
-        (THats,dTHatdss) = generate_T_profiles_sameflux(nt,nb,samefluxshift,**kwargs)
-    else:
-        (THats,dTHatdss) = generate_T_profiles(**kwargs)
+# KEPT SINCE A PAIN TO CALCULATE
+#nHats[imp_index] = etaHats[imp_index] *(nHats[main_index]/etaHats[main_index])**((Zs[imp_index]/Zs[main_index])*(THats[main_index]/THats[imp_index]))
+#derivative calculate from sympy
+#dnHatdpsis[imp_index]=(nHats[main_index]/etaHats[main_index])**(Zs[imp_index]*THats[main_index]/(Zs[main_index]*THats[imp_index]))*((-Zs[imp_index]*THats[main_index]*dTHatdpsis[imp_index]/(Zs[main_index]*THats[imp_index]**2) + Zs[imp_index]*dTHatdpsis[main_index]/(Zs[main_index]*THats[imp_index]))*numpy.log(nHats[main_index]/etaHats[main_index]) + Zs[imp_index]*(dnHatdpsis[main_index]/etaHats[main_index] - nHats[main_index]*detaHatdpsis[main_index]/etaHats[main_index]**2)*THats[main_index]*etaHats[main_index]/(Zs[main_index]*THats[imp_index]*nHats[main_index]))*etaHats[imp_index] + (nHats[main_index]/etaHats[main_index])**(Zs[imp_index]*THats[main_index]/(Zs[main_index]*THats[imp_index]))*detaHatdpsis[imp_index]
         
    
 
-    # generate Phi
-    PhiHat = lambda x: -(Delta/(Z_1*2*omega))*THats[main_index](x)*log(sqrt(1/(16*c**2) + nHats[e_index](x)/(2*c*Z_1*etaHats[main_index](x)))-1/(4*c))
-    dPhiHatds = lambda x: -(Delta/(Z_1*2*omega))*(dTHatdss[main_index](x)*log(X(x)) + THats[main_index](x)*dXds(x)/X(x))
-    
-    T=simul.TBar*THats[main_index](psiMidPed)
-    n=simul.nBar*nHats[main_index](psiMidPed)
-    print "T: "+str(T)
-    print "n: "+str(n)
-    nu_r=update_nu_r(simul,n,T)
-    print "nu_r: " + str(nu_r)
-
-        
-    # generate electron eta
-    (etaHats[e_index],detaHatdss[e_index]) = generate_eta_from_n_Phi_profile(nHats[e_index],PhiHat,THats[e_index],dnHatdss[e_index],dPhiHatds,dTHatdss[e_index],Zs[e_index],Delta,omega)
-
-    write_outputs(simul,THats,dTHatdss,nHats,dnHatdss,etaHats,detaHatdss,PhiHat,dPhiHatds,psi)
 
