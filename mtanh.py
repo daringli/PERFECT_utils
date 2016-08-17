@@ -74,8 +74,6 @@ def parameter_wrapper(X_ped,dXdr_core,dXdr_ped,dXdr_sol,ped_width,ped_pos):
     a_ped = X_ped + dXdr_core * ped_width/2.0
     X_sol = X_ped + dXdr_ped * ped_width
     a_sol = X_ped + (dXdr_ped  - dXdr_sol/2.0) * ped_width
-    print "a_ped: " + repr(a_ped)
-    print "a_sol: " + repr(a_sol)
     try:
         a_slope = -4 * a_delta * dXdr_core / (a_ped - a_sol)
         b_slope = -4 * a_delta * dXdr_sol / (a_ped - a_sol)
@@ -156,11 +154,20 @@ def match_heat_flux_proxy(T_ped,dTdr_core_0,dTdr_ped,dTdr_sol,ped_width,ped_pos,
     dTdr_core=scipy.optimize.fsolve(f,dTdr_core_0)[0]
     return generate_m2tanh_profile(T_ped,dTdr_core,dTdr_ped,dTdr_sol,ped_width,ped_pos)
 
-def mtanh_transition(f,g,a=1):
-    return lambda r: (f(r)*exp(r/a) + g(r)*exp(-r/a))/(exp(r/a)+exp(-r/a))
+def mtanh_transition(f,g,a=1,b=0):
+    return lambda r: (f(r)*exp((r-b)/a) + g(r)*exp(-(r-b)/a))/(exp((r-b)/a)+exp(-(r-b)/a))
 
-def ddx_mtanh_transition(f,g,ddx_f,ddx_g,a=1):
-    return lambda r: ((2/a)*(f(r) - g(r)) + ddx_f(r)*(1+exp(2*r/a)) + ddx_g(r)*(1+exp(-2*r/a)))/((exp(r/a)+exp(-r/a))**2.0)
+def ddx_mtanh_transition(f,g,ddx_f,ddx_g,a=1,b=0):
+    return lambda r: ((2/a)*(f(r) - g(r)) + ddx_f(r)*(1+exp(2*(r-b)/a)) + ddx_g(r)*(1+exp(-2*(r-b)/a)))/((exp((r-b)/a)+exp(-(r-b)/a))**2.0)
+
+def derivative_m3tanh_transition(flist,ddx_flist,x,width):
+    a=width/4.0
+    b=x
+    f=flist[1]
+    g=flist[0]
+    ddx_f = ddx_flist[1]
+    ddx_g = ddx_flist[0]
+    return (mtanh_transition(f,g,a,b),ddx_mtanh_transition(f,g,ddx_f,ddx_g,a,b))
 
 
 def generate_m3tanh_profile(a_ped,a_sol,a_etb,dXdr_core,dXdr_sol,a_delta,dpsi_ds=lambda r : 1 + 0*r):
@@ -381,4 +388,39 @@ if __name__ == "__main__":
     plt.plot(x, ddx_P3(x))
     plt.plot(x, ddx_P4(x))
     
+    plt.show()
+
+    plt.title("m3tanh transition")
+    a = 0.1
+    b = 1.0
+    n = lambda x: 6.0 - (3.0/20)*(x + 10.0)
+    ddx_n = lambda x: - (3.0/20) + 0*x
+    T = lambda x: 3-a*x
+    ddx_T = lambda x: -a + 0*x
+    Phi_c = 8.0
+    f = lambda r: n(r)*exp(Phi_c/T(x))
+    g = lambda r: 1+b*(r - 2)
+    ddx_f = lambda r: (ddx_n(r) - n(r)*Phi_c/(T(r)**2)*ddx_T(r))*exp(Phi_c/T(r))
+    ddx_g = lambda r: b + r*0
+
+    flist = [g,f]
+    ddx_flist = [ddx_g,ddx_f]
+    width=4.0
+    x0=-5
+    P1, ddx_P1 = derivative_m3tanh_transition(flist,ddx_flist,x0,width)
+    
+    plt.subplot(2, 1, 1)
+    plt.hold(True)
+    plt.plot(x, P1(x))
+    plt.plot(x, f(x))
+    plt.plot(x, g(x))
+    plt.xlim(xlims)
+
+    plt.subplot(2, 1, 2)
+    plt.hold(True)
+    plt.plot(x, ddx_P1(x))
+    plt.plot(x, ddx_f(x))
+    plt.plot(x, ddx_g(x))
+    plt.xlim(xlims)
+
     plt.show()
