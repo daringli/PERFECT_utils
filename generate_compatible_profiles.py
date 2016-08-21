@@ -736,9 +736,11 @@ def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,ol
         # generate Phi
         PhiHat = lambda x: -(Delta/(Zs[main_index]*2*omega))*THats[main_index](x)*log(sqrt(1/(16*c**2) + nHats[e_index](x)/(2*c*Zs[main_index]*etaHats[main_index](x)))-1/(4*c))
         dPhiHatds = lambda x: -(Delta/(Zs[main_index]*2*omega))*(dTHatdss[main_index](x)*log(X(x)) + THats[main_index](x)*dXds(x)/X(x))
+
         
-    #eta_e from n_e
-    (etaHats[e_index], detaHatdss[e_index]) = generate_eta_from_n_Phi_profile(nHats[e_index],PhiHat,THats[e_index],dnHatdss[e_index],dPhiHatds,dTHatdss[e_index],Zs[e_index],Delta,omega)
+    if Nspecies == 3:
+        #eta_e from n_e
+        (etaHats[e_index], detaHatdss[e_index]) = generate_eta_from_n_Phi_profile(nHats[e_index],PhiHat,THats[e_index],dnHatdss[e_index],dPhiHatds,dTHatdss[e_index],Zs[e_index],Delta,omega)
 
     #get psiN, dpsiN_ds that maps from uniform grid to physical psi
     (psi,dpsi_ds) = get_psiN(nonuniform,simul,**kwargs)

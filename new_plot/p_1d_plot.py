@@ -71,21 +71,22 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
     i=-1
     psp_lists=[] #list of lists of perfect subplot object
     gridspec_list=[]
-    local=[simul.local for simul in simulList]
-    colors=cm(numpy.linspace(0,1,len(simulList)-sum(local)))
-    if len(colors) == 0:
-        #all simulations were local
-        colors=cm(numpy.linspace(0,1,len(simulList)))
+    
+    colors=cm(numpy.linspace(0,1,len(simulList)))
     #assign colors to simulations
     all_linecolors=[]
     color_index=0
+
+    local=[simul.local for simul in simulList]
     if lg:
+        colors=cm(numpy.linspace(0,1,len(simulList)-sum(local)))
         for loc in local:
             all_linecolors.append(colors[color_index])
             if loc == True:
                 color_index=color_index+1
     else:
-        all_linecolors=colors
+        colors=cm(numpy.linspace(0,1,len(simulList)))
+    all_linecolors=colors
 
     if linestyles == None:
         linestyles=[] #linestyles generated from local or global
