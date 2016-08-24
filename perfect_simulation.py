@@ -307,8 +307,8 @@ class perfect_simulation(object):
         if scale:
             scale_factor=(self.psiAHat/self.psiAHatArray)
         else:
-            #scale_factor=numpy.ones(self.Npsi) #for derivatives on internal grid
-            scale_factor=(self.psiAHat/self.psiAHatArray[0])*numpy.ones(self.Npsi)
+            scale_factor=numpy.ones(self.Npsi) #for derivatives on internal grid
+            #scale_factor=(self.psiAHat/self.psiAHatArray[0])*numpy.ones(self.Npsi)
         #get attribute array
         if type(attrib) == str:
             a = getattr(self,attrib)

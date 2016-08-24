@@ -738,7 +738,7 @@ def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,ol
         dPhiHatds = lambda x: -(Delta/(Zs[main_index]*2*omega))*(dTHatdss[main_index](x)*log(X(x)) + THats[main_index](x)*dXds(x)/X(x))
 
         
-    if Nspecies == 3:
+    if Nspecies > 1:
         #eta_e from n_e
         (etaHats[e_index], detaHatdss[e_index]) = generate_eta_from_n_Phi_profile(nHats[e_index],PhiHat,THats[e_index],dnHatdss[e_index],dPhiHatds,dTHatdss[e_index],Zs[e_index],Delta,omega)
 
