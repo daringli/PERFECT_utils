@@ -95,6 +95,9 @@ class perfect_simulation(object):
         self.pressure_perturbation_name="pressurePerturbation"
 
         self.local_name="makeLocalApproximation"
+
+        self.Npsi_sourceless_right_name = "NpsiSourcelessRight"
+        self.Npsi_sourceless_left_name = "NpsiSourcelessLeft"
         
         self.version_group="/"
         self.program_mode_group="/"
@@ -450,6 +453,33 @@ class perfect_simulation(object):
             return False
         else:
             print "perfect_simulation: error: makeLocalApproximation is neither true nor false!?"
+
+    @property
+    def Npsi_sourceless_right(self):
+        try:
+            return self.outputs[self.group_name+self.Npsi_sourceless_right_name][()]
+        except (KeyError,TypeError):
+            return 0
+
+    @property
+    def Npsi_sourceless_left(self):
+        try:
+            return self.outputs[self.group_name+self.Npsi_sourceless_left_name][()]
+        except (KeyError,TypeError):
+            return 0
+
+    def pad_sources(self,S,value=numpy.nan):
+        #pads sources with nans on gridpoints where they are not calculated
+        Nright = self.Npsi_sourceless_right
+        Nleft = self.Npsi_sourceless_left
+        Npsi = self.Npsi
+        Nspecies =self.Nspecies
+        padded_S = value*numpy.ones([Npsi,Nspecies])
+        padded_S[Nleft:Npsi-Nright,:] = S
+        return padded_S
+
+ 
+            
     @property
     def Z(self):
         return numpy.array(self.inputs.charges)
@@ -598,32 +628,38 @@ class perfect_simulation(object):
 
     @property
     def heat_source(self):
-        first_i=5
-        last_i=203
-        print self.output_dir
-        S_h = self.outputs[self.group_name+self.heat_source_name][()][first_i:last_i,:]
-        psiN=self.actual_psiN[first_i:last_i]
-        print "Integrated heat sources: " + str(scipy.integrate.simps(S_h,psiN,axis=0))
-        return self.outputs[self.group_name+self.heat_source_name][()]
+        #first_i=5
+        #last_i=203
+        #print self.output_dir
+        #S_h = self.outputs[self.group_name+self.heat_source_name][()][first_i:last_i,:]
+        #psiN=self.actual_psiN[first_i:last_i]
+        #print "Integrated heat sources: " + str(scipy.integrate.simps(S_h,psiN,axis=0))
+
+        # Sources may be nonexisting at the boundary
+        S = self.outputs[self.group_name+self.heat_source_name][()]
+        return self.pad_sources(S)
     
     
     @property
     def particle_source(self):
-        first_i=5
-        last_i=203
-        print self.output_dir
-        S_p = self.outputs[self.group_name+self.particle_source_name][()][first_i:last_i,:]
-        psiN=self.actual_psiN[first_i:last_i]
-        print "Integrated particle sources: " + str(scipy.integrate.simps(S_p,psiN,axis=0))
-        return self.outputs[self.group_name+self.particle_source_name][()]
+        #first_i=5
+        #last_i=203
+        #print self.output_dir
+        #S_p = self.outputs[self.group_name+self.particle_source_name][()][first_i:last_i,:]
+        #psiN=self.actual_psiN[first_i:last_i]
+        #print "Integrated particle sources: " + str(scipy.integrate.simps(S_p,psiN,axis=0))
+
+        # Sources may be nonexisting at the boundary
+        S = self.outputs[self.group_name+self.particle_source_name][()]
+        return self.pad_sources(S)
 
     @property
     def heat_source_over_m2(self):
-        return self.outputs[self.group_name+self.heat_source_name][()]/(self.masses**2)
+        return self.heat_source/(self.masses**2)
 
     @property
     def particle_source_over_m2(self):
-        return self.outputs[self.group_name+self.particle_source_name][()]/(self.masses**2)
+        return self.particle_source/(self.masses**2)
 
     @property
     def particle_source_over_m2nPed(self):

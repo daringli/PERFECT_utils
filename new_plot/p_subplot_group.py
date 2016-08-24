@@ -37,7 +37,7 @@ class perfect_subplot_group:
         for subplot in self.getattrs(attr_name):
             for simulation in subplot:
                 maxes=maxes+[numpy.max(simulation)]
-        max=numpy.max(maxes)                
+        max=numpy.nanmax(maxes) #ignores nan values
         if margin == 0:
             return max
         else:
@@ -49,7 +49,7 @@ class perfect_subplot_group:
         for subplot in self.getattrs(attr_name):
             for simulation in subplot:
                 mines=mines+[numpy.min(simulation)]
-        min = numpy.min(mines)
+        min = numpy.nanmin(mines) #ignores nan values
         if margin == 0:
             return min
         else:
