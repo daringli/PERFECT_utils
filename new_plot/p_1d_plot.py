@@ -85,8 +85,7 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
             if loc == True:
                 color_index=color_index+1
     else:
-        colors=cm(numpy.linspace(0,1,len(simulList)))
-    all_linecolors=colors
+        all_linecolors=cm(numpy.linspace(0,1,len(simulList)))
 
     if linestyles == None:
         linestyles=[] #linestyles generated from local or global
