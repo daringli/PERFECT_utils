@@ -171,12 +171,8 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
             X,Y=numpy.meshgrid(p_subplot.x,p_subplot.y)
             z=numpy.transpose(p_subplot.data)
 
-            #print X
-            #print Y
-            #print z
             ax.pcolor(X, Y, z,rasterized=True,linewidth=0)
-            #print z
-
+            
             if p_subplot.show_zaxis == True:
                 divider = make_axes_locatable(ax)
                 cax = divider.append_axes("top", "-10%", pad="10%")

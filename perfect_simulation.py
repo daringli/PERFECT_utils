@@ -94,6 +94,11 @@ class perfect_simulation(object):
         self.density_perturbation_name="densityPerturbation"
         self.pressure_perturbation_name="pressurePerturbation"
 
+        self.FSA_density_perturbation_name="FSADensityPerturbation"
+        self.FSA_pressure_perturbation_name="FSAPressurePerturbation"
+
+        
+        
         self.local_name="makeLocalApproximation"
 
         self.Npsi_sourceless_right_name = "NpsiSourcelessRight"
@@ -1288,6 +1293,12 @@ class perfect_simulation(object):
         return self.outputs[self.group_name+self.density_perturbation_name][()]
 
     @property
+    def FSA_density_perturbation(self):
+        #non-adiabatic part
+        return self.outputs[self.group_name+self.FSA_density_perturbation_name][()]
+
+    
+    @property
     def density_perturbation_shifted(self,shift=numpy.pi):
         #non-adiabatic part
         (theta,density_perturbation_shifted) = self.shift_theta(shift,self.density_perturbation)
@@ -1298,6 +1309,12 @@ class perfect_simulation(object):
         #non-adiabatic part
         return self.outputs[self.group_name+self.pressure_perturbation_name][()]
 
+    @property
+    def FSA_pressure_perturbation(self):
+        #non-adiabatic part
+        return self.outputs[self.group_name+self.FSA_pressure_perturbation_name][()]
+
+    
     @property
     def total_density_perturbation(self):
         #non-adiabatic part

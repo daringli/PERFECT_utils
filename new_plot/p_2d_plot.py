@@ -58,9 +58,6 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
             gridspec=[len(simulList),1]
         for i,simul in enumerate(simulList):
             data0=getattr(simul,attrib) #need to split this into species data
-            if len(simul.species) == 1:
-                #adding a species dimension to single-species data
-                data0=data0[:,:,numpy.newaxis]
             for i_s,s in enumerate(this_species_set):
                 if attrib_sp_dep:
                     index=[i2 for i2,s2 in enumerate(simul.species) if s2 == s]
