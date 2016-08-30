@@ -266,12 +266,13 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
 if __name__=="__main__":
 
 
-    base_dir='../../../../../../../perfectSimuls/helium/'
-    sub_dirs=['impurity_content_scan/0.02/','impurity_content_scan-local/0.02/']
+    base_dir='../../../../../../../perfectSimuls/he_paper/nonuniform/const_Phi-m2tanh/'
+    sub_dirs=['0.01/','0.01-local']
     dirlist=[base_dir+x for x in sub_dirs]
-    normlist='../../../../../../../perfectSimuls/helium/norms.namelist'
-    species='../../../../../../../perfectSimuls/helium/species'
-    simulList=perfect_simulations_from_dirs(dirlist,normlist,species)
+    normlist=[dir+'/norms.namelist' for dir in dirlist]
+    species=[dir+'/species' for dir in dirlist]
+    psiAHats=[dir+'/psiAHat.h5' for dir in dirlist]
+    simulList=perfect_simulations_from_dirs(dirlist,normlist,species,psiAHats)
     
     psp1=perfect_subplot(simulList[0].flow[:,:,0],x=100*simulList[0].psi,y=simulList[0].theta/numpy.pi,subplot_coordinates=(0,0),show_zaxis_ticklabel=True,show_yaxis_ticklabel=True,zaxis_label="test z",yaxis_label="test y",xaxis_label="test bad x",zscale='linear',xscale='linear',groups=["i","sim1"])
     psp2=perfect_subplot(simulList[0].flow[:,:,1],x=100*simulList[0].psi,y=simulList[0].theta/numpy.pi,subplot_coordinates=(0,1),show_zaxis_ticklabel=True,groups=["z","sim1"])

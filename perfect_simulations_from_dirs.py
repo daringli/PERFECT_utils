@@ -28,7 +28,10 @@ def perfect_simulations_from_dirs(dirlist,normlist,species,psiN_to_psi=sentinel)
         if psiN_to_psi != sentinel:
             psiN_to_psi_filename = psiN_to_psi[i]
         else:
-            psiN_to_psi_filename = sentinel
+            psiN_to_psi_filename = None
+        print psiN_to_psi_filename
+        print species_filename
+        
         simuls.append(normalized_perfect_simulation(input_filename,norm_filename,species_filename,output_filename,psiN_to_psi_filename))
         simuls[i].description=dir
         #simuls[i].species=species

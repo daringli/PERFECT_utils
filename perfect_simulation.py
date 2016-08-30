@@ -71,8 +71,15 @@ class perfect_simulation(object):
         self.poloidal_flow_name="poloidalFlow"
         self.FSA_toroidal_flow_name="FSAToroidalFlow"
         self.FSA_poloidal_flow_name="FSAPoloidalFlow"
+
+        #old names, for compatibility with old output
         self.magnetization_flow_perturbation_name="magnetizationFlowPerturbation"
         self.magnetization_perturbation_name="magnetizationPerturbation"
+        #new names for same thing
+        self.p_perp_term_in_Vp_name="pPerpTermInVp"
+        self.p_perp_term_in_Vp_underived_name="pPerpTermInVpBeforePsiDerivative"
+        
+        
         self.kPar_name="kPar"
         self.FSAkPar_name="FSAKPar"
         self.FSAFlow_name="FSAFlow"
@@ -220,6 +227,7 @@ class perfect_simulation(object):
             self.psiAHatArray = numpy.array([self.psiAHat]*self.Npsi)
             self.actual_psi = self.psiAHat*self.psi
             self.actual_psiN = self.psi
+        print 
             
             
                 
@@ -998,12 +1006,18 @@ class perfect_simulation(object):
     
     @property
     def magnetization_flow_perturbation(self):
-        return self.outputs[self.group_name+self.magnetization_flow_perturbation_name][()]
+        try:
+            return self.outputs[self.group_name+self.magnetization_flow_perturbation_name][()]
+        except KeyError:
+            return self.outputs[self.group_name+self.p_perp_term_in_Vp_name][()]
         #return self.magnetization_flow_perturbation_test
         
     @property
     def magnetization_perturbation(self):
-        return self.outputs[self.group_name+self.magnetization_perturbation_name][()]
+        try:
+            return self.outputs[self.group_name+self.magnetization_perturbation_name][()]
+        except KeyError:
+            return self.outputs[self.group_name+self.p_perp_term_in_Vp_underived_name][()]
         #return numpy.expand_dims(3*self.nHat*self.THat/(self.Delta*self.masses),axis=1)*self.pressure_perturbation - self.outputs[self.group_name+self.magnetization_perturbation_name][()]
 
     @property
@@ -1374,7 +1388,12 @@ class perfect_simulation(object):
 
     @property
     def RHat(self):
-        return nstack(self.outputs[self.group_name+self.RHat_name][()],axis=0,n=len(self.psi)) #add psi axis
+        RHat = self.outputs[self.group_name+self.RHat_name][()]
+        if arraylist_rank(RHat) == 2:
+            return RHat
+        elif arraylist_rank(RHat) == 1:
+            #for compatibility with old 1D RHat output
+            return nstack(RHat,axis=0,n=len(self.psi)) #add psi axis
 
     @property
     def JHat(self):
@@ -1935,6 +1954,11 @@ class normalized_perfect_simulation(perfect_simulation):
     def sum_normed_n_FSA_toroidal_mass_flow(self):
         return numpy.sum(self.normed_n_FSA_toroidal_mass_flow,axis=1)
 
+    def Pradtl_proxy(self,ion_index,psi_index):
+        print self.normed_conductive_heat_flux_psi_unit_vector[psi_index,ion_index]
+        print self.normed_m_momentum_flux_psi_unit_vector[psi_index,:]
+        return self.normed_m_momentum_flux_psi_unit_vector*((1/self.normed_conductive_heat_flux_psi_unit_vector[:,ion_index])*(self.p[:,ion_index])/(self.RBar*self.normed_n_FSA_toroidal_mass_flow[:,ion_index])*(self.deltaT[:,ion_index]/self.deltaN[:,ion_index]))[psi_index]
+
     @property
     def Pradtl_proxy1(self):
         #over Delta(massflow_toroidal)/Delta(psi)
@@ -1988,7 +2012,7 @@ class normalized_perfect_simulation(perfect_simulation):
     def Pradtl_proxy4_3(self):
         ion_index=0
         psi_index=90
-        return self.normed_m_momentum_flux_psi_unit_vector*((1/self.normed_conductive_heat_flux_psi_unit_vector[:,ion_index])*(self.p[:,ion_index])/(self.RBar*self.normed_n_FSA_toroidal_mass_flow[:,ion_index])*(self.deltaT[:,ion_index]/self.deltaN[:,ion_index]))[psi_index]
+        return self.Pradtl_proxy(ion_index=0,psi_index=90)
 
     @property
     def Pradtl_proxy4_4(self):
@@ -2001,4 +2025,5 @@ class normalized_perfect_simulation(perfect_simulation):
         print "mVtn/n dn/dr " + str((self.normed_n_FSA_toroidal_mass_flow[psi_index,ion_index]/self.n[psi_index,ion_index])*(self.n[psi_index+dpsi_index,ion_index] - self.n[psi_index-dpsi_index,ion_index])/(self.actual_psi[psi_index+dpsi_index] - self.actual_psi[psi_index-dpsi_index])*numpy.fabs(self.FSABp[psi_index]/self.RBar))
         
         return self.normed_m_momentum_flux_psi_unit_vector*((1/self.normed_conductive_heat_flux_psi_unit_vector[:,ion_index])*(self.p[:,ion_index])/(self.RBar)*(self.deltaT[:,ion_index]/(dmnVtdr*self.rho_p[:,ion_index])))[psi_index]
+
 

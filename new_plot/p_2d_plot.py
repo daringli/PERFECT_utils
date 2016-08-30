@@ -8,6 +8,8 @@ from sort_species_list import sort_species_list
 from generic_species_labels import generic_species_labels
 from is_attribute_species_dependent import is_attribute_species_dependent
 
+from get_index_range import get_index_range
+
 from matplotlib.pyplot import cm
 import matplotlib.pyplot as plt
 import numpy
@@ -106,7 +108,19 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
                     x_scale=100
                 else:
                     x_scale=1
-                x = getattr(simul,xattr)*x_scale
+                if xattr is not "psio":
+                    x = getattr(simul,xattr)*x_scale
+                else:
+                    print "WARNING: orbit width uses hardcoded index for deuterium and pedestal start and stop values!"
+                    vlines2 = [0.94927395957025573,0.97463697978512787]
+                    
+                    iD = 0
+                    ped_start_index=get_index_range(simul.actual_psiN,[vlines2[0],vlines2[0]])[1]
+                    ped_stop_index=get_index_range(simul.actual_psiN,[vlines2[1],vlines2[1]])[1]
+                    ow_start=simul.orbit_width[ped_start_index,iD]
+                    ow_stop=simul.orbit_width[ped_stop_index,iD]
+                    x = (simul.actual_psiN-vlines2[1])/simul.orbit_width[:,iD]
+                    vlines=[(vlines2[0]-vlines2[1])/ow_start,(vlines2[1]-vlines2[1])/ow_stop]
                 y = getattr(simul,yattr)*y_scale
                 #print data
                 psp_list.append(perfect_subplot(data,x=x,y=y,subplot_coordinates=subplot_coordinates,show_zaxis_ticklabel=show_zaxis_ticklabel,show_yaxis_ticklabel=show_yaxis_ticklabel,show_xaxis_ticklabel=show_xaxis_ticklabel,title=title,groups=[s,"sim"+str(i),gl_grp,"pair"+str(i/2),species_attrib_groupname],dimensions=2))
@@ -156,10 +170,11 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
         for i,sim_group in enumerate(sim_groups):
             if i != 0:
                 sim_group.setattrs("show_zaxis",False)
-        
-
-            
-        perfect_visualizer(psp_list,gridspec,global_xlabel=r"$100\psi_N$",dimensions=2,global_ylabel=r"$\theta/\pi$")
+        if xattr is not "psio":
+            global_xlabel=r"$100\psi_N$"
+        else:
+            global_xlabel=r"$\psi^\mathrm{o}$"
+        perfect_visualizer(psp_list,gridspec,global_xlabel=global_xlabel,dimensions=2,global_ylabel=r"$\theta/\pi$")
 
         plt.savefig(attrib+'.pdf')
 
