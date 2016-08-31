@@ -16,7 +16,7 @@ import numpy
 import sys
 
 
-def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",cm=cm.rainbow,lg=True,xlims=[90,100],ylims=[0,2],species=True,sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[]):
+def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",cm=cm.rainbow,lg=True,xlims=[90,100],ylims=[0,2],species=True,sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[],skip_species = []):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -31,6 +31,8 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
     psiN_to_psiList=[x + "/" + psiN_to_psiname for x in dirlist]
     simulList=perfect_simulations_from_dirs(dirlist,normlist,specieslist,psiN_to_psiList)
 
+    #if we translate species labels to generic ion and impurity labels
+    #we still need to use original species for sorting preferences
     if generic_labels:
         for simul in simulList:
             simul.species_list=generic_species_labels(simul.species_list,label_dict)
@@ -38,12 +40,20 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
             last=generic_species_labels(last,label_dict)
             
         
-    #get number of columns needed to fit all species
+    #get the total list of species found in each simulation
     species_set=set([])
     for simul in simulList:
+        # exclude species that are in the skip list
+        nonexcluded = set(simul.species).difference(skip_species)
+        simul.species_list = list(nonexcluded)
+        # add nonexcluded species to total species set
         species_set = species_set | set(simul.species)
+        
+    # sort species according to preferences
     if sort_species:
         species_set=sort_species_list(list(species_set),first,last)
+    print species_set
+        
     
     for attrib in attribs:
         psp_list=[] #list of perfect subplot objects
@@ -73,7 +83,6 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
                         data=numpy.sum(data0[:,:,index],axis=2)
                 else:
                     data=data0
-                #print data
                 subplot_coordinates=(i,i_s)
                 #print subplot_coordinates 
                 if i == 0:
@@ -122,7 +131,6 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
                     x = (simul.actual_psiN-vlines2[1])/simul.orbit_width[:,iD]
                     vlines=[(vlines2[0]-vlines2[1])/ow_start,(vlines2[1]-vlines2[1])/ow_stop]
                 y = getattr(simul,yattr)*y_scale
-                #print data
                 psp_list.append(perfect_subplot(data,x=x,y=y,subplot_coordinates=subplot_coordinates,show_zaxis_ticklabel=show_zaxis_ticklabel,show_yaxis_ticklabel=show_yaxis_ticklabel,show_xaxis_ticklabel=show_xaxis_ticklabel,title=title,groups=[s,"sim"+str(i),gl_grp,"pair"+str(i/2),species_attrib_groupname],dimensions=2))
         #end simulList loop
         for psp in psp_list:

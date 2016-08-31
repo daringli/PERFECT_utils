@@ -154,8 +154,6 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
             for i in range(len(y)):
                 try:
                     ax.plot(x[i],y[i],linestyle=p_subplot.linestyles[i],color=p_subplot.colors[i],linewidth=p_subplot.linewidths[i],marker=p_subplot.markers[i])
-                    #print x[i]
-                    #print y[i]
                 except IndexError:
                     print "Index error in ax.plot(). Most likely, linestyles, linewidths and colors have the wrong lengths."
                     print "len(colors): " + str(len(p_subplot.colors))
@@ -170,7 +168,7 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
         if p_subplot.dimensions == 2:
             X,Y=numpy.meshgrid(p_subplot.x,p_subplot.y)
             z=numpy.transpose(p_subplot.data)
-
+  
             ax.pcolor(X, Y, z,rasterized=True,linewidth=0)
             
             if p_subplot.show_zaxis == True:
