@@ -44,8 +44,10 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
     species_set=set([])
     for simul in simulList:
         # exclude species that are in the skip list
-        nonexcluded = set(simul.species).difference(skip_species)
-        simul.species_list = list(nonexcluded)
+        #nonexcluded = set(simul.species).difference(skip_species)
+        nonexcluded = [s for s in simul.species if s not in skip_species]
+        
+        simul.species_list = nonexcluded
         # add nonexcluded species to total species set
         species_set = species_set | set(simul.species)
         
@@ -70,6 +72,7 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
             gridspec=[len(simulList),1]
         for i,simul in enumerate(simulList):
             data0=getattr(simul,attrib) #need to split this into species data
+            #i_s will be coordinate of plot
             for i_s,s in enumerate(this_species_set):
                 if attrib_sp_dep:
                     index=[i2 for i2,s2 in enumerate(simul.species) if s2 == s]
@@ -79,7 +82,7 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
                     elif len(index)==1:
                         data=data0[:,:,index[0]]
                     else:
-                        print "perfect_2d_plot: warning: more than one of the same species in the simulation. Will add contributions."
+                        print "perfect_2d_plot: warning: more than one of the same species in the simulation. Will add contributions, but this is untested."
                         data=numpy.sum(data0[:,:,index],axis=2)
                 else:
                     data=data0
