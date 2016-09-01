@@ -133,8 +133,18 @@ def get_psiN(nonuniform,simul,**kwargs):
         
             # by design of non-uniform grid, s[0]=psiN[0], s[-1]=psiN[-1]
             # for the physical psiN. Not true for indices between
-            psiN1= psiMinPed
-            psiN2= psiMaxPed
+            if "leftshift" in kwargs.keys():
+                leftshift = (psiMaxPed-psiMinPed)*kwargs["leftshift"]
+            else:
+                leftshift = 0
+
+            if "rightshift" in kwargs.keys():
+                rightshift = (psiMaxPed-psiMinPed)*kwargs["rightshift"]
+            else:
+                rightshift = 0
+            
+            psiN1= psiMinPed - leftshift
+            psiN2= psiMaxPed + rightshift
 
             actual_psi,dactual_psi_ds = generate_nonuniform_grid_Int_arctan(simul.input,a,b,c,psiN1,psiN2)
         else:
