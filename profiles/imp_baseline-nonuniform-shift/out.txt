@@ -1,0 +1,229 @@
+hebbe21-9 hebbe21-10 hebbe22-1 hebbe22-2 hebbe22-10 hebbe23-8 hebbe23-9 hebbe23-10
+ ****************************************************************************
+ PERFECT: Pedestal and Edge Radially-global Fokker-Planck Evaluation of Collisio
+ nal Transport.
+ Using double precision.
+ Parallel job (  64 processes) detected.
+ Successfully read parameters from flowControl namelist in input.namelist.
+ Successfully read parameters from geometryParameters namelist in input.namelist
+ .
+ Successfully read parameters from speciesParameters namelist in input.namelist.
+ Successfully read parameters from physicsParameters namelist in input.namelist.
+ Successfully read parameters from resolutionParameters namelist in 
+ input.namelist.
+ Successfully read parameters from otherNumericalParameters namelist in 
+ input.namelist.
+ Successfully read parameters from preconditionerOptions namelist in 
+ input.namelist.
+ mumps detected
+ superlu_dist not detected
+ [           1 ] ---- Physics parameters: ----
+ [           1 ] number of species =            3
+ [           1 ] masses =    1.00000000000000        6.94139043844000     
+  2.719336917680000E-004
+ [           1 ] charges =    1.00000000000000        7.00000000000000     
+  -1.00000000000000     
+ [           1 ] desiredU =   0.200000000000000     
+ [           1 ] epsilon =   0.263000000000000     
+ [           1 ] nu_r =   2.841729826110000E-002
+ [           1 ] Geometry scheme:            1
+ [           1 ] Not making the local approximation
+ [           1 ] ---- Numerical parameters: ----
+ [           1 ] NpsiPerDiameter    =    1000.00000000000     
+ [           1 ] psiDiameter        =   0.253630202149000     
+ [           1 ] widthExtender      =   0.000000000000000E+000
+ [           1 ] Npsi               =          255
+ [           1 ] Ntheta             =           75
+ [           1 ] Nxi                =           24
+ [           1 ] NL                 =            4
+ [           1 ] Nx                 =            8
+ [           1 ] NxPotentialsPerVth =    30.0000000000000     
+ [           1 ] xMax               =    5.00000000000000     
+ [           1 ] solverTolerance    =   1.000000000000000E-005
+ [           1 ] xScaleFactor       =    1.00000000000000     
+ [           1 ] Psi derivative: centered finite differences, 5-point stencil
+ [           1 ] Theta derivative: centered finite differences, 5-point stencil
+ [           1 ] Using iterative solver
+ [           1 ] The matrix is     11017530 x    11017530  elements.
+ [           1 ] Processor            1  owns psi indices            1  to 
+           4
+ [           1 ] Processor           33  owns psi indices          129  to 
+         132
+ [           1 ] Processor           49  owns psi indices          193  to 
+         196
+ [           1 ] Processor           57  owns psi indices          225  to 
+         228
+ [           1 ] Processor            9  owns psi indices           33  to 
+          36
+ [           1 ] Processor           25  owns psi indices           97  to 
+         100
+ [           1 ] Processor           15  owns psi indices           57  to 
+          60
+ [           1 ] Processor           17  owns psi indices           65  to 
+          68
+ [           1 ] Processor            3  owns psi indices            9  to 
+          12
+ [           1 ] Processor           41  owns psi indices          161  to 
+         164
+ [           1 ] Processor           56  owns psi indices          221  to 
+         224
+ [           1 ] Processor           11  owns psi indices           41  to 
+          44
+ [           1 ] Processor           19  owns psi indices           73  to 
+          76
+ [           1 ] Processor            6  owns psi indices           21  to 
+          24
+ [           1 ] Processor           10  owns psi indices           37  to 
+          40
+ [           1 ] Processor           13  owns psi indices           49  to 
+          52
+ [           1 ] Processor           20  owns psi indices           77  to 
+          80
+ [           1 ] Processor           35  owns psi indices          137  to 
+         140
+ [           1 ] Processor            8  owns psi indices           29  to 
+          32
+ [           1 ] Processor           43  owns psi indices          169  to 
+         172
+ [           1 ] Processor           14  owns psi indices           53  to 
+          56
+ [           1 ] Processor           18  owns psi indices           69  to 
+          72
+ [           1 ] Processor           21  owns psi indices           81  to 
+          84
+ [           1 ] Processor           44  owns psi indices          173  to 
+         176
+ [           1 ] Processor           16  owns psi indices           61  to 
+          64
+ [           1 ] Processor           51  owns psi indices          201  to 
+         204
+ [           1 ] Processor           22  owns psi indices           85  to 
+          88
+ [           1 ] Processor           34  owns psi indices          133  to 
+         136
+ [           1 ] Processor           37  owns psi indices          145  to 
+         148
+ [           1 ] Processor           52  owns psi indices          205  to 
+         208
+ [           1 ] Processor           24  owns psi indices           93  to 
+          96
+ [           1 ] Processor           59  owns psi indices          233  to 
+         236
+ [           1 ] Processor           30  owns psi indices          117  to 
+         120
+ [           1 ] Processor           42  owns psi indices          165  to 
+         168
+ [           1 ] Processor           45  owns psi indices          177  to 
+         180
+ [           1 ] Processor            4  owns psi indices           13  to 
+          16
+ [           1 ] Processor           32  owns psi indices          125  to 
+         128
+ [           1 ] Processor           27  owns psi indices          105  to 
+         108
+ [           1 ] Processor           38  owns psi indices          149  to 
+         152
+ [           1 ] Processor           50  owns psi indices          197  to 
+         200
+ [           1 ] Processor           53  owns psi indices          209  to 
+         212
+ [           1 ] Processor           12  owns psi indices           45  to 
+          48
+ [           1 ] Processor           48  owns psi indices          189  to 
+         192
+ [           1 ] Processor           62  owns psi indices          245  to 
+         248
+ [           1 ] Processor           58  owns psi indices          229  to 
+         232
+ [           1 ] Processor           61  owns psi indices          241  to 
+         244
+ [           1 ] Processor           28  owns psi indices          109  to 
+         112
+ [           1 ] Processor           64  owns psi indices          253  to 
+         255
+ [           1 ] Processor           54  owns psi indices          213  to 
+         216
+ [           1 ] Processor            2  owns psi indices            5  to 
+           8
+ [           1 ] Processor            5  owns psi indices           17  to 
+          20
+ [           1 ] Processor           36  owns psi indices          141  to 
+         144
+ [           1 ] Processor           40  owns psi indices          157  to 
+         160
+ [           1 ] Processor           46  owns psi indices          181  to 
+         184
+ [           1 ] Processor           26  owns psi indices          101  to 
+         104
+ [           1 ] Processor           29  owns psi indices          113  to 
+         116
+ [           1 ] Processor           60  owns psi indices          237  to 
+         240
+ [           1 ] Processor           39  owns psi indices          153  to 
+         156
+ [           1 ] Processor           47  owns psi indices          185  to 
+         188
+ [           1 ] Processor           55  owns psi indices          217  to 
+         220
+ [           1 ] Processor            7  owns psi indices           25  to 
+          28
+ [           1 ] Processor           23  owns psi indices           89  to 
+          92
+ [           1 ] Processor           31  owns psi indices          121  to 
+         124
+ [           1 ] Processor           63  owns psi indices          249  to 
+         252
+ Beginning preallocation for whichMatrix =            0
+ Beginning preallocation for whichMatrix =            1
+ [           1 ] Time to pre-assemble preconditioner matrix: 
+   1.41193699836731       seconds.
+ [           1 ] Time to assemble preconditioner matrices: 
+  0.393822908401489       seconds.
+ Beginning preallocation for whichMatrix =            0
+ Beginning preallocation for whichMatrix =            1
+ [           1 ] Time to pre-assemble matrix:    1.81726694107056       seconds.
+ [           1 ] Time to assemble matrices:   0.482710123062134       seconds.
+ [           1 ] Proc          64 
+  is solving local kinetic equation at right boundary ...
+ [           1 ] Proc           1 
+  is solving local kinetic equation at left boundary ...
+  0 KSP Residual norm 7.969975555011e+00 
+  0 KSP Residual norm 1.456369241230e+01 
+  2 KSP Residual norm 1.562781715728e+00 
+  2 KSP Residual norm 4.750075258792e+00 
+  4 KSP Residual norm 7.642273741503e-01 
+  4 KSP Residual norm 3.415767209577e+00 
+  6 KSP Residual norm 6.098532702115e-01 
+  6 KSP Residual norm 1.351137762535e+00 
+  8 KSP Residual norm 1.976705438768e-01 
+  8 KSP Residual norm 1.003484245889e-01 
+ 10 KSP Residual norm 7.450255455552e-02 
+ 10 KSP Residual norm 2.064050053123e-03 
+ 12 KSP Residual norm 2.233854739700e-02 
+ 12 KSP Residual norm 2.462912248502e-03 
+ 14 KSP Residual norm 1.878599286205e-02 
+ 14 KSP Residual norm 1.096922445502e-03 
+ 16 KSP Residual norm 1.275810126197e-02 
+ 16 KSP Residual norm 2.192675867646e-04 
+ 18 KSP Residual norm 6.703303687296e-03 
+ 18 KSP Residual norm 1.387996220138e-04 
+ 20 KSP Residual norm 6.383077650679e-03 
+ 20 KSP Residual norm 4.880983108026e-05 
+ [           1 ] Done solving for right boundary.  Time to solve: 
+  0.495890140533447       seconds.
+ [           1 ] Solution at right boundary converged!  KSPConvergedReason = 
+           2
+ 22 KSP Residual norm 5.997094633694e-03 
+ 24 KSP Residual norm 1.049280408389e-03 
+ 26 KSP Residual norm 2.328868389416e-04 
+ 28 KSP Residual norm 9.316078216008e-05 
+ 30 KSP Residual norm 4.060066263127e-04 
+ 32 KSP Residual norm 7.133682728745e-06 
+ [           1 ] Done solving for left boundary.  Time to solve: 
+  0.647107839584351       seconds.
+ [           1 ] Solution at left boundary converged!  KSPConvergedReason = 
+           2
+ [           1 ] Using mumps to factorize the preconditioner.
+ [           1 ] # of nonzeros in matrix:   608679267 
+ , # of nonzeros in preconditioner:   275635460 , ratio:  0.452841874109703     
+ [           1 ] Beginning the main solve.  This could take a while ...

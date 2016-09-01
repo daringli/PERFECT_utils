@@ -24,3 +24,8 @@ perfect_1d_plot(dirlist,attribs,same_plot=True,ylabels=ylabels,outputname="ddx_i
 attribs=["deltaEta","deltaN","deltaT","U"]
 ylabels=[r"$\delta_\eta$",r"$\delta_n$",r"$\delta_T$",r"$U$"]
 perfect_1d_plot(dirlist,attribs,same_plot=True,ylabels=ylabels,outputname="deltas",xattr="actual_psiN",xlims=[0.84,1.11],hlines=[0],vlines=vlines,generic_labels=False,lg=False)
+
+
+attribs=["psiAHatArray"]
+ylabels=[r"$dh/ds$"]
+perfect_1d_plot(dirlist,attribs,same_plot=True,ylabels=ylabels,outputname="psiAHatArray",xattr="actual_psiN",xlims=[0.84,1.11],hlines=[0],vlines=vlines,generic_labels=False,lg=False)
