@@ -630,6 +630,10 @@ class perfect_simulation(object):
     def conductive_heat_flux_sum(self):
         return numpy.sum(self.conductive_heat_flux,axis=1)
 
+    @property
+    def conductive_heat_flux_sum_over_ne(self):
+        return numpy.sum(self.conductive_heat_flux,axis=1)/(self.nHat[:,-1]**2)
+
     
     @property
     def momentum_flux_sum(self):
