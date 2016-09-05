@@ -554,7 +554,7 @@ def generate_n_from_eta_X_profile(etaHat,X,detaHatds,dXds,Z):
     dnHatdpsi=lambda x : detaHatds(x)*X(x)**Z + etaHat(x)*Z*X(x)**(Z-1)*dXds(x)
     return (nHat,dnHatdpsi)
 
-def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,oldsameflux=False,sameeta=False,samefluxshift=0,specialEta=False,psiDiamFact=5,transitionFact=0.2,dxdpsiN=1,midShift=0,upShift_denom=3.0,m2tanh=False,mode="const_Phi",**kwargs):
+def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,oldsameflux=False,sameeta=False,samefluxshift=0,specialEta=False,psiDiamFact=5,transitionFact=0.2,dxdpsiN=1,midShift=0,upShift_denom=3.0,m2tanh=False,mode="const_Phi",leftBoundaryShift=0.0,rightBoundaryShift=0.0,**kwargs):
     #NOTE: uses the dx/dpsi at minor radius for both core and SOL, which assumes that
     #simulated region is small enough that it doesn't change much.
     e=scipy.constants.e
@@ -617,10 +617,8 @@ def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,ol
     #2015-12-16: -psiN_ped_width/3.0 was the old default.
     upShift=-psiN_ped_width/upShift_denom
 
-    leftBoundaryShift=0.0
-    rightBoundaryShift=0.0
-
-    update_domain_size(simul,psiN_ped_width,midShift,psiDiamFact,leftBoundaryShift,rightBoundaryShift=rightBoundaryShift)
+    
+    update_domain_size(simul,psiN_ped_width,midShift,psiDiamFact,leftBoundaryShift,rightBoundaryShift)
     (Delta,omega) = update_Delta_omega(simul)
 
     #these things do not depend on whether the grid is uniform or nonuniform

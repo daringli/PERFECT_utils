@@ -78,20 +78,37 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
     color_index=0
 
     local=[simul.local for simul in simulList]
+    noddpsi=[simul.no_ddpsi for simul in simulList]
+    
     if lg:
-        colors=cm(numpy.linspace(0,1,len(simulList)-sum(local)))
-        for loc in local:
-            all_linecolors.append(colors[color_index])
-            if loc == True:
-                color_index=color_index+1
+        colors=cm(numpy.linspace(0,1,len(simulList)-sum(local)-sum(noddpsi)))
+        if sum(local)>0:
+            #if we have local simulations, increment color after them
+            for loc in local:
+                all_linecolors.append(colors[color_index])
+                if loc == True:
+                    color_index=color_index+1
+        elif sum(noddpsi)>0:
+            #otherwise, increment color after noddpsi simulation
+            for nd in noddpsi:
+                all_linecolors.append(colors[color_index])
+                if nd == True:
+                    color_index=color_index+1
+        else:
+            #else, always increment
+            all_linecolors=cm(numpy.linspace(0,1,len(simulList)))
     else:
+        # force always increment behavior
         all_linecolors=cm(numpy.linspace(0,1,len(simulList)))
 
     if linestyles == None:
         linestyles=[] #linestyles generated from local or global
-        for l in local:
+        for n,l in zip(noddpsi,local):
+            # local overrides noddpsi in code as well
             if l:
                 linestyles=linestyles+["dashed"]
+            elif n:
+                linestyles=linestyles+["dashdot"]
             else:
                 linestyles=linestyles+["solid"]
     

@@ -107,7 +107,8 @@ class perfect_simulation(object):
         
         
         self.local_name="makeLocalApproximation"
-
+        self.include_ddpsi_name= "includeddpsiTerm"
+        
         self.Npsi_sourceless_right_name = "NpsiSourcelessRight"
         self.Npsi_sourceless_left_name = "NpsiSourcelessLeft"
         
@@ -467,6 +468,23 @@ class perfect_simulation(object):
         else:
             print "perfect_simulation: error: makeLocalApproximation is neither true nor false!?"
 
+    @property
+    def no_ddpsi(self):
+        try:
+            ddpsi=self.outputs[self.group_name+self.include_ddpsi_name][()]
+        except (KeyError,TypeError):
+            if self.inputs.includeddpsiTerm:
+                ddpsi = 1
+            else:
+                ddpsi = -1
+        if ddpsi == -1:
+            return True
+        elif ddpsi == 1:
+            return False
+        else:
+            print "perfect_simulation: error: includeddpsiTerm is neither true nor false!?"
+
+            
     @property
     def Npsi_sourceless_right(self):
         try:
