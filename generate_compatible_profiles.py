@@ -320,7 +320,8 @@ def generate_T_profiles_sameflux(nt,nb,breakpoint_shift,**kwargs):
     TpedGrads=numpy.array(TpedGrads)
     
     if mtanh:
-        (THats[main_index],dTHatdss[main_index]) = match_heat_flux_proxy(Tpeds[main_index],TCoreGrads[main_index],TpedGrads[main_index],TSOLGrads[main_index],psiMaxPed-psiMinPed,psiMinPed,nt,nb,psiMin,psiMax)
+        transition_length = 1*(psiMaxPed-psiMinPed)
+        (THats[main_index],dTHatdss[main_index]) = match_heat_flux_proxy(Tpeds[main_index],TCoreGrads[main_index],TpedGrads[main_index],TSOLGrads[main_index],transition_length,psiMinPed,nt,nb,psiMin,psiMax)
         (core,ped,sol,ddx_core,ddx_ped,ddx_sol) = extrapolate_m2tanh_sections(THats[main_index],dTHatdss[main_index],psiMin,psiMinPed,psiMaxPed,psiMax)
         
         TiHatPed = ped

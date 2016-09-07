@@ -103,6 +103,8 @@ class perfect_subplot:
         if dimensions==1:
             #going to visualize 1D data
             self.dimensions=1
+            print "111"
+            print data
 
             #split 2D array into list of 1D arrays
             self.data=array2D_to_array_list(data,data_otheraxis)
@@ -112,6 +114,8 @@ class perfect_subplot:
             data_lineaxis=data_otheraxis
 
             #kwarg needed to intepret x, which can be a list of arrays here
+            print "222"
+            print self.data
             x_xaxis=kwarg_default("x_xaxis",0,**kwargs)
             x_lineaxis=(x_xaxis+1)%2
             
