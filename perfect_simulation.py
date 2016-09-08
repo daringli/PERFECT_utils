@@ -596,6 +596,21 @@ class perfect_simulation(object):
         return self.heat_flux-(5.0/2.0)*self.THat*self.particle_flux
 
     @property
+    def q_max(self):
+        #species wise maximum in q
+        q=self.conductive_heat_flux
+        imax=numpy.argmax(numpy.fabs(q),axis=0)
+        return numpy.array([q[im,i] for i,im in enumerate(imax)])
+
+    @property
+    def q_max_psiN(self):
+        #species wise psiN location of maximum in q
+        q=self.conductive_heat_flux
+        imax=numpy.argmax(numpy.fabs(q),axis=0)
+        return self.actual_psiN[imax]
+    
+    
+    @property
     def conductive_heat_flux_psi_unit_vector(self):        
         return self.heat_flux_psi_unit_vector-(5.0/2.0)*self.THat*self.particle_flux_psi_unit_vector
 

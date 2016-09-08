@@ -153,13 +153,14 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
                 p_subplot.linewidths=[p_subplot.linewidths]*len(y)
             for i in range(len(y)):
                 try:
-                    ax.plot(x[i],y[i],linestyle=p_subplot.linestyles[i],color=p_subplot.colors[i],linewidth=p_subplot.linewidths[i],marker=p_subplot.markers[i])
+                    ax.plot(x[i],y[i],linestyle=p_subplot.linestyles[i],color=p_subplot.colors[i],linewidth=p_subplot.linewidths[i],marker=p_subplot.markers[i],fillstyle=p_subplot.fillstyles[i])
                 except IndexError:
                     print "Index error in ax.plot(). Most likely, linestyles, linewidths and colors have the wrong lengths."
                     print "len(colors): " + str(len(p_subplot.colors))
                     print "len(linestyles): " + str(len(p_subplot.linestyles))
                     print "len(linewidths): " + str(len(p_subplot.linewidths))
                     print "len(markers): " + str(len(p_subplot.markers))
+                    print "len(fillstyles): " + str(len(p_subplot.fillstyles))
                     print "len(x): " + str(len(x))
                     print "len(y): " + str(len(y))
             ax.yaxis.set_label_coords(-0.15, 0.5)            

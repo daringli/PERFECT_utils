@@ -28,7 +28,6 @@ class perfect_subplot:
         data_xaxis=kwarg_default("data_xaxis",0,**kwargs)
         data_otheraxis=(data_xaxis+1)%2
 
-            
         #use rank of input data to try to determine dimensions
         #and reshape appropriately
         rank=arraylist_rank(data)
@@ -103,9 +102,7 @@ class perfect_subplot:
         if dimensions==1:
             #going to visualize 1D data
             self.dimensions=1
-            print "111"
-            print data
-
+            
             #split 2D array into list of 1D arrays
             self.data=array2D_to_array_list(data,data_otheraxis)
             #print  self.data
@@ -114,8 +111,6 @@ class perfect_subplot:
             data_lineaxis=data_otheraxis
 
             #kwarg needed to intepret x, which can be a list of arrays here
-            print "222"
-            print self.data
             x_xaxis=kwarg_default("x_xaxis",0,**kwargs)
             x_lineaxis=(x_xaxis+1)%2
             
@@ -160,6 +155,7 @@ class perfect_subplot:
             self.hidden_yticklabels=kwarg_default("hidden_yticklabels",[0,-1],**kwargs)
             self.linestyles=kwarg_default("linestyles",["solid"]*len(x),**kwargs)
             self.markers=kwarg_default("markers",[""]*len(x),**kwargs)
+            self.fillstyles=kwarg_default("fillstyles",["full"]*len(x),**kwargs)
             self.linewidths=kwarg_default("linewidths",[1]*len(x),**kwargs)
             self.colors=kwarg_default("colors",["k"]*len(x),**kwargs)
 
