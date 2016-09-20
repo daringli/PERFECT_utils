@@ -16,7 +16,7 @@ import numpy
 import sys
 
 
-def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",cm=cm.rainbow,lg=True,xlims=[90,100],ylims=[0,2],species=True,sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[],skip_species = []):
+def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",cm=cm.rainbow,lg=True,xlims=[90,100],ylims=[0,2],species=True,sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[],skip_species = [],simulList=None):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -25,11 +25,15 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
     
     if type(attribs) is not list:
         attribs=[attribs]
+
+    if simulList == None:
+        normlist=[x + "/" + normname for x in dirlist]
+        specieslist=[x + "/" + speciesname for x in dirlist]
+        psiN_to_psiList=[x + "/" + psiN_to_psiname for x in dirlist]
+        simulList=perfect_simulations_from_dirs(dirlist,normlist,specieslist,psiN_to_psiList)
+    else:
+        "p_2d_plot: simulList specified externally, ignoring dirlist, etc."
     
-    normlist=[x + "/" + normname for x in dirlist]
-    specieslist=[x + "/" + speciesname for x in dirlist]
-    psiN_to_psiList=[x + "/" + psiN_to_psiname for x in dirlist]
-    simulList=perfect_simulations_from_dirs(dirlist,normlist,specieslist,psiN_to_psiList)
 
     #if we translate species labels to generic ion and impurity labels
     #we still need to use original species for sorting preferences

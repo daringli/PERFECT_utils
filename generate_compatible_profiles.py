@@ -17,6 +17,7 @@ from set_species_param import set_species_param
 
 from mtanh import generate_m2tanh_profile, extrapolate_m2tanh_sections, match_heat_flux_proxy, derivative_m3tanh_transition
 from generate_nonuniform_grid import generate_nonuniform_grid_Int_arctan
+from global_multiplier import generate_global_multiplier
 
 #for debugging purposes
 import matplotlib.pyplot as plt
@@ -77,6 +78,7 @@ def write_outputs(simul,THats,dTHatdss,nHats,dnHatdss,etaHats,detaHatdss,PhiHat,
     s = simul.psi
     #psi(s)
     psi = psi(s)
+    psiN = psi/simul.psiAHat
     #dpsi_ds(s)
     dhds = dpsi_ds(s)
     
@@ -96,7 +98,10 @@ def write_outputs(simul,THats,dTHatdss,nHats,dnHatdss,etaHats,detaHatdss,PhiHat,
     dTHatdss =dTHatdss * dhds
     dnHatdss = dnHatdss * dhds
     detaHatdss = detaHatdss * dhds
-    
+
+    #if we need to generate a global term multiplier, we do so here.
+    if simul.inputs.useGlobalTermMultiplier == 1:
+        generate_global_multiplier("globalTermMultiplier.h5",psi,Delta=1/500,delta_a=0.1,delta_b=0.1,c=0.1)
     
     # Write profiles
     #print simul.input_dir+"/"+simul.inputs.profilesFilename

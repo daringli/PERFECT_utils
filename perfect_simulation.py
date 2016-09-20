@@ -65,7 +65,10 @@ class perfect_simulation(object):
         self.num_species_name="Nspecies"
         self.heat_source_name="heatSourceProfile"
         self.particle_source_name="particleSourceProfile"
-
+        self.no_charge_source_name="noChargeSource"
+        self.no_charge_source_momentum_source_name="noChargeSourceMomentumSourceProfile"
+        
+        
         self.flow_name="flow"
         self.toroidal_flow_name="toroidalFlow"
         self.poloidal_flow_name="poloidalFlow"
@@ -525,6 +528,14 @@ class perfect_simulation(object):
     @property
     def particle_flux_before_theta_integral(self):
         return self.outputs[self.group_name+self.particle_flux_before_theta_integral_name][()]
+
+    @property
+    def pedestal_particle_flux_of_theta(self,psiN=0.96):
+        return self.attrib_at_psi_of_theta(self.particle_flux_before_theta_integral,psiN)
+
+    @property
+    def core_particle_flux_of_theta(self,psiN=0.90):
+        return self.attrib_at_psi_of_theta(self.particle_flux_before_theta_integral,psiN)
     
     @property
     def particle_flux_test(self):
@@ -753,6 +764,20 @@ class perfect_simulation(object):
         #for comparrison with dQHat/dPsiN
         VPrimeHat=numpy.fabs(self.VPrimeHat)
         return -self.THat**(5./2.)*self.psiAHat*numpy.expand_dims(VPrimeHat,axis=1)*numpy.sqrt(numpy.pi)/(2*self.Delta*self.masses**2)*(5*self.particle_source + 3*self.heat_source) -((2*self.omega/self.Delta)*self.Z*numpy.expand_dims(self.dPhiHatdpsiN,axis=1) + (5./2.)*self.dTHatdpsiN)*self.particle_flux
+
+    @property
+    def noChargeSource(self):
+        try:
+            return self.outputs[self.group_name+self.no_charge_source_name][()]    
+        except KeyError:
+            return 0
+        
+    @property
+    def no_charge_source_momentum_source(self):
+        if self.noChargeSource == 1:
+            return self.outputs[self.group_name+self.no_charge_source_momentum_source_name][()]
+        else:
+            return numpy.nan*numpy.ones([self.Npsi,self.Nspecies])
 
     @property
     def FSAFlow(self):
@@ -1279,18 +1304,17 @@ class perfect_simulation(object):
         return self.ddpsiN(self.THat,order=4)
 
     @property
-    def alpha(self):
-        #Zeff-Zmain
-        if self.num_species>2:
-            electron_index=self.species_list.index("e")
-            Z=self.Z
-            Z[electron_index]=0 # to exclude electrons from calculation
-            return numpy.sum(Z**2*self.nHat,axis=1)/numpy.sum(Z*self.nHat,axis=1)-Z[0]
-        else:
-            print "perfect_simulation: alpha: warning: no impurity species. alpha=Zeff-Z_main set to zero."
-            return [0]*len(self.psi)
+    def Zeff(self):
+        electron_index=self.species_list.index("e")
+        Z=self.Z
+        Z[electron_index]=0 # to exclude electrons from calculation
+        return numpy.sum(Z**2*self.nHat,axis=1)/numpy.sum(Z*self.nHat,axis=1)
 
-
+    @property
+    def alpha(self,main_index=0):
+        print "perfect_simulation: warning: alpha: Assumes main species has index " + str(main_index)
+        self.Zeff - self.Z[main_index]
+        
     @property
     def source_charge(self):
         return numpy.sum(self.Z*self.GammaHat_source,axis=1)
