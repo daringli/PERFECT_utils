@@ -11,6 +11,10 @@ new_grid_filename_base = 'psiAHat.h5'
 old_grid_filename_base = 'psiAHat.h5_old'
 
 
+new_C_filename_base = 'globalTermMultiplier.h5'
+old_C_filename_base = 'globalTermMultiplier.h5_old'
+
+
 
 
 abs_precision = "0.000001"
@@ -36,6 +40,10 @@ for dir in subdirs:
 
     new_grid_filename = os.path.join(dir,new_grid_filename_base)
     old_grid_filename = os.path.join(dir,old_grid_filename_base)
+
+    new_C_filename = os.path.join(dir,new_C_filename_base)
+    old_C_filename = os.path.join(dir,old_C_filename_base)
+    
     
     print seperator + " dir: " + dir + " " + seperator
 
@@ -44,7 +52,10 @@ for dir in subdirs:
     subprocess.call(["rm",new_profile_filename])
     print ">removing " + new_grid_filename
     subprocess.call(["rm",new_grid_filename])
+    print ">removing " + new_C_filename
+    subprocess.call(["rm",new_C_filename])
 
+    
     print ">generating " + new_profile_filename
     subprocess.call(["python","generate_profiles.py"],cwd=dir)
     
@@ -63,7 +74,16 @@ for dir in subdirs:
             print "*DIFFERENCES FOUND!*"
             differences += 1
             dirs_with_differences.append(dir)
-        
+
+    #check globalTermMultiplier.h5
+    if os.path.isfile(old_C_filename):
+        print cmd + " " + difftype + " " + abs_precision + " " + new_C_filename_base + " " + old_C_filename_base +":"
+        out = subprocess.call([cmd, difftype,abs_precision,new_C_filename,old_C_filename])
+        if out != 0:
+            print "*DIFFERENCES FOUND!*"
+            differences += 1
+            dirs_with_differences.append(dir)
+
 
 print seperator
 

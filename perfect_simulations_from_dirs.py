@@ -4,7 +4,7 @@ from perfect_simulation import perfect_simulation,normalized_perfect_simulation
 
 sentinel=object()
 
-def perfect_simulations_from_dirs(dirlist,normlist,species,psiN_to_psi=sentinel):
+def perfect_simulations_from_dirs(dirlist,normlist,species,psiN_to_psi=sentinel,global_term_multiplier=sentinel):
     #for now, assumes that the simulations have been previously finished
     if type(normlist) is not list:
         normlist=[normlist]*len(dirlist)
@@ -13,6 +13,9 @@ def perfect_simulations_from_dirs(dirlist,normlist,species,psiN_to_psi=sentinel)
     if psiN_to_psi != sentinel:
         if type(psiN_to_psi) is not list:
             psiN_to_psi=[psiN_to_psi]*len(dirlist)
+    if  global_term_multiplier != sentinel:
+        if type(global_term_multiplier) is not list:
+            global_term_multiplier=[global_term_multiplier]*len(dirlist)
             
 
     input="input.namelist"
@@ -29,10 +32,16 @@ def perfect_simulations_from_dirs(dirlist,normlist,species,psiN_to_psi=sentinel)
             psiN_to_psi_filename = psiN_to_psi[i]
         else:
             psiN_to_psi_filename = None
-        print psiN_to_psi_filename
-        print species_filename
+        if global_term_multiplier != sentinel:
+            global_term_multiplier_filename = global_term_multiplier[i]
+        else:
+            global_term_multiplier_filename = None
         
-        simuls.append(normalized_perfect_simulation(input_filename,norm_filename,species_filename,output_filename,psiN_to_psi_filename))
+        print species_filename
+        print psiN_to_psi_filename
+        print global_term_multiplier_filename
+        
+        simuls.append(normalized_perfect_simulation(input_filename,norm_filename,species_filename,output_filename,psiN_to_psi_filename,global_term_multiplier_filename))
         simuls[i].description=dir
         #simuls[i].species=species
         i=i+1

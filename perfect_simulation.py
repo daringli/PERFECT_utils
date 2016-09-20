@@ -24,7 +24,7 @@ sentinel=object() #to detect default inputs
 
 class perfect_simulation(object):
 
-    def __init__(self,input_filename,output_filename=sentinel,species_filename=sentinel,psiN_to_psi_filename=sentinel,group_name=sentinel,pedestal_points=[]):
+    def __init__(self,input_filename,output_filename=sentinel,species_filename=sentinel,psiN_to_psi_filename=sentinel,global_term_multiplier_filename=sentinel,group_name=sentinel,pedestal_points=[]):
         
         #description of simulation, for usage as legend in plots, etc.
         self.description=""
@@ -131,6 +131,10 @@ class perfect_simulation(object):
 
         #can have no psiN_to_psi, if uniform grid.
         self.psiN_to_psi = psiN_to_psi_filename
+
+        #can have no global_term_multiplier, if useGlobalTermMultiplier is 0.
+        self.global_term_multiplier = global_term_multiplier_filename
+        
         
         #where the pedestal starts and stops
         self.pedestal_points=pedestal_points
@@ -231,11 +235,38 @@ class perfect_simulation(object):
             self.psiAHatArray = numpy.array([self.psiAHat]*self.Npsi)
             self.actual_psi = self.psiAHat*self.psi
             self.actual_psiN = self.psi
-        print 
-            
-            
-                
 
+    @property
+    def global_term_multiplier(self):
+        return self.global_term_multiplier_profile
+
+    @global_term_multiplier.setter
+    def global_term_multiplier(self,global_term_multiplier_filename):
+        try:
+            self.inputs.useGlobalTermMultiplier
+        except AttributeError:
+            self.inputs.useGlobalTermMultiplier=0
+            
+        if self.inputs.useGlobalTermMultiplier==1:
+            if (global_term_multiplier_filename==sentinel) or (global_term_multiplier_filename==None):
+                self.global_term_multiplier_filename=None
+                self.global_term_multiplier_profile=None
+                self.global_term_multiplier_dir=self.input_dir
+                self.global_term_multiplier_filename_nodir =None
+            else:
+                self.global_term_multiplier_filename="." + "/" + global_term_multiplier_filename
+                self.global_term_multiplier_dir = self.global_term_multiplier_filename.rsplit('/',1)[:-1][0]
+                self.global_term_multiplier_filename_nodir = "." + "/" + self.global_term_multiplier_filename.rsplit('/',1)[-1]
+                self.global_term_multiplier_groupname="/Npsi"+str(self.inputs.Npsi)+"/"
+                if os.path.isfile(self.global_term_multiplier_filename):
+                    self.global_term_multiplier_file=h5py.File(global_term_multiplier_filename,'r')
+                    self.global_term_multiplier_profile = self.global_term_multiplier_file[self.global_term_multiplier_groupname+"globalTermMultiplier"][()]
+                else:
+                    print "Error: perfect_simulation: global_term_multiplier cannot be read, file "+ global_term_multiplier_filename +" does not exist!"
+                    sys.exit(1)
+        elif self.inputs.useGlobalTermMultiplier==0:
+            self.global_term_multiplier_profile = numpy.array([1.0]*self.Npsi)
+            
     def always_run_simulation(self,cmdline):
         print "Starting:\n>>"+cmdline+"\nin directory '"+self.input_dir+"'"      
         simulation = subprocess.Popen(
@@ -1746,8 +1777,8 @@ class perfect_simulation(object):
 #####################################
 
 class normalized_perfect_simulation(perfect_simulation):
-    def __init__(self,input_filename,norm_filename,species_filename=sentinel,output_filename=sentinel,psiN_to_psi_filename=sentinel,group_name=sentinel,pedestal_points=[]):
-        perfect_simulation.__init__(self,input_filename,output_filename,species_filename,psiN_to_psi_filename,group_name,pedestal_points)
+    def __init__(self,input_filename,norm_filename,species_filename=sentinel,output_filename=sentinel,psiN_to_psi_filename=sentinel,global_term_multiplier_filename=sentinel,group_name=sentinel,pedestal_points=[]):
+        perfect_simulation.__init__(self,input_filename,output_filename,species_filename,psiN_to_psi_filename,global_term_multiplier_filename,group_name,pedestal_points)
 
         self.norm=norm_filename
 
