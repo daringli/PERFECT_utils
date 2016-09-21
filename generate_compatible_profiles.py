@@ -101,7 +101,7 @@ def write_outputs(simul,THats,dTHatdss,nHats,dnHatdss,etaHats,detaHatdss,PhiHat,
 
     #if we need to generate a global term multiplier, we do so here.
     if simul.inputs.useGlobalTermMultiplier == 1:
-        generate_global_multiplier("globalTermMultiplier.h5",psi,Delta=1/500,delta_a=0.1,delta_b=0.1,c=0.1)
+        generate_global_multiplier("globalTermMultiplier.h5",psi,Delta=1/200.0,delta_a=0.04,delta_b=0.04,c=0.1)
     
     # Write profiles
     #print simul.input_dir+"/"+simul.inputs.profilesFilename
