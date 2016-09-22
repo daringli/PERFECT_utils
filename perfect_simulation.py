@@ -67,7 +67,7 @@ class perfect_simulation(object):
         self.particle_source_name="particleSourceProfile"
         self.no_charge_source_name="noChargeSource"
         self.no_charge_source_momentum_source_name="noChargeSourceMomentumSourceProfile"
-        
+        self.no_charge_source_particle_source_name="noChargeSourceParticleSourceProfile"
         
         self.flow_name="flow"
         self.toroidal_flow_name="toroidalFlow"
@@ -805,10 +805,19 @@ class perfect_simulation(object):
         
     @property
     def no_charge_source_momentum_source(self):
-        if self.noChargeSource == 1:
+        try:
             return self.outputs[self.group_name+self.no_charge_source_momentum_source_name][()]
-        else:
+        except KeyError:
             return numpy.nan*numpy.ones([self.Npsi,self.Nspecies])
+
+    @property
+    def no_charge_source_particle_source(self):
+        try:
+            return self.outputs[self.group_name+self.no_charge_source_particle_source_name][()]
+        except KeyError:
+            return numpy.nan*numpy.ones([self.Npsi,self.Nspecies])
+
+        
 
     @property
     def FSAFlow(self):
