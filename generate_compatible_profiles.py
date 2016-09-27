@@ -12,6 +12,7 @@ import os
 from nu_r import nu_r #nu_r
 from coulomb_logarithms import lambda_ee as coulombLog #lambda=ln(Lambda)
 from perfectProfilesFile import perfectProfiles
+from perfectGlobalMultiplierProfileFile import create_globalMultiplier_of_Npsi
 
 from set_species_param import set_species_param
 
@@ -29,8 +30,8 @@ verbose=False
 # GLOBAL VARIABLES
 psiMinPed = None #pedestal start in psiN
 psiMaxPed = None #pedestal end in psiN
-psiMin = None #pedestal start in psiN
-psiMax = None #pedestal end in psiN
+psiMin = None #domain start in psiN
+psiMax = None #domain end in psiN
 Nspecies = None
 mtanh = None
 species = None
@@ -74,7 +75,7 @@ def sample_funclist(f_i,x):
     return numpy.array(f_ij)
     
 
-def write_outputs(simul,THats,dTHatdss,nHats,dnHatdss,etaHats,detaHatdss,PhiHat,dPhiHatds,psi,dpsi_ds):
+def write_outputs(simul,THats,dTHatdss,nHats,dnHatdss,etaHats,detaHatdss,PhiHat,dPhiHatds,psi,dpsi_ds,C):
     s = simul.psi
     #psi(s)
     psi = psi(s)
@@ -101,7 +102,8 @@ def write_outputs(simul,THats,dTHatdss,nHats,dnHatdss,etaHats,detaHatdss,PhiHat,
 
     #if we need to generate a global term multiplier, we do so here.
     if simul.inputs.useGlobalTermMultiplier == 1:
-        generate_global_multiplier("globalTermMultiplier.h5",psi,Delta=1/200.0,delta_a=0.04,delta_b=0.04,c=0.1)
+        C = numpy.transpose(sample_funclist(C,psi))
+        create_globalMultiplier_of_Npsi("globalTermMultiplier.h5",Npsi,C)  
     
     # Write profiles
     #print simul.input_dir+"/"+simul.inputs.profilesFilename
@@ -758,10 +760,23 @@ def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,ol
 
     #get psiN, dpsiN_ds that maps from uniform grid to physical psi
     (psi,dpsi_ds) = get_psiN(nonuniform,simul,**kwargs)
-
+    if simul.inputs.useGlobalTermMultiplier == 1:
+        multiplier_delta_a = kwargs["multiplier_transition_shift"]
+        multiplier_delta_b = multiplier_delta_a
+        multiplier_c = kwargs["multiplier_edge_value"]
+        multiplier_Delta = kwargs["multiplier_transition_length"]
+        #multiplier_delta_a = 0.04
+        #multiplier_delta_b = 0.04
+        #multiplier_c =0.1
+        #multiplier_Delta = 1/200.0
+        C=generate_global_multiplier(psiMin,psiMax,Delta=multiplier_Delta,delta_a=multiplier_delta_a,delta_b=multiplier_delta_b,c=multiplier_c)
+    else:
+        C=lambda x: 1.0 + 0*x
+    
+    
     #sample profiles at physical psi
     #rescale derivatives from physical psi to internal uniform grid
-    write_outputs(simul,THats,dTHatdss,nHats,dnHatdss,etaHats,detaHatdss,PhiHat,dPhiHatds,psi,dpsi_ds)
+    write_outputs(simul,THats,dTHatdss,nHats,dnHatdss,etaHats,detaHatdss,PhiHat,dPhiHatds,psi,dpsi_ds,C)
 
 ##########################################################
 # generate_compatible_profiles_constant_ne

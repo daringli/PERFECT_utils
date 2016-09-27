@@ -29,17 +29,17 @@ def generate_smooth_upshifted_characteristic(Delta,a,b,delta_a,delta_b,c):
     d1 = 1-d2*chi(middle)
     return lambda x: d1 + d2*chi(x)
 
-def generate_global_multiplier(globalTermMultiplierFilename,psiN,Delta=1/500,delta_a=0.1,delta_b=0.1,c=0.1):
+def generate_global_multiplier(a,b,Delta=1/500,delta_a=0.1,delta_b=0.1,c=0.1):
     #psiN: the actual psiN (or psi, normalizations do not matter), as an array.
-    a=psiN[0]
-    b=psiN[-1]
+    #globalTermMultiplierFilename,psiN
+    #a=psiN[0]
+    #b=psiN[-1]
     width = b - a
-    Npsi = len(psiN)
     Delta = Delta * width
     delta_a = delta_a * width
     delta_b = delta_b * width
     C=generate_smooth_upshifted_characteristic(Delta,a,b,delta_a,delta_b,c)
-    create_globalMultiplier_of_Npsi(globalTermMultiplierFilename,Npsi,C(psiN))
+    #create_globalMultiplier_of_Npsi(globalTermMultiplierFilename,Npsi,C(psiN))
     return C
     
 if __name__=="__main__":
