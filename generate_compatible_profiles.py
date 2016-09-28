@@ -636,7 +636,7 @@ def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,ol
     psiMid = simul.inputs.psiMid
     psiMin = simul.inputs.psiMin
     psiMax = simul.inputs.psiMax
-
+    
     #start and stop pedestal in physical psiN
     psiMinPed=psiMid-psiN_ped_width/2.0
     psiMaxPed=psiMid+psiN_ped_width/2.0+upShift

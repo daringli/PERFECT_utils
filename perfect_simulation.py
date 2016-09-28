@@ -547,8 +547,11 @@ class perfect_simulation(object):
             
     @property
     def Z(self):
-        return numpy.array(self.inputs.charges)
-
+        Z =numpy.array(self.inputs.charges)
+        if Z.shape == ():
+            Z.shape = (1,)
+        return Z
+    
     @property
     def particle_flux(self):
         VPrimeHat=[self.VPrimeHat]
@@ -1198,9 +1201,11 @@ class perfect_simulation(object):
 
     @property
     def masses(self):
-        #print repr(self.inputs.masses)
-        return numpy.array(self.inputs.masses)
-    
+        m= numpy.array(self.inputs.masses)
+        if m.shape == ():
+            m.shape = (1,)
+        return m
+        
     @property
     def THat(self):
         try:
