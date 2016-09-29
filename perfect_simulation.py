@@ -389,7 +389,33 @@ class perfect_simulation(object):
                 print "ERROR: perfect_simulation.ddpsiN: rank 1 array badly shaped."
                 sys.exit(1)
             
-            
+
+    def internal_grid_fft(self,attrib,interval=None,use_internal_grid_4_interval=False):
+        # this function simply ffts an attribute in interval, disregarding nonuniform sampling
+        # this is useful for uniform grid simulations,
+        # or to quantify grid-scale oscillations and other numerical errors on the internal uniform grid.
+        if interval != None:
+            s1 = interval[0]
+            s2 = interval[1]
+            if use_internal_grid_4_interval == True:
+                #intepret interval as specified on internal grid
+                s = self.psiN
+            else:
+                #intepret interval as specified on physical grid
+                s = self.actual_psiN
+            indices=get_index_range(s,[s1,s2],ret_range=False)
+        else:
+            indices = [0,self.Npsi]
+        
+        if type(attrib) == str:
+            a=getattr(self,attrib)[indices[0]:indices[1]]
+        else:
+            a=attrib[indices[0]:indices[1]]
+        fft=numpy.fft.rfft(a,axis=0)
+        N=len(fft[:,0])
+        fft=numpy.abs(fft)/float(N)
+        return fft
+                
     def attrib_at_psi_of_theta(self,attrib,psiN):
         indices=get_index_range(self.actual_psiN,[psiN,psiN],ret_range=False)
         if type(attrib) == str:
@@ -560,6 +586,10 @@ class perfect_simulation(object):
         return self.outputs[self.group_name+self.particle_flux_name][()]*signOfVPrimeHat
 
     @property
+    def particle_flux_fft(self):
+        return self.internal_grid_fft(self.particle_flux)
+
+    @property
     def particle_flux_before_theta_integral(self):
         return self.outputs[self.group_name+self.particle_flux_before_theta_integral_name][()]
 
@@ -639,6 +669,10 @@ class perfect_simulation(object):
     @property
     def conductive_heat_flux(self):        
         return self.heat_flux-(5.0/2.0)*self.THat*self.particle_flux
+
+    @property
+    def conductive_heat_flux_fft(self):
+        return self.internal_grid_fft(self.conductive_heat_flux)
 
     @property
     def q_max(self):

@@ -113,7 +113,7 @@ class perfect_subplot:
             #kwarg needed to intepret x, which can be a list of arrays here
             x_xaxis=kwarg_default("x_xaxis",0,**kwargs)
             x_lineaxis=(x_xaxis+1)%2
-            
+
             if type(arraylist_rank(x)) is not list:
                 if arraylist_rank(x) == 1:
                     if all(len(x) != len(self.data[i]) for i in range(len(self.data))):

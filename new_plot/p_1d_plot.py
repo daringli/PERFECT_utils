@@ -20,7 +20,7 @@ from mpldatacursor import datacursor
 
 
 
-def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,markers=None,linestyles=None,xlims=[0.9,1.0],same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[],interactive=False):
+def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,markers=None,linestyles=None,xlims=None,same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[],interactive=False):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -152,7 +152,17 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                     x_scale=1/numpy.pi
                 else:
                     x_scale=1
-                x=[getattr(simul,xattr)*x_scale for simul in simulList if s in simul.species]
+                if xattr != None:
+                    x=[getattr(simul,xattr)*x_scale for simul in simulList if s in simul.species]
+                else:
+                    # If xattrib is None, we plot against the index of the data
+                    # This probably will not work if we are not plotting against
+                    # the first index of data
+                    x=[numpy.array(range(len(getattr(simul,attrib)))) for simul in simulList if s in simul.species]
+                if xlims == None:
+                    # min to max among all the simulations
+                    xlims = [numpy.min(x),numpy.max(x)]
+                    
                 linecolors=[all_linecolors[i_si] for i_si,simul in enumerate(simulList) if s in simul.species]
                 coordinates=(i,0)
                 if perhaps_last and (i_sp == len(species_set) - 1):
@@ -265,6 +275,8 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
             global_xlabel=r"$\psi_N$"
         elif xattr=="psi_index":
             global_xlabel=r"$i_\psi$"
+        elif xattr==None:
+            global_xlabel=r"$i$"
         perfect_visualizer(psp_list,gridspec_list[i_li],global_xlabel=global_xlabel,dimensions=1,global_ylabel=global_ylabel)
         if same_plot:
             plt.savefig(outputname+".pdf")
