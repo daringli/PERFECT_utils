@@ -415,6 +415,21 @@ class perfect_simulation(object):
         N=len(fft[:,0])
         fft=numpy.abs(fft)/float(N)
         return fft
+
+    def export_attribute_to_h5(self,attrib,attrib_name,file_name):
+        if type(attrib) == str:
+            a=getattr(self,attrib)
+        else:
+            a=attrib
+        h5file = h5py.File(file_name,'w')
+            
+        groupname = "Npsi"+str(self.Npsi)
+        if groupname in h5file:
+            print "Error: profiles already added for Npsi="+str(Npsi)
+            exit(1)
+        profilesgroup = h5file.create_group(groupname)
+        profilesgroup.create_dataset(attrib_name,data=a)
+        h5file.close()
                 
     def attrib_at_psi_of_theta(self,attrib,psiN):
         indices=get_index_range(self.actual_psiN,[psiN,psiN],ret_range=False)
@@ -1397,6 +1412,11 @@ class perfect_simulation(object):
     @property
     def source_charge(self):
         return numpy.sum(self.Z*self.GammaHat_source,axis=1)
+
+    def source_charge(self):
+        return numpy.sum(self.Z*self.GammaHat_source,axis=1)
+    
+    
     
     @property
     def total_source_charge(self):

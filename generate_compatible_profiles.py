@@ -17,6 +17,7 @@ from perfectGlobalMultiplierProfileFile import create_globalMultiplier_of_Npsi
 from set_species_param import set_species_param
 
 from mtanh import generate_m2tanh_profile, extrapolate_m2tanh_sections, match_heat_flux_proxy, derivative_m3tanh_transition
+from sinusoidal import generate_sin_profile
 from generate_nonuniform_grid import generate_nonuniform_grid_Int_arctan
 from global_multiplier import generate_global_multiplier
 
@@ -78,22 +79,22 @@ def sample_funclist(f_i,x):
 def write_outputs(simul,THats,dTHatdss,nHats,dnHatdss,etaHats,detaHatdss,PhiHat,dPhiHatds,psi,dpsi_ds,C):
     s = simul.psi
     #psi(s)
-    psi = psi(s)
-    psiN = psi/simul.psiAHat
+    psiN = psi(s)
+    psi = psiN/simul.psiAHat
     #dpsi_ds(s)
     dhds = dpsi_ds(s)
     
     #tranpose
-    THats = numpy.transpose(sample_funclist(THats,psi))
-    dTHatdss = numpy.transpose(sample_funclist(dTHatdss,psi))
-    nHats = numpy.transpose(sample_funclist(nHats,psi))
-    dnHatdss = numpy.transpose(sample_funclist(dnHatdss,psi))
-    etaHats = numpy.transpose(sample_funclist(etaHats,psi))
-    detaHatdss = numpy.transpose(sample_funclist(detaHatdss,psi))
-    PhiHat = sample_funclist(PhiHat,psi)
-    dPhiHatds = sample_funclist(dPhiHatds,psi)
+    THats = numpy.transpose(sample_funclist(THats,psiN))
+    dTHatdss = numpy.transpose(sample_funclist(dTHatdss,psiN))
+    nHats = numpy.transpose(sample_funclist(nHats,psiN))
+    dnHatdss = numpy.transpose(sample_funclist(dnHatdss,psiN))
+    etaHats = numpy.transpose(sample_funclist(etaHats,psiN))
+    detaHatdss = numpy.transpose(sample_funclist(detaHatdss,psiN))
+    PhiHat = sample_funclist(PhiHat,psiN)
+    dPhiHatds = sample_funclist(dPhiHatds,psiN)
 
-    #convert back to psiN derivatives
+    #convert back to s derivatives
     dPhiHatds =  dPhiHatds * dhds
     dhds = dhds[:,numpy.newaxis]
     dTHatdss =dTHatdss * dhds
@@ -102,7 +103,7 @@ def write_outputs(simul,THats,dTHatdss,nHats,dnHatdss,etaHats,detaHatdss,PhiHat,
 
     #if we need to generate a global term multiplier, we do so here.
     if simul.inputs.useGlobalTermMultiplier == 1:
-        C = numpy.transpose(sample_funclist(C,psi))
+        C = numpy.transpose(sample_funclist(C,psiN))
         create_globalMultiplier_of_Npsi("globalTermMultiplier.h5",Npsi,C)  
     
     # Write profiles
@@ -565,6 +566,10 @@ def generate_n_from_eta_X_profile(etaHat,X,detaHatds,dXds,Z):
 def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,oldsameflux=False,sameeta=False,samefluxshift=0,specialEta=False,psiDiamFact=5,transitionFact=0.2,dxdpsiN=1,midShift=0,upShift_denom=3.0,m2tanh=False,mode="const_Phi",leftBoundaryShift=0.0,rightBoundaryShift=0.0,**kwargs):
     #NOTE: uses the dx/dpsi at minor radius for both core and SOL, which assumes that
     #simulated region is small enough that it doesn't change much.
+    if mode == "periodic":
+        generate_periodic_profiles(simul,xwidth,nonuniform,dxdpsiN,psiDiamFact,midShift,upShift_denom,leftBoundaryShift,rightBoundaryShift,**kwargs)
+        return 
+    
     e=scipy.constants.e
     log=numpy.log
     exp=numpy.exp
@@ -785,8 +790,108 @@ def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,ol
 def generate_compatible_profiles_constant_ne(simul,xwidth,nonuniform=False,sameflux=False,oldsameflux=False,sameeta=False,samefluxshift=0,specialEta=False,psiDiamFact=5,transitionFact=0.2,dxdpsiN=1,midShift=0,upShift_denom=3.0,m2tanh=False,**kwargs):
     generate_compatible_profiles(simul,xwidth,nonuniform,sameflux,oldsameflux,sameeta,samefluxshift,specialEta,psiDiamFact,transitionFact,dxdpsiN,midShift,upShift_denom,m2tanh,mode="const_ne",**kwargs)
 
+def generate_periodic_profiles(simul,xwidth,nonuniform,dxdpsiN,psiDiamFact,midShift,upShift_denom,leftBoundaryShift,rightBoundaryShift,**kwargs):
+    global psiMin
+    global psiMax
+    global Nspecies
+    global main_index
+    global Npsi
 
+    species=simul.species
+    Nspecies=len(species)
+    if Nspecies == 1:
+        main_index=kwargs["mI"]
+    else:
+        print "Error: periodic only does one species right now!"
+        return -1
     
+    if dxdpsiN == 1:
+        print "Intepreting gradients as being given in psi_N."
+    else:
+        print "Intepreting gradients as being given in x space"
+        print "Will use function specified by dx_dpsi to convert" 
+    
+    dxdpsiN_at_a = dxdpsiN
+    x_ped_width=xwidth
+    psiN_ped_width=x_ped_width/dxdpsiN_at_a
+
+    #old domain calculation
+    #calculate new psiMid and diameter for this profile
+    midShift=midShift*psiN_ped_width
+
+    #2015-12-16: -psiN_ped_width/3.0 was the old default.
+    upShift=-psiN_ped_width/upShift_denom
+    
+    update_domain_size(simul,psiN_ped_width,midShift,psiDiamFact,leftBoundaryShift,rightBoundaryShift)
+    (Delta,omega) = update_Delta_omega(simul)
+    psiMid = simul.inputs.psiMid
+    psiMin = simul.inputs.psiMin
+    psiMax = simul.inputs.psiMax
+
+    psiMinPed=psiMid-psiN_ped_width/2.0
+    psiMaxPed=psiMid+psiN_ped_width/2.0+upShift
+
+    # update simulation domain to in fact only include pedestal and
+    # a mirror image of the pedestal
+    simul.inputs.psiDiameter = 2*(psiMaxPed - psiMinPed)
+    simul.inputs.psiMid = psiMaxPed
+    simul.inputs.leftBoundaryShift = 0.0
+    simul.inputs.rightBoundaryShift = 0.0
+
+    psiMid = simul.inputs.psiMid
+    psiMin = simul.inputs.psiMin
+    psiMax = simul.inputs.psiMax
+    Npsi=simul.inputs.Npsi
+    print 
+
+    # update species parameters
+    species_filename= os.path.join(os.path.dirname(__file__), 'species_database.namelist')
+    (Zs,ms)=update_species_parameters(simul.species,species_filename,simul.norm,simul) 
+
+    # generate profiles
+    if "nScale_"+species[main_index] in kwargs.keys():
+        niScale=kwargs["nScale_"+species[main_index]]
+    else:
+        niScale=1.0
+    niPed=niScale*kwargs["nped_"+species[main_index]]
+    niPedGrad=niScale*kwargs["dnpeddx_"+species[main_index]]*dxdpsiN_at_a
+    (niHat,dniHatdpsi) = generate_sin_profile(niPed,niPedGrad,psiMinPed,psiMaxPed)
+
+    if "TScale_"+species[main_index] in kwargs.keys():
+        TiScale=kwargs["TScale_"+species[main_index]]
+    else:
+        TiScale = 1.0
+    TiPed = TiScale*kwargs["Tped_"+species[main_index]]
+    TiPedGrad = TiScale*kwargs["dTpeddx_"+species[main_index]]*dxdpsiN_at_a
+    (TiHat,dTiHatdpsi) = generate_sin_profile(TiPed,TiPedGrad,psiMinPed,psiMaxPed)
+
+    PhiPed = 0.0
+    An=-niPedGrad*(psiMaxPed - psiMinPed)
+    AT=-TiPedGrad*(psiMaxPed - psiMinPed)
+    k = 2*numpy.pi/(psiMaxPed - psiMinPed)
+    PhiPedGrad = (Delta/(2*omega))*k*An/(2*Zs[main_index])*((TiPed - AT)/(niPed - An))/6.0
+    (PhiHat,dPhiHatdpsi) = generate_sin_profile(PhiPed,PhiPedGrad,psiMinPed,psiMaxPed)
+    (etaiHat,detaiHatdpsi)=generate_eta_from_n_Phi_profile(niHat,PhiHat,TiHat,dniHatdpsi,dPhiHatdpsi,dTiHatdpsi,Zs[main_index],Delta,omega)
+
+
+    THats = [TiHat]
+    nHats = [niHat]
+    etaHats = [etaiHat]
+    dTHatdss = [dTiHatdpsi]
+    dnHatdss = [dniHatdpsi]
+    detaHatdss = [detaiHatdpsi]
+    dPhiHatds = dPhiHatdpsi
+    
+    if simul.inputs.useGlobalTermMultiplier == 1:
+        print "useGlobalTermMultiplier == 1 when using periodic boundary conditions. This is currently not supported and does not make sense. Will generate a trivial (constant 1) C profile."
+    C=lambda x: 1.0 + 0*x
+
+    if nonuniform == True:
+        print "nonuniform grid is not supported with periodic boundary conditions yet: the default nonuniform grid would not make sense."
+    (psi,dpsi_ds) = get_psiN(nonuniform=False,simul=simul,**kwargs)
+    write_outputs(simul,THats,dTHatdss,nHats,dnHatdss,etaHats,detaHatdss,PhiHat,dPhiHatds,psi,dpsi_ds,C)
+ 
+
     
 # KEPT SINCE A PAIN TO CALCULATE
 #nHats[imp_index] = etaHats[imp_index] *(nHats[main_index]/etaHats[main_index])**((Zs[imp_index]/Zs[main_index])*(THats[main_index]/THats[imp_index]))
