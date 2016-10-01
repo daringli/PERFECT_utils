@@ -1412,11 +1412,6 @@ class perfect_simulation(object):
     @property
     def source_charge(self):
         return numpy.sum(self.Z*self.GammaHat_source,axis=1)
-
-    def source_charge(self):
-        return numpy.sum(self.Z*self.GammaHat_source,axis=1)
-    
-    
     
     @property
     def total_source_charge(self):
