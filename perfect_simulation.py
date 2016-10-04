@@ -1412,6 +1412,22 @@ class perfect_simulation(object):
     @property
     def source_charge(self):
         return numpy.sum(self.Z*self.GammaHat_source,axis=1)
+
+    @property
+    def charge_source(self):
+        return self.source_charge
+
+    @property
+    def GammaHat_source_for_export(self):
+        #for comparrison with dGammaHat/dPsiN
+        VPrimeHat=numpy.fabs(self.VPrimeHat)
+        prefact=1#(self.psiAHatArray[:,numpy.newaxis]/self.psiAHat)
+        #print self.psiAHat
+        return self.THat**(3./2.)*self.particle_source/(self.masses**2)
+    
+    @property
+    def charge_source_for_export(self):
+        return numpy.sum(self.Z*self.GammaHat_source_for_export,axis=1)
     
     @property
     def total_source_charge(self):
