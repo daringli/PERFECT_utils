@@ -11,6 +11,7 @@ import errno #to handle exception when making directory
 import copy #to copy objects rather than get references to them
 #for normed simulation
 import scipy.constants
+import scipy.ndimage
 import subprocess
 from subprocess import call
 from get_index_range import get_index_range
@@ -430,6 +431,22 @@ class perfect_simulation(object):
         profilesgroup = h5file.create_group(groupname)
         profilesgroup.create_dataset(attrib_name,data=a)
         h5file.close()
+
+    def export_attribute_to_text(self,attrib,file_name):
+        #tested for psi, species dependent. No theta dependence
+        if type(attrib) == str:
+            a=getattr(self,attrib)
+        else:
+            a=attrib
+        file = open(file_name, 'w')
+        for line in a:
+            try:
+                for entry in line:
+                    file.write(str(entry))
+            except:
+                file.write(str(line))
+            file.write('\n')
+        file.close()
                 
     def attrib_at_psi_of_theta(self,attrib,psiN):
         indices=get_index_range(self.actual_psiN,[psiN,psiN],ret_range=False)
@@ -748,6 +765,31 @@ class perfect_simulation(object):
     def jHat(self):
         return numpy.sum(self.Z*self.particle_flux,axis=1)
 
+    @property
+    def mPiHat_source_jHat(self):
+        return (self.psiAHat/self.Delta)*self.jHat
+
+    @property
+    def minus_mPiHat_source_jHat(self):
+        return -self.mPiHat_source_jHat
+
+    @property
+    def mPiHat_source_source(self):
+        return numpy.sum(self.masses*self.PiHat_source_source,axis=1)
+
+    @property
+    def mPiHat_source_source_filtered(self):
+        a=self.mPiHat_source_source
+        gaussian_filter=scipy.ndimage.filters.gaussian_filter1d
+        sigma = 3
+        order = 0
+        a[0]=0.0
+        a[-1]=0.0
+        filtered=gaussian_filter(a, sigma, axis=0, order=order, output=None, mode='constant', cval=0.0, truncate=4.0)
+        return filtered
+        
+        
+    
     #for backwards compatibility, for now.
     @property
     def ambipolarity(self):
@@ -849,6 +891,41 @@ class perfect_simulation(object):
         return -self.THat**(5./2.)*self.psiAHat*numpy.expand_dims(VPrimeHat,axis=1)*numpy.sqrt(numpy.pi)/(2*self.Delta*self.masses**2)*(5*self.particle_source + 3*self.heat_source) -((2*self.omega/self.Delta)*self.Z*numpy.expand_dims(self.dPhiHatdpsiN,axis=1) + (5./2.)*self.dTHatdpsiN)*self.particle_flux
 
     @property
+    def PiHat_source_source(self):
+        #for comparrison with dQHat/dPsiN
+        VPrimeHat=numpy.fabs(self.VPrimeHat)
+        Sm = self.no_charge_source_momentum_source
+        Sm_nan_indices=numpy.isnan(Sm)
+        if any(Sm_nan_indices):
+            # nan sources
+            print "Some momentum sources are NaN. Interpreting NaN as 0."
+            Sm[Sm_nan_indices] = 0.0
+
+        # NOTE: assumes that Theta_m = 1
+        Theta_m = 1        
+        PiHat_source = (self.psiAHat/self.Delta)*numpy.sqrt(numpy.pi)/(2*self.masses**(5./2.))*numpy.expand_dims(self.FSA(Theta_m*self.IHat/self.BHat)*VPrimeHat,axis=1)*self.THat**2*Sm
+        return PiHat_source
+
+    @property
+    def PiHat_source_source_filtered(self):
+        a=self.PiHat_source_source
+        gaussian_filter=scipy.ndimage.filters.gaussian_filter1d
+        sigma = 3
+        order = 0
+        a[0,:]=0.0
+        a[-1,:]=0.0
+        filtered=gaussian_filter(a, sigma, axis=0, order=order, output=None, mode='constant', cval=0.0, truncate=4.0)
+        return filtered
+        return PiHat_source
+    
+    
+    @property
+    def PiHat_source(self):
+        #for comparrison with dPiHat/dPsiN
+        PiHat_source = (self.psiAHat/self.Delta)*(self.Z/self.masses)*self.particle_flux + self.PiHat_source_source
+        return PiHat_source
+
+    @property
     def noChargeSource(self):
         try:
             return self.outputs[self.group_name+self.no_charge_source_name][()]    
@@ -862,6 +939,17 @@ class perfect_simulation(object):
         except KeyError:
             return numpy.nan*numpy.ones([self.Npsi,self.Nspecies])
 
+    @property
+    def no_charge_source_momentum_source_filtered(self):
+        a=self.no_charge_source_momentum_source
+        gaussian_filter=scipy.ndimage.filters.gaussian_filter1d
+        sigma = 3
+        order = 0
+        a[0,:]=0.0
+        a[-1,:]=0.0
+        filtered=gaussian_filter(a, sigma, axis=0, order=order, output=None, mode='constant', cval=0.0, truncate=4.0)
+        return filtered
+        
     @property
     def no_charge_source_particle_source(self):
         try:
@@ -1457,6 +1545,10 @@ class perfect_simulation(object):
             return self.inputs.psi
 
     @property
+    def pedestal_point_indices(self):
+        return [get_index_range(self.actual_psiN,[point,point])[1] for point in  self.pedestal_points]
+
+    @property
     def psi_index(self):
         return numpy.array(range(self.Npsi))
         
@@ -1529,6 +1621,11 @@ class perfect_simulation(object):
     def dGammaHat_dpsiN(self):
         GammaHat=self.particle_flux
         return self.ddpsiN(GammaHat,order=4)
+
+    @property
+    def dPiHat_dpsiN(self):
+        PiHat=self.momentum_flux
+        return self.ddpsiN(PiHat,order=4)
 
     @property
     def jprefac_dPi_dpsiN(self):
@@ -1636,21 +1733,7 @@ class perfect_simulation(object):
         #From comparing with above: does not seem so.
         return 2*numpy.pi/numpy.expand_dims((self.q*self.VPrimeHat),axis=1)
 
-    @property
-    def orbit_width(self):
-        # orbit width in psiN
-        # uses hardcoded numerical values for RBar dpsiN/dr...
-        print "###################################"
-        print "...          WARNING            ..."
-        print "###################################"
-        print "perfect_simulation.orbit_width contains hard-coded RBar dpsi_N/dr values."
-        RBar_dpsiN_over_dr =4.92
-        return numpy.fabs(numpy.sqrt(self.epsilon*self.THat*self.masses)/(self.Z*numpy.expand_dims(numpy.fabs(self.FSABp),axis=1))*self.Delta*RBar_dpsiN_over_dr)
-
-    @property
-    def orbit_width_over_rN(self):
-        return numpy.fabs(self.orbit_width*self.dnHatdpsiN/self.nHat)
-
+    
     @property
     def Bp_at_psi_of_theta(self):
         #for PERFECT Mille geometry, Bp does not depend on psi
@@ -2143,6 +2226,34 @@ class normalized_perfect_simulation(perfect_simulation):
     def sum_normed_n_FSA_toroidal_mass_flow(self):
         return numpy.sum(self.normed_n_FSA_toroidal_mass_flow,axis=1)
 
+    @property
+    def orbit_width(self):
+        # orbit width in psiN
+        # uses hardcoded numerical values for RBar dpsiN/dr...
+        print "###################################"
+        print "...          WARNING            ..."
+        print "###################################"
+        print "perfect_simulation.orbit_width contains hard-coded RBar dpsi_N/dr values."
+        RBar_dpsiN_over_dr =4.92
+        return numpy.fabs(numpy.sqrt(self.epsilon*self.THat*self.masses)/(self.Z*numpy.expand_dims(numpy.fabs(self.FSABp),axis=1))*self.Delta*RBar_dpsiN_over_dr)
+
+    @property
+    def orbit_width_over_rN(self):
+        return numpy.fabs(self.orbit_width*self.dnHatdpsiN/self.nHat)
+
+
+    @property
+    def psi_o(self,i_s=0):
+        #i_s : index of species for which to calculate orbit width for
+        ped_stop = self.pedestal_points[-1]
+        psi_o = (self.actual_psiN-ped_stop)/self.orbit_width[:,i_s]
+        return psi_o
+        
+    @property
+    def pedestal_points_psi_o(self):
+        return [self.psi_o[point] for point in self.pedestal_point_indices]
+    
+    
     def Pradtl_proxy(self,ion_index,psi_index):
         print self.normed_conductive_heat_flux_psi_unit_vector[psi_index,ion_index]
         print self.normed_m_momentum_flux_psi_unit_vector[psi_index,:]

@@ -20,7 +20,7 @@ from mpldatacursor import datacursor
 
 
 
-def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,markers=None,linestyles=None,xlims=None,same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[],interactive=False):
+def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,markers=None,linestyles=None,xlims=None,same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[],interactive=False,colors=None):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -44,7 +44,11 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
     specieslist=[x + "/" + speciesname for x in dirlist]
     psiN_to_psiList=[x + "/" + psiN_to_psiname for x in dirlist]
     global_term_multiplierList=[x + "/" + global_term_multiplier_name for x in dirlist]
-    simulList=perfect_simulations_from_dirs(dirlist,normlist,specieslist,psiN_to_psiList,global_term_multiplierList)
+    if vlines== None:
+        here_vlines=[]
+    else:
+        here_vlines=vlines
+    simulList=perfect_simulations_from_dirs(dirlist,normlist,specieslist,psiN_to_psiList,global_term_multiplierList,pedestal_points_list=here_vlines)
     if markers == None:
         markers=['']*len(simulList)
 
@@ -72,35 +76,40 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
     i=-1
     psp_lists=[] #list of lists of perfect subplot object
     gridspec_list=[]
-    
-    colors=cm(numpy.linspace(0,1,len(simulList)))
+
     #assign colors to simulations
-    all_linecolors=[]
     color_index=0
 
     local=[simul.local for simul in simulList]
     noddpsi=[simul.no_ddpsi for simul in simulList]
+
     
-    if lg:
-        colors=cm(numpy.linspace(0,1,len(simulList)-sum(local)-sum(noddpsi)))
-        if sum(local)>0:
-            #if we have local simulations, increment color after them
-            for loc in local:
-                all_linecolors.append(colors[color_index])
-                if loc == True:
-                    color_index=color_index+1
-        elif sum(noddpsi)>0:
-            #otherwise, increment color after noddpsi simulation
-            for nd in noddpsi:
-                all_linecolors.append(colors[color_index])
-                if nd == True:
-                    color_index=color_index+1
+    if colors == None:
+        colors=cm(numpy.linspace(0,1,len(simulList)))
+        all_linecolors=[]
+    
+        if lg:
+            colors=cm(numpy.linspace(0,1,len(simulList)-sum(local)-sum(noddpsi)))
+            if sum(local)>0:
+                #if we have local simulations, increment color after them
+                for loc in local:
+                    all_linecolors.append(colors[color_index])
+                    if loc == True:
+                        color_index=color_index+1
+            elif sum(noddpsi)>0:
+                #otherwise, increment color after noddpsi simulation
+                for nd in noddpsi:
+                    all_linecolors.append(colors[color_index])
+                    if nd == True:
+                        color_index=color_index+1
+            else:
+                #else, always increment
+                all_linecolors=cm(numpy.linspace(0,1,len(simulList)))
         else:
-            #else, always increment
+            # force always increment behavior
             all_linecolors=cm(numpy.linspace(0,1,len(simulList)))
     else:
-        # force always increment behavior
-        all_linecolors=cm(numpy.linspace(0,1,len(simulList)))
+        all_linecolors=colors
 
     if linestyles == None:
         linestyles=[] #linestyles generated from local or global
@@ -256,10 +265,6 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
             
         
             
-        all_group.setattrs("show_yaxis_ticklabel",True)
-        all_group.setattrs("vlines",vlines)
-        all_group.setattrs("hlines",hlines)
-        last_group.setattrs("show_xaxis_ticklabel",True)
         #print gridspec_list[i_li]
         if xattr=="psi":
             global_xlabel=r"$\psi_N$"
@@ -275,8 +280,20 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
             global_xlabel=r"$\psi_N$"
         elif xattr=="psi_index":
             global_xlabel=r"$i_\psi$"
+        elif xattr=="psi_o":
+            global_xlabel=r"$\psi^o$"
         elif xattr==None:
             global_xlabel=r"$i$"
+            
+        if xattr == "psi_o":
+            this_vlines = simulList[0].pedestal_points_psi_o
+        else:
+            this_vlines = vlines
+        all_group.setattrs("show_yaxis_ticklabel",True)
+        all_group.setattrs("vlines",this_vlines)
+        all_group.setattrs("hlines",hlines)
+        last_group.setattrs("show_xaxis_ticklabel",True)
+        
         perfect_visualizer(psp_list,gridspec_list[i_li],global_xlabel=global_xlabel,dimensions=1,global_ylabel=global_ylabel)
         if same_plot:
             plt.savefig(outputname+".pdf")

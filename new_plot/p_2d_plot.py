@@ -30,7 +30,12 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
         normlist=[x + "/" + normname for x in dirlist]
         specieslist=[x + "/" + speciesname for x in dirlist]
         psiN_to_psiList=[x + "/" + psiN_to_psiname for x in dirlist]
-        simulList=perfect_simulations_from_dirs(dirlist,normlist,specieslist,psiN_to_psiList)
+        if vlines== None:
+            here_vlines=[]
+        else:
+            here_vlines=vlines
+    
+        simulList=perfect_simulations_from_dirs(dirlist,normlist,specieslist,psiN_to_psiList,pedestal_points_list=here_vlines)
     else:
         "p_2d_plot: simulList specified externally, ignoring dirlist, etc."
     
@@ -124,19 +129,10 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
                     x_scale=100
                 else:
                     x_scale=1
-                if xattr is not "psio":
-                    x = getattr(simul,xattr)*x_scale
-                else:
-                    print "WARNING: orbit width uses hardcoded index for deuterium and pedestal start and stop values!"
-                    vlines2 = [0.94927395957025573,0.97463697978512787]
-                    
-                    iD = 0
-                    ped_start_index=get_index_range(simul.actual_psiN,[vlines2[0],vlines2[0]])[1]
-                    ped_stop_index=get_index_range(simul.actual_psiN,[vlines2[1],vlines2[1]])[1]
-                    ow_start=simul.orbit_width[ped_start_index,iD]
-                    ow_stop=simul.orbit_width[ped_stop_index,iD]
-                    x = (simul.actual_psiN-vlines2[1])/simul.orbit_width[:,iD]
-                    vlines=[(vlines2[0]-vlines2[1])/ow_start,(vlines2[1]-vlines2[1])/ow_stop]
+
+                if xattr=="psi_o":
+                    vlines=simul.pedestal_points_psi_o
+                x = getattr(simul,xattr)*x_scale
                 y = getattr(simul,yattr)*y_scale
                 psp_list.append(perfect_subplot(data,x=x,y=y,subplot_coordinates=subplot_coordinates,show_zaxis_ticklabel=show_zaxis_ticklabel,show_yaxis_ticklabel=show_yaxis_ticklabel,show_xaxis_ticklabel=show_xaxis_ticklabel,title=title,groups=[s,"sim"+str(i),gl_grp,"pair"+str(i/2),species_attrib_groupname],dimensions=2))
         #end simulList loop
@@ -185,7 +181,7 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
         for i,sim_group in enumerate(sim_groups):
             if i != 0:
                 sim_group.setattrs("show_zaxis",False)
-        if xattr is not "psio":
+        if xattr is not "psi_o":
             global_xlabel=r"$100\psi_N$"
         else:
             global_xlabel=r"$\psi^\mathrm{o}$"

@@ -842,7 +842,9 @@ def generate_periodic_profiles(simul,xwidth,nonuniform,dxdpsiN,psiDiamFact,midSh
     psiMin = simul.inputs.psiMin
     psiMax = simul.inputs.psiMax
     Npsi=simul.inputs.Npsi
-    print 
+    print Npsi
+    print psiMin
+    print psiMax
 
     # update species parameters
     species_filename= os.path.join(os.path.dirname(__file__), 'species_database.namelist')
