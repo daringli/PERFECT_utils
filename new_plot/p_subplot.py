@@ -10,12 +10,13 @@ from diverging_red_blue_colormap import diverging_rb_cm
 from get_index_range import get_index_range
 
 class perfect_subplot:
-    def __init__(self,data,x,subplot_coordinates,dimensions=None,y=None,**kwargs):
+    def __init__(self,data,x,subplot_coordinates,dimensions=None,y=None,**kwargs,x_data=None, y_data=None):
         #this object contains instructions for what to plot in a numpy subplot with gridspec
         
-        #dimensions: whether to visualize data as a 2D colormap, or several 1D plots in the same subplot
+        #dimensions: whether to visualize data as a 2D colormap (2), or several 1D plots in the same subplot (1), or a quiver plot (-2)
         #            this can be partially infered from the dimensions of the data
         #data: the data to go into this plot. Should be a 1D, list of 1D, or 2D numpy array
+        # x_data,y_data: same as data, but x and y component for quiver plots
         #x,y: x/y grid points corresponding to the indices in the data array. y value needed for 2D arrays
         #subplot_coordinates: where to put this plot on the gridspec
         #**kwargs: extra visualization options that will be different depending on "dimensions".
@@ -28,33 +29,34 @@ class perfect_subplot:
         data_xaxis=kwarg_default("data_xaxis",0,**kwargs)
         data_otheraxis=(data_xaxis+1)%2
 
-        #use rank of input data to try to determine dimensions
-        #and reshape appropriately
-        rank=arraylist_rank(data)
-        if rank == 1:
-            #put it in a list for consistency with multi-array code
-            data=[data]
-            if dimensions==None:
-                dimensions=1
-        elif rank == 2:
-            #can be a 2D function or several 1D.
-            #please manually specify to avoid ambiguity
-            #default assumes second index reperesents species/simulation
-            #if it is under or equal to 4.#
-            if dimensions==None:
-                print "perfect_subplot: warning: ambigious array rank."
-                if y == None:
-                    dimensions=1
-                else:
-                    dimensions=2
-        elif type(rank) is list:
-            if all(x == 1 for x in rank):
+        if dimensions != -2:
+            #use rank of input data to try to determine dimensions
+            #and reshape appropriately
+            rank=arraylist_rank(data)
+            if rank == 1:
+                #put it in a list for consistency with multi-array code
+                data=[data]
                 if dimensions==None:
                     dimensions=1
-            else:
-                print rank
-                print "perfect_subplot: error: input list has array(s) of rank above 1."
-                exit(1)
+        elif rank == 2:
+                #can be a 2D function or several 1D.
+                #please manually specify to avoid ambiguity
+                #default assumes second index reperesents species/simulation
+                #if it is under or equal to 4.#
+                if dimensions==None:
+                    print "perfect_subplot: warning: ambigious array rank."
+                    if y == None:
+                        dimensions=1
+                    else:
+                        dimensions=2
+            elif type(rank) is list:
+                if all(x == 1 for x in rank):
+                    if dimensions==None:
+                        dimensions=1
+                else:
+                    print rank
+                    print "perfect_subplot: error: input list has array(s) of rank above 1."
+                    exit(1)
 
 
         #kwargs related to tagging this subplot
@@ -228,6 +230,21 @@ class perfect_subplot:
             self.title_y=kwarg_default("title_y",1.19,**kwargs)
             self.title_x=kwarg_default("title_x",0.5,**kwargs)
 
+        if dimensions==-2:
+            #going to visualize 2D vector data
+            self.dimensions=-2
+            if y is None:
+                print "perfect_subplot: quiver: error: need y for quiver plot."
+                exit(1)
+            if (x_data==None) or (y_data==None):
+                print "perfect_subplot: quiver: error: need x_data and y_data for quiver plot."
+                exit(1)
+            self.y_data = y_data
+            self.x_data = x_data
+            self.y = y
+            self.x = x
+            
+            
 
     #functions data in the range that will be plotted
 
@@ -257,18 +274,23 @@ class perfect_subplot:
             for x,d in zip(self.x,self.data):
                 ixrange=get_index_range(x,self.xlims,True)
                 data=data+[d[ixrange]]
+            return data
         if self.dimensions==2:
             xlims=self.xlims
             ylims=self.ylims
             ixrange=numpy.array(get_index_range(self.x,xlims,True))
             iyrange=numpy.array(get_index_range(self.y,ylims,True))
-            #print ixrange
-            #print iyrange
             data=self.data[ixrange[:,numpy.newaxis],iyrange]
-            #print numpy.shape(data)
-            #print numpy.size(ixrange)
-            #print numpy.size(iyrange)
-        return data
+            return data
+        if self.dimensions==-2:
+            xlims=self.xlims
+            ylims=self.ylims
+            ixrange=numpy.array(get_index_range(self.x,xlims,True))
+            iyrange=numpy.array(get_index_range(self.y,ylims,True))
+            x_data=self.x_data[ixrange[:,numpy.newaxis],iyrange]
+            y_data=self.y_data[ixrange[:,numpy.newaxis],iyrange]
+            return (x_data,y_data)
+        
 
 if __name__=="__main__":
     data=numpy.array([[1,2,3],[4,5,6]])

@@ -210,8 +210,14 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
                     plt.setp(cb.ax.get_xticklabels()[i],visible=False)
             cb.solids.set_edgecolor("face")
 
-                
-        
+        ### QUIVER PLOT #####
+        if p_subplot.dimensions == -2:
+            X,Y=numpy.meshgrid(p_subplot.x,p_subplot.y)
+            U=numpy.transpose(p_subplot.x_data)
+            V=numpy.transpose(p_subplot.y_data)
+            ax.quiver(X,Y,U,V)
+
+
         #we need to sort out ticks after plotting, since they are generated
         #during the plot operation
         if p_subplot.xaxis_label is not None:
