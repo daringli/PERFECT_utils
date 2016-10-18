@@ -33,10 +33,12 @@ def symmetrize_colormap(cm,vmin,vmax):
         # truncate lower half of colormap
         if vmax>0:
             start=0.5+0.5*abs(vmin/float(vmax))
+            #start = (vmax-abs(vmin))/(2*vmax)
             stop=1.0
         else:
             start=0.0
             stop=0.5-0.5*abs(vmax/float(vmin))
+            #stop=(abs(vmin)+vmax)/(2*abs(vmin))
         new_cm=shiftedColorMap(cm,start=start,stop=stop,name="new_map",nomid=True)
     
     return new_cm

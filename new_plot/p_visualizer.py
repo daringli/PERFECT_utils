@@ -11,6 +11,7 @@ import numpy
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib import ticker
 
+from streamplot import streamplot
 
 # for the __name__="__main__" part only:
 from perfect_simulations_from_dirs import perfect_simulations_from_dirs
@@ -36,7 +37,7 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
         adjust_top=kwarg_default("adjust_top",0.97,**kwargs)
         adjust_right=kwarg_default("adjust_right",0.95,**kwargs)
         base_rows=3.0
-    elif dimensions == 2:
+    elif abs(dimensions) == 2:
         adjust_bottom=kwarg_default("adjust_bottom",0.15,**kwargs)
         adjust_left=kwarg_default("adjust_left",0.12,**kwargs)
         adjust_top=kwarg_default("adjust_top",0.85,**kwargs)
@@ -141,81 +142,12 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
 
        
         ############## 1D #########
-        if p_subplot.dimensions == 1:
-            x=p_subplot.x
-            y=p_subplot.data            
-            ax.yaxis.offset_text_position="there"
+        p_subplot.plot(fig,ax)
             
-
-            
-            if type(p_subplot.linestyles) is not list:
-                p_subplot.linestyles=[p_subplot.linestyles]*len(y)
-                p_subplot.linewidths=[p_subplot.linewidths]*len(y)
-            for i in range(len(y)):
-                try:
-                    ax.plot(x[i],y[i],linestyle=p_subplot.linestyles[i],color=p_subplot.colors[i],linewidth=p_subplot.linewidths[i],marker=p_subplot.markers[i],fillstyle=p_subplot.fillstyles[i])
-                except IndexError:
-                    print "Index error in ax.plot(). Most likely, linestyles, linewidths and colors have the wrong lengths."
-                    print "len(colors): " + str(len(p_subplot.colors))
-                    print "len(linestyles): " + str(len(p_subplot.linestyles))
-                    print "len(linewidths): " + str(len(p_subplot.linewidths))
-                    print "len(markers): " + str(len(p_subplot.markers))
-                    print "len(fillstyles): " + str(len(p_subplot.fillstyles))
-                    print "len(x): " + str(len(x))
-                    print "len(y): " + str(len(y))
-            ax.yaxis.set_label_coords(-0.15, 0.5)            
-
         ############# 2D ###########
-        if p_subplot.dimensions == 2:
-            X,Y=numpy.meshgrid(p_subplot.x,p_subplot.y)
-            z=numpy.transpose(p_subplot.data)
-  
-            ax.pcolor(X, Y, z,rasterized=True,linewidth=0)
-            
-            if p_subplot.show_zaxis == True:
-                divider = make_axes_locatable(ax)
-                cax = divider.append_axes("top", "-10%", pad="10%")
-                cb=fig.colorbar(ax.collections[0],cax=cax,orientation="horizontal")
-                #cb.solids.set_edgecolor("face")
-                monkey_patch(cb.ax.xaxis, 'x')
-                if p_subplot.yscale == 'linear':
-                    tick_locator = ticker.MaxNLocator(nbins=p_subplot.zticks)
-                if p_subplot.yscale == 'log':
-                    tick_locator = ticker.LogLocator(nbins=p_subplot.zticks)
-                cb.locator=tick_locator
-                cb.ax.xaxis.set_ticks_position('top')
-                cb.ax.xaxis.set_label_position('top')
-                cb.ax.set_xscale(p_subplot.zscale)
-                cb.ax.tick_params(direction='out', pad=1)
-                cb.formatter.set_powerlimits((0, 0))
-                cb.update_ticks()
-                if p_subplot.show_zaxis_ticklabel == False:
-                    plt.setp(cb.ax.get_xticklabels(), visible=False)
-                    #makes it impossible to have an offset without a ticklabel
-                    cb.formatter.set_powerlimits((float("-inf"), float("inf")))
-                    cb.update_ticks()
-                cb.ax.xaxis.offset_text_position="there2"
+        p_subplot.plot(fig,ax)
 
-            if p_subplot.zaxis_label is not None:
-                cb.ax.set_xlabel(p_subplot.zaxis_label)
-            if p_subplot.zlims is not None:
-                zmin=p_subplot.zlims[0]
-                zmax=p_subplot.zlims[1]
-                ax.collections[0].set_clim(zmin,zmax)
-                cm=p_subplot.cm
-                if p_subplot.symmetrize_cm:
-                    cm=symmetrize_colormap(cm,zmin,zmax)
-                ax.collections[0].set_cmap(cm)
-                for i in p_subplot.hidden_zticklabels:
-                    plt.setp(cb.ax.get_xticklabels()[i],visible=False)
-            cb.solids.set_edgecolor("face")
 
-        ### QUIVER PLOT #####
-        if p_subplot.dimensions == -2:
-            X,Y=numpy.meshgrid(p_subplot.x,p_subplot.y)
-            U=numpy.transpose(p_subplot.x_data)
-            V=numpy.transpose(p_subplot.y_data)
-            ax.quiver(X,Y,U,V)
 
 
         #we need to sort out ticks after plotting, since they are generated
