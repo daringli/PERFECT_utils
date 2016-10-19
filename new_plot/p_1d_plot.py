@@ -294,15 +294,12 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
         all_group.setattrs("hlines",hlines)
         last_group.setattrs("show_xaxis_ticklabel",True)
         
-        perfect_visualizer(psp_list,gridspec_list[i_li],global_xlabel=global_xlabel,dimensions=1,global_ylabel=global_ylabel)
+        perfect_visualizer(psp_list,gridspec_list[i_li],global_xlabel=global_xlabel,dimensions=1,global_ylabel=global_ylabel,interactive=interactive)
         if same_plot:
             plt.savefig(outputname+".pdf")
         else:
             plt.savefig(attribs[i_li]+".pdf")
-        if interactive:
-            #dangerous, since it will (for some reason) be executed after all 1d_plot calls and show everything plotted in the given script.
-            datacursor(display='multiple', draggable=True)
-            plt.show()
+
         
 
     

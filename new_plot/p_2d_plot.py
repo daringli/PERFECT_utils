@@ -16,7 +16,7 @@ import numpy
 import sys
 
 
-def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",cm=cm.rainbow,lg=True,xlims=[90,100],ylims=[0,2],species=True,sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[],skip_species = [],simulList=None):
+def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",cm=cm.rainbow,lg=True,xlims=[90,100],ylims=[0,2],species=True,sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[],skip_species = [],simulList=None,outputname=None):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -187,7 +187,10 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
             global_xlabel=r"$\psi^\mathrm{o}$"
         perfect_visualizer(psp_list,gridspec,global_xlabel=global_xlabel,dimensions=2,global_ylabel=r"$\theta/\pi$")
 
-        plt.savefig(attrib+'.pdf')
+        if outputname is None:
+            plt.savefig(attrib+'.pdf')
+        else:
+            plt.savefig(outputname+'.pdf')
 
 if __name__=="__main__":
     dirlist=sys.argv[1:]

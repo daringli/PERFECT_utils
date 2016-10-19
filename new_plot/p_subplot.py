@@ -104,6 +104,10 @@ class perfect_subplot:
         self.yaxis_label_x=kwarg_default("yaxis_label_x",-0.15,**kwargs)
         self.yaxis_label_y=kwarg_default("yaxis_label_y",0.5,**kwargs)
 
+        self.datastyle=kwarg_default("datastyle","color",**kwargs)
+        
+        self.bg_alpha=kwarg_default("bg_alpha",1.0,**kwargs)
+
         self.subplot_coordinates=subplot_coordinates
 
                 
@@ -186,7 +190,8 @@ class perfect_subplot:
         if dimensions==2:
             #going to visualize 2D data
             self.dimensions=2
-
+            
+            self.linecolor=kwarg_default("linecolor","k",**kwargs)
             #terminology suitable for 2D case
             data_yaxis=data_otheraxis
 
@@ -209,18 +214,14 @@ class perfect_subplot:
                 print "perfect_subplot: 2D: error: need y for 2D plot."
                 exit(1)
             if (x_data!=None) and (y_data!=None):
-                self.y_data = y_data
-                self.x_data = x_data
                 self.xy_data_exists=True
                 if (data_xaxis == 0) and (data_yaxis == 1):
                     self.y_data = y_data
                     self.x_data = x_data
-                    self.xy_data_exists=True
                 elif (data_xaxis == 1) and (data_yaxis == 0):
                     #we always want our x data along the first axis
                     self.y_data = numpy.transpose(y_data)
                     self.x_data = numpy.transpose(x_data)
-                    self.xy_data_exists=True
                     
             elif (x_data==None and y_data!=None) or (x_data!=None and y_data==None):
                 print "perfect_subplot: 2D: error: need x_data and y_data for stream plot."
@@ -300,7 +301,7 @@ class perfect_subplot:
             data=self.data[ixrange[:,numpy.newaxis],iyrange]
             return data
 
-    def plot(self,fig,ax):
+    def plot(self,fig,ax):        
         if self.dimensions == 1:
             x=self.x
             y=self.data            
@@ -358,7 +359,14 @@ class perfect_subplot:
                 z=numpy.transpose(self.data)
                 U=numpy.transpose(self.x_data)
                 V=numpy.transpose(self.y_data)
-                streamplot(ax,self.x,self.y,U,V,density=(1,3),cmap=self.cm,color=z,vmin=vmin,vmax=vmax)
+                if self.datastyle == "color":
+                    color=z
+                    linecolor=None
+                elif (self.datastyle == "") or (self.datastyle is None):
+                    color=None
+                    #linecolor=self.linecolor
+                    linecolor=None
+                streamplot(ax,self.x,self.y,U,V,density=(2,3),cmap=self.cm,color=color,vmin=vmin,vmax=vmax,linecolor=linecolor)
             else:
                 #pcolor
                 X,Y=numpy.meshgrid(self.x,self.y)
@@ -407,6 +415,8 @@ class perfect_subplot:
                     plt.setp(cb.ax.get_xticklabels()[i],visible=False)
                 if self.show_zaxis == True:
                     cb.solids.set_rasterized(True)
+        ax.patch.set_alpha(self.bg_alpha)
+
                 
                 
 

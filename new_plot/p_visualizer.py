@@ -13,6 +13,8 @@ from matplotlib import ticker
 
 from streamplot import streamplot
 
+from mpldatacursor import datacursor
+
 # for the __name__="__main__" part only:
 from perfect_simulations_from_dirs import perfect_simulations_from_dirs
 
@@ -28,6 +30,8 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
     textcols=kwarg_default("textcols",1,**kwargs)
     rows=kwarg_default("rows",gridspec_params[0],**kwargs)
     cols=kwarg_default("cols",gridspec_params[1],**kwargs)
+
+    interactive=kwarg_default("interactive",False,**kwargs)
 
     
     #set the height differently depending on if most plots are colormaps (2D), and thus need colorbars
@@ -89,7 +93,7 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
     ax_list=[]
     
     for p_subplot in p_subplot_list:
-        ax_list.append(plt.subplot(gs[p_subplot.subplot_coordinates]))
+        ax_list.append(fig.add_subplot(gs[p_subplot.subplot_coordinates]))
 
     for ax,p_subplot in zip(ax_list,p_subplot_list):
         monkey_patch(ax.xaxis,'x')
@@ -196,6 +200,9 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
         
         #print str(p_subplot.title)+": " +"("+str(p_subplot.title_x)+","+str(p_subplot.title_y)+")"
         ax.set_title(p_subplot.title,x=p_subplot.title_x,y=p_subplot.title_y,fontsize=8)
+        if interactive:
+            datacursor(display='multiple', draggable=True)
+            plt.show()
 
 
 

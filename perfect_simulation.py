@@ -623,7 +623,13 @@ class perfect_simulation(object):
 
     @property
     def particle_flux_before_theta_integral(self):
-        return self.outputs[self.group_name+self.particle_flux_before_theta_integral_name][()]
+        VPrimeHat=self.VPrimeHat[:,numpy.newaxis,numpy.newaxis]
+        signOfVPrimeHat=numpy.sign(VPrimeHat)
+        return self.outputs[self.group_name+self.particle_flux_before_theta_integral_name][()]*signOfVPrimeHat
+
+    @property
+    def particle_flux_no_fsa(self):
+        return numpy.expand_dims(numpy.fabs(self.JHat),axis=2)*self.particle_flux_before_theta_integral
 
     @property
     def pedestal_particle_flux_of_theta(self,psiN=0.96):
@@ -642,6 +648,11 @@ class perfect_simulation(object):
     def particle_flux_psi_unit_vector(self):
         #divide \nabla \psi with |\nabla \psi| =|RB_p| (assumes BBar, RBar positive)
         return numpy.expand_dims(self.VPrimeHat,axis=1)*self.FSA(self.particle_flux_before_theta_integral/(numpy.fabs(numpy.expand_dims(self.RHat*self.Bp,axis=2))),jacobian=False)
+
+    @property
+    def particle_flux_psi_unit_vector_no_fsa(self):
+        #divide \nabla \psi with |\nabla \psi| =|RB_p| (assumes BBar, RBar positive)
+        return self.particle_flux_no_fsa/(numpy.fabs(numpy.expand_dims(self.RHat*self.Bp,axis=2)))
         
     @property
     def momentum_flux(self):
@@ -652,7 +663,9 @@ class perfect_simulation(object):
 
     @property
     def momentum_flux_before_theta_integral(self):
-        return self.outputs[self.group_name+self.momentum_flux_before_theta_integral_name][()]
+        VPrimeHat=self.VPrimeHat[:,numpy.newaxis,numpy.newaxis]
+        signOfVPrimeHat=numpy.sign(VPrimeHat)
+        return self.outputs[self.group_name+self.momentum_flux_before_theta_integral_name][()]*signOfVPrimeHat
 
     
     @property
@@ -691,7 +704,9 @@ class perfect_simulation(object):
 
     @property
     def heat_flux_before_theta_integral(self):
-        return self.outputs[self.group_name+self.heat_flux_before_theta_integral_name][()]
+        VPrimeHat=self.VPrimeHat[:,numpy.newaxis,numpy.newaxis]
+        signOfVPrimeHat=numpy.sign(VPrimeHat)
+        return self.outputs[self.group_name+self.heat_flux_before_theta_integral_name][()]*signOfVPrimeHat
 
     @property
     def heat_flux_psi_unit_vector(self):
@@ -2026,8 +2041,18 @@ class normalized_perfect_simulation(perfect_simulation):
         sim_copy.norm=new_n_filename
         
         return sim_copy
-        
 
+    @property
+    def a(self):
+        return self.epsilon*self.RBar
+
+    @property
+    def a_theta(self):
+        return self.a*self.theta
+
+    @property
+    def a_theta(self):
+        return self.a*self.theta
 
     @property
     def T(self):
@@ -2073,6 +2098,14 @@ class normalized_perfect_simulation(perfect_simulation):
         VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
         signOfVPrimeHat=numpy.sign(VPrimeHat)
         return (self.particle_flux_psi_unit_vector/VPrimeHat)*signOfVPrimeHat*(numpy.pi*self.Delta**2)*self.nBar*self.vBar
+
+    @property
+    def normed_particle_flux_psi_unit_vector_no_fsa(self):
+        return numpy.pi*self.Delta**2*self.nBar*self.vBar*self.particle_flux_psi_unit_vector_no_fsa
+
+    @property
+    def normed_particle_flow_psi_unit_vector_no_fsa(self):
+        return numpy.pi*self.Delta**2*self.vBar*self.particle_flux_psi_unit_vector_no_fsa/numpy.expand_dims(self.nHat,axis=1)
 
     @property
     def normed_momentum_flux(self):
@@ -2193,6 +2226,17 @@ class normalized_perfect_simulation(perfect_simulation):
     def normed_potential_perturbation(self):
         return self.PhiBar*self.potential_perturbation
 
+    @property
+    def normed_poloidal_flow(self):
+        return self.Delta*self.vBar*self.poloidal_flow
+
+    @property
+    def normed_poloidal_flow_km_s(self):
+        return 1e-3*self.Delta*self.vBar*self.poloidal_flow
+    
+    @property
+    def normed_poloidal_flux(self):
+        return self.Delta*self.vBar*numpy.expand_dims(self.n,axis=1)*self.poloidal_flow
     
     @property
     def normed_perpendicular_flow(self):
@@ -2248,10 +2292,20 @@ class normalized_perfect_simulation(perfect_simulation):
         ped_stop = self.pedestal_points[-1]
         psi_o = (self.actual_psiN-ped_stop)/self.orbit_width[:,i_s]
         return psi_o
-        
+
+    @property
+    def r(self, dr_dpsiN=0.591412216405):
+        #i_s : index of species for which to calculate orbit width for
+        return (self.actual_psiN - self.pedestal_points[-1])*dr_dpsiN
+    
+    
     @property
     def pedestal_points_psi_o(self):
         return [self.psi_o[point] for point in self.pedestal_point_indices]
+
+    @property
+    def pedestal_points_r(self):
+        return [self.r[point] for point in self.pedestal_point_indices]
     
     
     def Pradtl_proxy(self,ion_index,psi_index):
