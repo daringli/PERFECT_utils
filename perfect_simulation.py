@@ -1075,7 +1075,7 @@ class perfect_simulation(object):
         
     @property
     def poloidal_flow_at_psi_of_theta(self):
-        return self.attrib_at_psi_of_theta("poloidal_flow",0.955)
+        return self.attrib_at_psi_of_theta("poloidal_flow",self.psi_o_to_psiN(-1.0))
 
     @property
     def poloidal_flow_outboard(self):
@@ -2108,6 +2108,10 @@ class normalized_perfect_simulation(perfect_simulation):
         return numpy.pi*self.Delta**2*self.vBar*self.particle_flux_psi_unit_vector_no_fsa/numpy.expand_dims(self.nHat,axis=1)
 
     @property
+    def normed_particle_flow_psi_unit_vector_no_fsa_km_s(self):
+        return 1e-3*self.normed_particle_flow_psi_unit_vector_no_fsa
+
+    @property
     def normed_momentum_flux(self):
         VPrimeHat=[self.VPrimeHat]
         VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
@@ -2232,7 +2236,7 @@ class normalized_perfect_simulation(perfect_simulation):
 
     @property
     def normed_poloidal_flow_km_s(self):
-        return 1e-3*self.Delta*self.vBar*self.poloidal_flow
+        return 1e-3*self.normed_poloidal_flow
     
     @property
     def normed_poloidal_flux(self):
@@ -2253,6 +2257,10 @@ class normalized_perfect_simulation(perfect_simulation):
     @property
     def normed_toroidal_flow(self):
         return self.Delta*self.vBar*self.toroidal_flow
+
+    @property
+    def normed_toroidal_flow_km_s(self):
+        return 1e-3*self.normed_toroidal_flow
 
     @property
     def normed_FSA_toroidal_flow(self):
@@ -2293,9 +2301,17 @@ class normalized_perfect_simulation(perfect_simulation):
         psi_o = (self.actual_psiN-ped_stop)/self.orbit_width[:,i_s]
         return psi_o
 
+    def psi_o_to_psiN(self,psi_o):
+        #psi_o : psi_o value to get psi_N for
+        i=get_index_range(self.psi_o,[psi_o,psi_o],ret_range=False)[0]
+        psiN=self.actual_psiN[i]
+        print psiN
+        return psiN
+        
+
     @property
     def r(self, dr_dpsiN=0.591412216405):
-        #i_s : index of species for which to calculate orbit width for
+        #dr_dpsiN : dr/dpsiN
         return (self.actual_psiN - self.pedestal_points[-1])*dr_dpsiN
     
     

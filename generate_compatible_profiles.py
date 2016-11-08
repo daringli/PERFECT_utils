@@ -284,7 +284,7 @@ def generate_ni_profile(**kwargs):
     
     return (niHat,dniHatds)
 
-def generate_T_profiles_sameflux(nt,nb,breakpoint_shift,**kwargs):
+def generate_T_profiles_sameflux(nt,nb,breakpoint_shift,T_transition_length,**kwargs):
     global TiHatPed
     global TiHatAft
     global dTiHatAftdpsi
@@ -328,8 +328,19 @@ def generate_T_profiles_sameflux(nt,nb,breakpoint_shift,**kwargs):
     TpedGrads=numpy.array(TpedGrads)
     
     if mtanh:
-        transition_length = 1*(psiMaxPed-psiMinPed)
-        (THats[main_index],dTHatdss[main_index]) = match_heat_flux_proxy(Tpeds[main_index],TCoreGrads[main_index],TpedGrads[main_index],TSOLGrads[main_index],transition_length,psiMinPed,nt,nb,psiMin,psiMax)
+        transition_length = T_transition_length*(psiMaxPed-psiMinPed)
+        # we always want the transition to end at the same place and start at the same density...
+        #... thus we shift the start when we change the transition length
+        transition_start = psiMinPed - (T_transition_length -1)*(psiMaxPed-psiMinPed)
+        print "!!!!!!!!!!!!!!!!!!"
+        print psiMin
+        print transition_start
+        
+        #... and change the Tped
+        Tped = Tpeds[main_index] - TpedGrads[main_index]*(T_transition_length -1)*(psiMaxPed-psiMinPed)
+        print Tped
+        
+        (THats[main_index],dTHatdss[main_index]) = match_heat_flux_proxy(Tped,TpedGrads[main_index],TpedGrads[main_index],TSOLGrads[main_index],transition_length,transition_start,nt,nb,psiMin,psiMax)
         (core,ped,sol,ddx_core,ddx_ped,ddx_sol) = extrapolate_m2tanh_sections(THats[main_index],dTHatdss[main_index],psiMin,psiMinPed,psiMaxPed,psiMax)
         
         TiHatPed = ped
@@ -563,7 +574,7 @@ def generate_n_from_eta_X_profile(etaHat,X,detaHatds,dXds,Z):
     dnHatdpsi=lambda x : detaHatds(x)*X(x)**Z + etaHat(x)*Z*X(x)**(Z-1)*dXds(x)
     return (nHat,dnHatdpsi)
 
-def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,oldsameflux=False,sameeta=False,samefluxshift=0,specialEta=False,psiDiamFact=5,transitionFact=0.2,dxdpsiN=1,midShift=0,upShift_denom=3.0,m2tanh=False,mode="const_Phi",leftBoundaryShift=0.0,rightBoundaryShift=0.0,**kwargs):
+def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,oldsameflux=False,sameeta=False,samefluxshift=0,specialEta=False,psiDiamFact=5,transitionFact=0.2,dxdpsiN=1,midShift=0,upShift_denom=3.0,m2tanh=False,mode="const_Phi",leftBoundaryShift=0.0,rightBoundaryShift=0.0,T_transition_length=1.0,**kwargs):
     #NOTE: uses the dx/dpsi at minor radius for both core and SOL, which assumes that
     #simulated region is small enough that it doesn't change much.
     if mode == "periodic":
@@ -699,7 +710,7 @@ def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,ol
     if (sameflux==True):
         nt=nHats[main_index](psiMin)
         nb=nHats[main_index](psiMax)
-        (THats,dTHatdss) = generate_T_profiles_sameflux(nt,nb,samefluxshift,**kwargs)
+        (THats,dTHatdss) = generate_T_profiles_sameflux(nt,nb,samefluxshift,T_transition_length,**kwargs)
     elif (oldsameflux==True):
         #this setting uses the old ni profile generation to generatea  temporary
         # n_i profile to generate sameflux T profiles that are the same as in
@@ -711,7 +722,7 @@ def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,ol
         (nH,dnHds) = generate_ni_profile(**kwargs)
         nt=nH(psiMin)
         nb=nH(psiMax)
-        (THats,dTHatdss) = generate_T_profiles_sameflux(nt,nb,samefluxshift,**kwargs)
+        (THats,dTHatdss) = generate_T_profiles_sameflux(nt,nb,samefluxshift,T_transition_length,**kwargs)
     else:
         (THats,dTHatdss) = generate_T_profiles(**kwargs)
 
@@ -787,8 +798,8 @@ def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,ol
 # generate_compatible_profiles_constant_ne
 #########################################################
 
-def generate_compatible_profiles_constant_ne(simul,xwidth,nonuniform=False,sameflux=False,oldsameflux=False,sameeta=False,samefluxshift=0,specialEta=False,psiDiamFact=5,transitionFact=0.2,dxdpsiN=1,midShift=0,upShift_denom=3.0,m2tanh=False,**kwargs):
-    generate_compatible_profiles(simul,xwidth,nonuniform,sameflux,oldsameflux,sameeta,samefluxshift,specialEta,psiDiamFact,transitionFact,dxdpsiN,midShift,upShift_denom,m2tanh,mode="const_ne",**kwargs)
+def generate_compatible_profiles_constant_ne(simul,xwidth,nonuniform=False,sameflux=False,oldsameflux=False,sameeta=False,samefluxshift=0,specialEta=False,psiDiamFact=5,transitionFact=0.2,dxdpsiN=1,midShift=0,upShift_denom=3.0,m2tanh=False,T_transition_length=1.0,**kwargs):
+    generate_compatible_profiles(simul,xwidth,nonuniform,sameflux,oldsameflux,sameeta,samefluxshift,specialEta,psiDiamFact,transitionFact,dxdpsiN,midShift,upShift_denom,m2tanh,mode="const_ne",T_transition_length=1.0,**kwargs)
 
 def generate_periodic_profiles(simul,xwidth,nonuniform,dxdpsiN,psiDiamFact,midShift,upShift_denom,leftBoundaryShift,rightBoundaryShift,**kwargs):
     global psiMin

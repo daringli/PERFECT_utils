@@ -16,7 +16,7 @@ import numpy
 import sys
 
 
-def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",cm=cm.rainbow,lg=True,xlims=[90,100],ylims=[0,2],species=True,sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[],skip_species = [],simulList=None,outputname=None):
+def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",cm=cm.rainbow,lg=True,xlims=[90,100],ylims=[0,2],species=True,sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[],skip_species = [],simulList=None,outputname=None,colors=None,zlabels=None,zaxis_powerlimits=(0,0)):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -100,7 +100,10 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
                 if i == 0:
                     show_zaxis_ticklabel=True
                     show_xaxis_ticklabel=False
-                    title=s
+                    if zlabels is None:
+                        title = s
+                    else:
+                        title = zlabels[i_s]
                 else:
                     show_zaxis_ticklabel=False
                     title=''
@@ -134,7 +137,7 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
                     vlines=simul.pedestal_points_psi_o
                 x = getattr(simul,xattr)*x_scale
                 y = getattr(simul,yattr)*y_scale
-                psp_list.append(perfect_subplot(data,x=x,y=y,subplot_coordinates=subplot_coordinates,show_zaxis_ticklabel=show_zaxis_ticklabel,show_yaxis_ticklabel=show_yaxis_ticklabel,show_xaxis_ticklabel=show_xaxis_ticklabel,title=title,groups=[s,"sim"+str(i),gl_grp,"pair"+str(i/2),species_attrib_groupname],dimensions=2))
+                psp_list.append(perfect_subplot(data,x=x,y=y,subplot_coordinates=subplot_coordinates,show_zaxis_ticklabel=show_zaxis_ticklabel,show_yaxis_ticklabel=show_yaxis_ticklabel,show_xaxis_ticklabel=show_xaxis_ticklabel,title=title,groups=[s,"sim"+str(i),gl_grp,"pair"+str(i/2),species_attrib_groupname],dimensions=2,zaxis_powerlimits=zaxis_powerlimits))
         #end simulList loop
         for psp in psp_list:
             print psp.groups
@@ -148,14 +151,19 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
         all_group=perfect_subplot_group(psp_list,groups='',get_all=True)
         share_scale_group=perfect_subplot_group(psp_list,groups=share_scale,logic="or")
         
-        
         if lg==False:
-            color=iter(cm(numpy.linspace(0,1,len(simulList))))
+            if colors is None:
+                color=iter(cm(numpy.linspace(0,1,len(simulList))))
+            else:
+                color=iter(colors)
             for sim_group in sim_groups:
                 c=next(color)
                 sim_group.setattrs("border_color",c)
         else:
-            color=iter(cm(numpy.linspace(0,1,len(pair_groups))))
+            if colors is None:
+                color=iter(cm(numpy.linspace(0,1,len(pair_groups))))
+            else:
+                color=iter(colors)
             for pair_group in pair_groups:
                 c=next(color)
                 pair_group.setattrs("border_color",c)
@@ -181,6 +189,8 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
         for i,sim_group in enumerate(sim_groups):
             if i != 0:
                 sim_group.setattrs("show_zaxis",False)
+        
+                
         if xattr is not "psi_o":
             global_xlabel=r"$100\psi_N$"
         else:

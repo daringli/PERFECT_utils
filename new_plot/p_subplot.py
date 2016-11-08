@@ -37,6 +37,8 @@ class perfect_subplot:
         #show_<X>axis: whether to show axis when plotting. <X>=x,y,(z)
         #show_<X>axis_label: whether to show axis label when plotting. <X>=x,y,(z)
 
+
+        
         #kwargs that may change how we intepret the data
         data_xaxis=kwarg_default("data_xaxis",0,**kwargs)
         data_otheraxis=(data_xaxis+1)%2
@@ -86,6 +88,7 @@ class perfect_subplot:
         self.xaxis_powerlimits=kwarg_default("xaxis_powerlimits",None,**kwargs)
         self.yaxis_powerlimits=kwarg_default("yaxis_powerlimits",None,**kwargs)
 
+        
         self.xaxis_label=kwarg_default("xaxis_label",None,**kwargs)
         self.yaxis_label=kwarg_default("yaxis_label",None,**kwargs)
             
@@ -120,6 +123,9 @@ class perfect_subplot:
         if dimensions==1:
             #going to visualize 1D data
             self.dimensions=1
+
+            #default plot-type is simply 1D plot (not really used for 1D plot)
+            self.plot_type=kwarg_default("plot_type","line",**kwargs) 
             
             #split 2D array into list of 1D arrays
             self.data=array2D_to_array_list(data,data_otheraxis)
@@ -131,6 +137,9 @@ class perfect_subplot:
             #kwarg needed to intepret x, which can be a list of arrays here
             x_xaxis=kwarg_default("x_xaxis",0,**kwargs)
             x_lineaxis=(x_xaxis+1)%2
+
+            
+
 
             if type(arraylist_rank(x)) is not list:
                 if arraylist_rank(x) == 1:
@@ -190,6 +199,9 @@ class perfect_subplot:
         if dimensions==2:
             #going to visualize 2D data
             self.dimensions=2
+
+            #z powerlimits
+            self.zaxis_powerlimits=kwarg_default("zaxis_powerlimits",(0,0),**kwargs)
             
             self.linecolor=kwarg_default("linecolor","k",**kwargs)
             #terminology suitable for 2D case
@@ -215,6 +227,9 @@ class perfect_subplot:
                 exit(1)
             if (x_data!=None) and (y_data!=None):
                 self.xy_data_exists=True
+                #default plot-type is streamplot
+                self.plot_type=kwarg_default("plot_type","streamplot",**kwargs)
+
                 if (data_xaxis == 0) and (data_yaxis == 1):
                     self.y_data = y_data
                     self.x_data = x_data
@@ -224,10 +239,12 @@ class perfect_subplot:
                     self.x_data = numpy.transpose(x_data)
                     
             elif (x_data==None and y_data!=None) or (x_data!=None and y_data==None):
-                print "perfect_subplot: 2D: error: need x_data and y_data for stream plot."
+                print "perfect_subplot: 2D: error: need x_data and y_data for vector plot."
                 exit(1)
             else:
                 self.xy_data_exists=False
+                #default plot-type is pcolormesh 
+                self.plot_type=kwarg_default("plot_type","pcolormesh",**kwargs) 
                 
 
             
@@ -366,12 +383,23 @@ class perfect_subplot:
                     color=None
                     #linecolor=self.linecolor
                     linecolor=None
-                streamplot(ax,self.x,self.y,U,V,density=(2,3),cmap=self.cm,color=color,vmin=vmin,vmax=vmax,linecolor=linecolor)
+                if self.plot_type == "streamplot":
+                    streamplot(ax,self.x,self.y,U,V,density=(2,3),cmap=self.cm,color=color,vmin=vmin,vmax=vmax,linecolor=linecolor)
+                else:
+                    print "perfect_subplot: 2D: error: unrecognized plot-type for vector data"
+                    exit(1)
             else:
                 #pcolor
                 X,Y=numpy.meshgrid(self.x,self.y)
                 z=numpy.transpose(self.data)
-                ax.pcolormesh(X, Y, z,rasterized=True,linewidth=0,cmap=self.cm,vmin=vmin,vmax=vmax)
+                if self.plot_type == "pcolormesh":
+                    ax.pcolormesh(X, Y, z,rasterized=True,linewidth=0,cmap=self.cm,vmin=vmin,vmax=vmax)
+                elif self.plot_type == "contour":
+                    levels = [0.0]
+                    ax.contour(X, Y, z,colors='k',rasterized=True,levels=levels)
+                else:
+                    print "perfect_subplot: 2D: error: unrecognized plot-type for 2D data"
+                    exit(1)
                 
             if self.show_zaxis == True:
                 divider = make_axes_locatable(ax)
@@ -389,7 +417,7 @@ class perfect_subplot:
                 cb.ax.xaxis.set_label_position('top')
                 cb.ax.set_xscale(self.zscale)
                 cb.ax.tick_params(direction='out', pad=1)
-                cb.formatter.set_powerlimits((0, 0))
+                cb.formatter.set_powerlimits(self.zaxis_powerlimits)
                 cb.update_ticks()
                 if self.show_zaxis_ticklabel == False:
                     plt.setp(cb.ax.get_xticklabels(), visible=False)

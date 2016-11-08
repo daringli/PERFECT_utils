@@ -20,7 +20,7 @@ from mpldatacursor import datacursor
 
 
 
-def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,markers=None,linestyles=None,xlims=None,same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[],interactive=False,colors=None):
+def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,markers=None,linestyles=None,xlims=None,same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[],interactive=False,colors=None,pedestal_points=None,pedestal_point_vlines=False):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -44,11 +44,13 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
     specieslist=[x + "/" + speciesname for x in dirlist]
     psiN_to_psiList=[x + "/" + psiN_to_psiname for x in dirlist]
     global_term_multiplierList=[x + "/" + global_term_multiplier_name for x in dirlist]
-    if vlines== None:
-        here_vlines=[]
-    else:
-        here_vlines=vlines
-    simulList=perfect_simulations_from_dirs(dirlist,normlist,specieslist,psiN_to_psiList,global_term_multiplierList,pedestal_points_list=here_vlines)
+    if pedestal_points is None:
+        if vlines is None:
+            pedestal_points=[]
+        else:
+            pedestal_points=vlines
+        
+    simulList=perfect_simulations_from_dirs(dirlist,normlist,specieslist,psiN_to_psiList,global_term_multiplierList,pedestal_points_list=pedestal_points)
     if markers == None:
         markers=['']*len(simulList)
 
@@ -284,9 +286,12 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
             global_xlabel=r"$\psi^o$"
         elif xattr==None:
             global_xlabel=r"$i$"
-            
-        if xattr == "psi_o":
-            this_vlines = simulList[0].pedestal_points_psi_o
+
+        if pedestal_point_vlines:
+            if xattr == "psi_o":
+                this_vlines = simulList[0].pedestal_points_psi_o
+            else:
+                this_vlines = simulList[0].pedestal_points
         else:
             this_vlines = vlines
         all_group.setattrs("show_yaxis_ticklabel",True)
