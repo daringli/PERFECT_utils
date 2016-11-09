@@ -1113,11 +1113,10 @@ class perfect_simulation(object):
     @property
     def k_poloidal(self):
         return self.poloidal_flow*self.poloidal_flow_to_k_poloidal_factor
-        #return self.k_poloidal_test
 
     @property
     def k_poloidal_at_psi_of_theta(self):
-        return self.attrib_at_psi_of_theta("k_poloidal",0.955)
+        return self.attrib_at_psi_of_theta("k_poloidal",self.psi_o_to_psiN(-1.0))
 
     @property
     def k_poloidal_outboard(self):

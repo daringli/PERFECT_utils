@@ -20,7 +20,7 @@ from mpldatacursor import datacursor
 
 
 
-def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,markers=None,linestyles=None,xlims=None,same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[],interactive=False,colors=None,pedestal_points=None,pedestal_point_vlines=False):
+def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,markers=None,linestyles=None,xlims=None,same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[],interactive=False,colors=None,pedestal_points=None,pedestal_point_vlines=True,skip_species = []):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -70,7 +70,12 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
             last=generic_species_labels(last,label_dict)
     species_set=set([])
     for simul in simulList:
+        nonexcluded = [s for s in simul.species if s not in skip_species]
+        simul.species_list = nonexcluded
+        # add nonexcluded species to total species set
         species_set = species_set | set(simul.species)
+    if sort_species:
+        species_set=sort_species_list(list(species_set),first,last)
     
     #print gridspec
     
@@ -144,8 +149,6 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                 perhaps_last=False
         else:
             perhaps_last=True
-        if sort_species:
-            species_set=sort_species_list(list(species_set),first,last)
         if attrib_sp_dep:
             for i_sp,s in enumerate(species_set):
                 i=i+1
