@@ -20,7 +20,7 @@ from mpldatacursor import datacursor
 
 
 
-def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,markers=None,linestyles=None,xlims=None,same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[],interactive=False,colors=None,pedestal_points=None,pedestal_point_vlines=True,skip_species = []):
+def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,markers=None,linestyles=None,xlims=None,same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[],interactive=False,colors=None,pedestal_points=None,pedestal_point_vlines=True,skip_species = [],yaxis_powerlimits=(0,0),hidden_xticklabels=[],yaxis_label_x=-0.15):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -185,7 +185,7 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                 else:
                     last_groupname="not_last"
 
-                psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,groups=[s,attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,colors=linecolors,markers=markers)) #yaxis_label=ylabels[i_a]
+                psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,groups=[s,attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,colors=linecolors,markers=markers,yaxis_powerlimits=yaxis_powerlimits,hidden_xticklabels=hidden_xticklabels,yaxis_label_x=yaxis_label_x)) #yaxis_label=ylabels[i_a]
                 
 
         else:
