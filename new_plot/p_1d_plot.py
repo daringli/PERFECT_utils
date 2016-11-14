@@ -20,13 +20,13 @@ from mpldatacursor import datacursor
 
 
 
-def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,markers=None,linestyles=None,xlims=None,same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[],interactive=False,colors=None,pedestal_points=None,pedestal_point_vlines=True,skip_species = [],yaxis_powerlimits=(0,0),hidden_xticklabels=[],yaxis_label_x=-0.15):
+def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,markers=None,linestyles=None,linewidths=None,xlims=None,same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[],interactive=False,colors=None,pedestal_points=None,pedestal_point_vlines=True,skip_species = [],yaxis_powerlimits=(0,0),hidden_xticklabels=[],yaxis_label_x=-0.15,ylims=None):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
     #normname: norm filename in the simuldir
     #lg: controls whether to interpret nearby simulations as being paired
-    
+
     if type(attribs) is not list:
         attribs=[attribs]
     if ylabels is not None:
@@ -128,6 +128,9 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                 linestyles=linestyles+["dashdot"]
             else:
                 linestyles=linestyles+["solid"]
+
+    if linewidths == None:
+        linewidths = [1]*len(simulList)
     
     for i_a,attrib in enumerate(attribs):
         psp_list=[]
@@ -185,7 +188,12 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                 else:
                     last_groupname="not_last"
 
-                psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,groups=[s,attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,colors=linecolors,markers=markers,yaxis_powerlimits=yaxis_powerlimits,hidden_xticklabels=hidden_xticklabels,yaxis_label_x=yaxis_label_x)) #yaxis_label=ylabels[i_a]
+                if ylims is None:
+                    ylim = None
+                else:
+                    ylim = ylims[i]
+                    
+                psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,groups=[s,attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,linewidths=linewidths,colors=linecolors,markers=markers,yaxis_powerlimits=yaxis_powerlimits,hidden_xticklabels=hidden_xticklabels,yaxis_label_x=yaxis_label_x,ylims=ylim)) #yaxis_label=ylabels[i_a]
                 
 
         else:
@@ -200,7 +208,12 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
             x=[getattr(simul,xattr) for simul in simulList]
             linecolors=all_linecolors
             coordinates=(i,0)
-            psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,groups=[attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,colors=linecolors,markers=markers)) #yaxis_label=ylabels[i_a]
+            
+            if ylims is None:
+                ylim = None
+            else:
+                ylim = ylims[i]
+            psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,groups=[attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,colors=linecolors,markers=markers,ylims=ylim)) #yaxis_label=ylabels[i_a]
             
         
         psp_lists.append(psp_list)
@@ -214,7 +227,6 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
             final_psp_lists = final_psp_lists + psp_list
         psp_lists=[final_psp_lists]
         
-            
     for i_li,psp_list in enumerate(psp_lists):
         for psp in psp_list:
             print psp.groups
@@ -237,8 +249,8 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                     attrib_group.set_middle_ylabel(ylabel)
                 if len(share_scale)>0:
                     share_scale_group=perfect_subplot_group(psp_list,groups=share_scale,logic="or")
-                    share_scale_group.setattrs("ylims",[share_scale_group.get_min("data",margin=0.1),share_scale_group.get_max("data",margin=0.1)])
-                    
+                    if ylims is None:
+                        share_scale_group.setattrs("ylims",[share_scale_group.get_min("data",margin=0.1),share_scale_group.get_max("data",margin=0.1)])
 
                     
         
@@ -258,14 +270,18 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
             this_species_groups=[perfect_subplot_group(attrib_group.p_subplot_list,groups=[s]) for s in species_set]
             for this_species_group in this_species_groups:
                 if len(this_species_group.p_subplot_list)>0:
-                    this_species_group.setattrs("ylims",[this_species_group.get_min("data",margin=0.1),this_species_group.get_max("data",margin=0.1)])
+                    if ylims is None:
+                        this_species_group.setattrs("ylims",[this_species_group.get_min("data",margin=0.1),this_species_group.get_max("data",margin=0.1)])
                     #print [this_species_group.get_min("data",margin=0.1),this_species_group.get_max("data",margin=0.1)]
+                    
             this_species_indep_group=perfect_subplot_group(attrib_group.p_subplot_list,groups=["species_independent"])
             if len(this_species_indep_group.p_subplot_list)>0:
-                this_species_indep_group.setattrs("ylims",[this_species_indep_group.get_min("data",margin=0.1),this_species_indep_group.get_max("data",margin=0.1)])
+                if ylims is None:
+                    this_species_indep_group.setattrs("ylims",[this_species_indep_group.get_min("data",margin=0.1),this_species_indep_group.get_max("data",margin=0.1)])
             this_share_scale_group=perfect_subplot_group(attrib_group.p_subplot_list,groups=share_scale,logic="or")
             if len(this_share_scale_group.p_subplot_list)>0:
-                this_share_scale_group.setattrs("ylims",[this_share_scale_group.get_min("data",margin=0.1),this_share_scale_group.get_max("data",margin=0.1)])
+                if ylims is None:
+                    this_share_scale_group.setattrs("ylims",[this_share_scale_group.get_min("data",margin=0.1),this_share_scale_group.get_max("data",margin=0.1)])
             
             
         
