@@ -205,7 +205,11 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                 last_groupname="not_last"
             #species independent plot
             data=[getattr(simul,attrib) for simul in simulList]
-            x=[getattr(simul,xattr) for simul in simulList]
+            if xattr=="theta":
+                x_scale=1/numpy.pi
+            else:
+                x_scale=1
+            x=[x_scale*getattr(simul,xattr) for simul in simulList]
             linecolors=all_linecolors
             coordinates=(i,0)
             

@@ -1075,7 +1075,7 @@ class perfect_simulation(object):
         
     @property
     def poloidal_flow_at_psi_of_theta(self):
-        return self.attrib_at_psi_of_theta("poloidal_flow",self.psi_o_to_psiN(-1.0))
+        return self.attrib_at_psi_of_theta("poloidal_flow",self.psi_o_to_psiN(-0.5))
 
     @property
     def poloidal_flow_outboard(self):
@@ -1116,7 +1116,7 @@ class perfect_simulation(object):
 
     @property
     def k_poloidal_at_psi_of_theta(self):
-        return self.attrib_at_psi_of_theta("k_poloidal",self.psi_o_to_psiN(-1.0))
+        return self.attrib_at_psi_of_theta("k_poloidal",self.psi_o_to_psiN(-0.5))
 
     @property
     def k_poloidal_outboard(self):
@@ -1347,7 +1347,7 @@ class perfect_simulation(object):
         try:
             return self.outputs[self.group_name+self.deltaT_name][()]
         except KeyError:
-            return  numpy.abs(self.ddpsilog_to_delta_factor * self.dTHatdpsiN/self.THat)
+            return  numpy.abs(self.ddpsilog_to_delta_factor *self.dlogTHatdpsiN)
             
 
     @property
@@ -1378,6 +1378,10 @@ class perfect_simulation(object):
             return self.outputs[self.group_name+self.dTHatdpsiN_name][()]
         except KeyError:
             print "PhiHat could not be obtained since no external profiles have been speciied and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate the inputs."
+
+    @property
+    def dlogTHatdpsiN(self):
+        return self.dTHatdpsiN/self.THat
 
 
     @property
@@ -1727,27 +1731,35 @@ class perfect_simulation(object):
 
     @property
     def FSABp(self):
-        #a typical Bp
-        return numpy.trapz(numpy.fabs(self.Bp)/numpy.fabs(self.JHat),dx=self.dtheta)/numpy.fabs(self.VPrimeHat)
+        return self.FSA(self.Bp)
 
     @property
     def sqrtFSABp2(self):
         #another typical Bp
-        return numpy.sqrt(numpy.trapz(numpy.fabs(self.Bp**2)/numpy.fabs(self.JHat),dx=self.dtheta)/numpy.fabs(self.VPrimeHat))
+        return numpy.sqrt(self.FSA(self.Bp**2))
 
     @property
     def FSABHat2_test(self):
         #to compare external FSA to PERFECT internal
         #2016-06-03: differ at 0.01
-        return numpy.trapz(self.BHat**2/numpy.fabs(self.JHat),dx=self.dtheta)/numpy.fabs(self.VPrimeHat)
+        return self.FSA(self.BHat**2)
+    
+    @property
+    def FSABp_old(self):
+        #a typical Bp
+        return numpy.trapz(numpy.fabs(self.Bp)/numpy.fabs(self.JHat),dx=self.dtheta)/numpy.fabs(self.VPrimeHat)
 
     @property
-    def FSABp_test(self):
-        #<B_p> = 1/V' \int d\theta/|\nabla \theta| ?= 2\pi R/(qV')
-        #From comparing with above: does not seem so.
-        return 2*numpy.pi/numpy.expand_dims((self.q*self.VPrimeHat),axis=1)
+    def sqrtFSABp2_old(self):
+        #another typical Bp
+        return numpy.sqrt(numpy.trapz(numpy.fabs(self.Bp**2)/numpy.fabs(self.JHat),dx=self.dtheta)/numpy.fabs(self.VPrimeHat))
 
-    
+    @property
+    def FSABHat2_test_old(self):
+        #to compare external FSA to PERFECT internal
+        #2016-06-03: differ at 0.01
+        return numpy.trapz(self.BHat**2/numpy.fabs(self.JHat),dx=self.dtheta)/numpy.fabs(self.VPrimeHat)
+
     @property
     def Bp_at_psi_of_theta(self):
         #for PERFECT Mille geometry, Bp does not depend on psi
@@ -2050,10 +2062,6 @@ class normalized_perfect_simulation(perfect_simulation):
         return self.a*self.theta
 
     @property
-    def a_theta(self):
-        return self.a*self.theta
-
-    @property
     def T(self):
         return self.TBar*self.THat
 
@@ -2109,6 +2117,16 @@ class normalized_perfect_simulation(perfect_simulation):
     @property
     def normed_particle_flow_psi_unit_vector_no_fsa_km_s(self):
         return 1e-3*self.normed_particle_flow_psi_unit_vector_no_fsa
+    
+    @property
+    def ow_normed_particle_flow_psi_unit_vector_no_fsa(self,i_s=0):
+        # i_s: index of species used for orbit width calculation 
+        return self.normed_particle_flow_psi_unit_vector_no_fsa/self.FSA_orbit_width[:,i_s,numpy.newaxis,numpy.newaxis]
+
+    @property
+    def pw_normed_particle_flow_psi_unit_vector_no_fsa(self,i_s=0):
+        # pedestal width normed
+        return self.normed_particle_flow_psi_unit_vector_no_fsa/self.pedestal_width
 
     @property
     def normed_momentum_flux(self):
@@ -2236,6 +2254,10 @@ class normalized_perfect_simulation(perfect_simulation):
     @property
     def normed_poloidal_flow_km_s(self):
         return 1e-3*self.normed_poloidal_flow
+
+    @property
+    def a_normed_poloidal_flow(self):
+        return self.normed_poloidal_flow/(self.a*2*numpy.pi)
     
     @property
     def normed_poloidal_flux(self):
@@ -2278,26 +2300,55 @@ class normalized_perfect_simulation(perfect_simulation):
         return numpy.sum(self.normed_n_FSA_toroidal_mass_flow,axis=1)
 
     @property
+    def RBar_nabla_psiN(self):
+        # old hardcoded value: RBar_dpsiN_over_dr =4.92
+        return numpy.fabs(self.RHat*self.Bp/self.psiAHat)
+
+    @property
+    def RBar_nabla_psiN_of_theta(self):
+        return self.attrib_at_psi_of_theta(self.RBar_nabla_psiN,psiN=0.9)
+
+    @property
+    def FSA_RBar_nabla_psiN(self):
+        return self.FSA(self.RBar_nabla_psiN)
+    
+
+    @property
     def orbit_width(self):
-        # orbit width in psiN
-        # uses hardcoded numerical values for RBar dpsiN/dr...
-        print "###################################"
-        print "...          WARNING            ..."
-        print "###################################"
-        print "perfect_simulation.orbit_width contains hard-coded RBar dpsi_N/dr values."
-        RBar_dpsiN_over_dr =4.92
-        return numpy.fabs(numpy.sqrt(self.epsilon*self.THat*self.masses)/(self.Z*numpy.expand_dims(numpy.fabs(self.FSABp),axis=1))*self.Delta*RBar_dpsiN_over_dr)
+        return numpy.fabs((self.Delta/self.psiAHat)*numpy.expand_dims(self.RHat,axis=2)*numpy.expand_dims(numpy.sqrt(self.epsilon*self.THat*self.masses)/self.Z,axis=1))
+    
+    @property
+    def orbit_width_of_theta(self):
+        return self.attrib_at_psi_of_theta(self.orbit_width,psiN=0.9)
+
+
+    @property
+    def FSA_orbit_width(self):
+        return self.FSA(self.orbit_width)
 
     @property
     def orbit_width_over_rN(self):
-        return numpy.fabs(self.orbit_width*self.dnHatdpsiN/self.nHat)
+        return numpy.fabs(self.FSA_orbit_width*self.dnHatdpsiN/self.nHat)
+
+    @property
+    def orbit_width_old(self):
+        RBar_dpsiN_over_dr =4.92
+        return numpy.fabs(numpy.expand_dims(numpy.sqrt(self.epsilon*self.THat*self.masses),axis=1)/(self.Z*numpy.expand_dims(self.Bp,axis=2))*self.Delta*RBar_dpsiN_over_dr)
+
+    @property
+    def orbit_width_of_theta_old(self):
+        return self.attrib_at_psi_of_theta(self.orbit_width_old,psiN=0.9)
+
+    @property
+    def FSA_orbit_width_old(self):
+        return self.FSA(self.orbit_width_old)
 
 
     @property
     def psi_o(self,i_s=0):
         #i_s : index of species for which to calculate orbit width for
         ped_stop = self.pedestal_points[-1]
-        psi_o = (self.actual_psiN-ped_stop)/self.orbit_width[:,i_s]
+        psi_o = (self.actual_psiN-ped_stop)/self.FSA_orbit_width[:,i_s]
         return psi_o
 
     def psi_o_to_psiN(self,psi_o):
@@ -2309,7 +2360,16 @@ class normalized_perfect_simulation(perfect_simulation):
         
 
     @property
-    def r(self, dr_dpsiN=0.591412216405):
+    def r(self):
+        #dr_dpsiN : dr/dpsiN
+        return (self.actual_psiN - self.pedestal_points[-1])*self.FSA_RBar_nabla_psiN/self.RBar
+
+    @property
+    def pedestal_width(self):
+        return numpy.fabs((self.pedestal_points[0] - self.pedestal_points[-1])*self.FSA_RBar_nabla_psiN[0]/self.RBar)
+    
+    @property
+    def r_old(self, dr_dpsiN=0.591412216405):
         #dr_dpsiN : dr/dpsiN
         return (self.actual_psiN - self.pedestal_points[-1])*dr_dpsiN
     

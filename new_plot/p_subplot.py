@@ -16,7 +16,7 @@ from matplotlib import ticker
 from symmetrize_colormap import symmetrize_colormap
 from streamplot import streamplot
 
-
+import cmocean # has some nice perceptually uniform diverging colormaps
 
 
 import matplotlib 
@@ -264,7 +264,9 @@ class perfect_subplot:
 
             self.zlims=kwarg_default("zlims",None,**kwargs)
 
-            self.cm=kwarg_default("cm",invert_cm(cm_remove_middle(cm.RdBu,cut_radius=0.1)),**kwargs)
+            #self.cm=kwarg_default("cm",invert_cm(cm_remove_middle(cm.RdBu,cut_radius=0.1)),**kwargs)
+            self.cm=kwarg_default("cm",cm_remove_middle(cmocean.cm.delta,cut_radius=0.05),**kwargs)
+            #self.cm=kwarg_default("cm",cmocean.cm.balance,**kwargs)
             #self.cm=kwarg_default("cm",invert_cm(cm.RdBu),**kwargs)
             #self.cm=kwarg_default("cm",diverging_rb_cm(),**kwargs)
             self.symmetrize_cm=kwarg_default("symmetrize_cm",True,**kwargs)
@@ -384,7 +386,8 @@ class perfect_subplot:
                     #linecolor=self.linecolor
                     linecolor=None
                 if self.plot_type == "streamplot":
-                    streamplot(ax,self.x,self.y,U,V,density=(2,3),cmap=self.cm,color=color,vmin=vmin,vmax=vmax,linecolor=linecolor)
+                    streamplot(ax,self.x,self.y,U,V,density=(2,3),cmap=self.cm,color=color,vmin=vmin,vmax=vmax,linecolor=linecolor,rasterized=True)
+                    #rasterizes collection of lines and arrows in streamplot as one
                 else:
                     print "perfect_subplot: 2D: error: unrecognized plot-type for vector data"
                     exit(1)
