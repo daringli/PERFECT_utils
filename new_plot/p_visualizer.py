@@ -18,7 +18,6 @@ from mpldatacursor import datacursor
 # for the __name__="__main__" part only:
 from perfect_simulations_from_dirs import perfect_simulations_from_dirs
 
-
 def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
     #p_subplot_list: list of perfect_subplot
     #gridspec_params = [rows,cols] of the subplot grid. Should be compatible with the coordinates of the perfect_subplots

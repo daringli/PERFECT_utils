@@ -18,9 +18,7 @@ import scipy.integrate
 from mpldatacursor import datacursor
 
 
-
-
-def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,markers=None,linestyles=None,linewidths=None,xlims=None,same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[],interactive=False,colors=None,pedestal_points=None,pedestal_point_vlines=True,skip_species = [],yaxis_powerlimits=(0,0),hidden_xticklabels=[],yaxis_label_x=-0.15,ylims=None):
+def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,markers=None,linestyles=None,linewidths=None,xlims=None,same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=[],hlines=[],share_scale=[],interactive=False,colors=None,skip_species = [],yaxis_powerlimits=(0,0),hidden_xticklabels=[],yaxis_label_x=-0.15,ylims=None,simulList=None,pedestal_start_stop=None,pedestal_point=None,core_point=None):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -39,18 +37,37 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
     else:
         ylabels=['']*len(attribs)
                 
-    
-    normlist=[x + "/" + normname for x in dirlist]
-    specieslist=[x + "/" + speciesname for x in dirlist]
-    psiN_to_psiList=[x + "/" + psiN_to_psiname for x in dirlist]
-    global_term_multiplierList=[x + "/" + global_term_multiplier_name for x in dirlist]
-    if pedestal_points is None:
-        if vlines is None:
-            pedestal_points=[]
-        else:
-            pedestal_points=vlines
-        
-    simulList=perfect_simulations_from_dirs(dirlist,normlist,specieslist,psiN_to_psiList,global_term_multiplierList,pedestal_points_list=pedestal_points)
+    if simulList == None:
+        normlist=[x + "/" + normname for x in dirlist]
+        specieslist=[x + "/" + speciesname for x in dirlist]
+        psiN_to_psiList=[x + "/" + psiN_to_psiname for x in dirlist]
+        global_term_multiplierList=[x + "/" + global_term_multiplier_name for x in dirlist]
+
+        # If no pedestal start stop is given:
+        #deduce pedestal start stop from vlines
+        #(this is for backwards compatiblity)
+        if pedestal_start_stop is None:
+            if vlines is None:
+                pedestal_start_stop=[]
+            else:
+                pedestal_start_stop=(vlines[0],vlines[-1])
+
+        # if no pedestal point is given, we get this from
+        # the middle of the pedestal
+        if pedestal_point is None:
+            if pedestal_start_stop is not None:
+                pedestal_point = (pedestal_start_stop[0] + pedestal_start_stop[1])/2.0
+
+        # if no core point is given, we get this from
+        # three pedestal widths into the core
+        if core_point is None:
+            if pedestal_start_stop is not None:
+                w = pedestal_start_stop[1] - pedestal_start_stop[0] 
+                core_point = pedestal_start_stop[0] - 3*w    
+
+        simulList=perfect_simulations_from_dirs(dirlist, normlist, specieslist, psiN_to_psiList, global_term_multiplierList, pedestal_start_stop_list=pedestal_start_stop, pedestal_point_list=pedestal_point, core_point_list=core_point)      
+    else:
+        "p_1d_plot: simulList specified externally, ignoring dirlist, etc."
     if markers == None:
         markers=['']*len(simulList)
 
@@ -233,7 +250,6 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
         
     for i_li,psp_list in enumerate(psp_lists):
         for psp in psp_list:
-            print psp.groups
             psp.xlims=xlims
             psp.data=psp.data_inrange()
             psp.x=psp.x_inrange()
@@ -310,13 +326,11 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
         elif xattr==None:
             global_xlabel=r"$i$"
 
-        if pedestal_point_vlines:
-            if xattr == "psi_o":
-                this_vlines = simulList[0].pedestal_points_psi_o
-            else:
-                this_vlines = simulList[0].pedestal_points
+        if xattr == "psi_o":
+            this_vlines = simulList[0].pedestal_start_stop_psi_o
         else:
             this_vlines = vlines
+
         all_group.setattrs("show_yaxis_ticklabel",True)
         all_group.setattrs("vlines",this_vlines)
         all_group.setattrs("hlines",hlines)

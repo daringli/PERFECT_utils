@@ -16,7 +16,7 @@ import numpy
 import sys
 
 
-def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",cm=cm.rainbow,lg=True,xlims=[90,100],ylims=[0,2],species=True,sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=None,hlines=None,share_scale=[],skip_species = [],simulList=None,outputname=None,colors=None,zlabels=None,zaxis_powerlimits=(0,0)):
+def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,xlims=[90,100],ylims=[0,2],species=True,sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=[],hlines=[],share_scale=[],skip_species = [],simulList=None,outputname=None,colors=None,zlabels=None,zaxis_powerlimits=(0,0),pedestal_start_stop=None,pedestal_point=None,core_point=None):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -26,16 +26,35 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
     if type(attribs) is not list:
         attribs=[attribs]
 
-    if simulList == None:
+    if simulList is None:
         normlist=[x + "/" + normname for x in dirlist]
         specieslist=[x + "/" + speciesname for x in dirlist]
         psiN_to_psiList=[x + "/" + psiN_to_psiname for x in dirlist]
-        if vlines== None:
-            here_vlines=[]
-        else:
-            here_vlines=vlines
-    
-        simulList=perfect_simulations_from_dirs(dirlist,normlist,specieslist,psiN_to_psiList,pedestal_points_list=here_vlines)
+        global_term_multiplierList=[x + "/" + global_term_multiplier_name for x in dirlist]
+
+        # If no pedestal start stop is given:
+        #deduce pedestal start stop from vlines
+        #(this is for backwards compatiblity)
+        if pedestal_start_stop is None:
+            if vlines is None:
+                pedestal_start_stop=(None,None)
+            else:
+                pedestal_start_stop=(vlines[0],vlines[-1])
+
+        # if no pedestal point is given, we get this from
+        # the middle of the pedestal
+        if pedestal_point is None:
+            if pedestal_start_stop is not None:
+                pedestal_point = (pedestal_start_stop[0] + pedestal_start_stop[1])/2.0
+
+        # if no core point is given, we get this from
+        # three pedestal widths into the core
+        if core_point is None:
+            if pedestal_start_stop is not None:
+                w = pedestal_start_stop[1] - pedestal_start_stop[0] 
+                core_point = pedestal_start_stop[0] - 3*w    
+
+        simulList=perfect_simulations_from_dirs(dirlist, normlist, specieslist, psiN_to_psiList, global_term_multiplierList, pedestal_start_stop_list=pedestal_start_stop, pedestal_point_list=pedestal_point, core_point_list=core_point)
     else:
         "p_2d_plot: simulList specified externally, ignoring dirlist, etc."
     
@@ -134,7 +153,7 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
                     x_scale=1
 
                 if xattr=="psi_o":
-                    vlines=simul.pedestal_points_psi_o
+                    vlines=simul.pedestal_start_stop_psi_o
                 x = getattr(simul,xattr)*x_scale
                 y = getattr(simul,yattr)*y_scale
                 psp_list.append(perfect_subplot(data,x=x,y=y,subplot_coordinates=subplot_coordinates,show_zaxis_ticklabel=show_zaxis_ticklabel,show_yaxis_ticklabel=show_yaxis_ticklabel,show_xaxis_ticklabel=show_xaxis_ticklabel,title=title,groups=[s,"sim"+str(i),gl_grp,"pair"+str(i/2),species_attrib_groupname],dimensions=2,zaxis_powerlimits=zaxis_powerlimits))

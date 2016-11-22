@@ -19,7 +19,8 @@ from streamplot import streamplot
 import cmocean # has some nice perceptually uniform diverging colormaps
 
 
-import matplotlib 
+import matplotlib
+
 
 class perfect_subplot:
     def __init__(self,data,x,subplot_coordinates,dimensions=None,y=None,x_data=None, y_data=None,**kwargs):
@@ -101,8 +102,8 @@ class perfect_subplot:
         self.xlims=kwarg_default("xlims",None,**kwargs)
         self.ylims=kwarg_default("ylims",None,**kwargs)
 
-        self.vlines=kwarg_default("vlines",None,**kwargs)
-        self.hlines=kwarg_default("hlines",None,**kwargs)
+        self.vlines=kwarg_default("vlines",[],**kwargs)
+        self.hlines=kwarg_default("hlines",[],**kwargs)
 
         self.yaxis_label_x=kwarg_default("yaxis_label_x",-0.15,**kwargs)
         self.yaxis_label_y=kwarg_default("yaxis_label_y",0.5,**kwargs)
