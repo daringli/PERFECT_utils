@@ -67,6 +67,7 @@ class perfect_simulation(object):
         self.particle_source_name="particleSourceProfile"
         self.no_charge_source_name="noChargeSource"
         self.no_charge_source_momentum_source_name="noChargeSourceMomentumSourceProfile"
+        self.no_charge_source_momentum_source_species_dependence_name = "momentumSourceSpeciesDependence"
         self.no_charge_source_particle_source_name="noChargeSourceParticleSourceProfile"
         
         self.flow_name="flow"
@@ -500,7 +501,7 @@ class perfect_simulation(object):
             return a[indices[0]]
 
     def attrib_at_theta_of_psi(self,attrib,theta):
-        indices=get_index_range(self.theta,[theta,theta],ret_range=False)
+        indices=get_index_range(self.theta,[theta,theta],ret_range=False,period=2*numpy.pi)
         if type(attrib) == str:
             a=getattr(self,attrib)
         else:
@@ -527,7 +528,7 @@ class perfect_simulation(object):
         #shifts the theta grid to allow plotting attrib from -\pi,\pi, etc.
         #returns shifted theta array and attribute in a tuple
         #new_zero : value of theta to be the new zero index
-        zero_index=get_index_range(self.theta,[new_zero,new_zero],ret_range=False)[0]
+        zero_index=get_index_range(self.theta,[new_zero,new_zero],ret_range=False,period=2*numpy.pi)[0]
         theta = numpy.concatenate((self.theta[zero_index:]-2*numpy.pi,self.theta[0:zero_index]))
         if attrib is not None:
             if type(attrib) == str:
@@ -959,11 +960,11 @@ class perfect_simulation(object):
 
     @property
     def PiHat_source_source(self):
-        #for comparrison with dQHat/dPsiN
+        #for comparrison with dPiHat/dPsiN
         VPrimeHat=numpy.fabs(self.VPrimeHat)
         Sm = self.no_charge_source_momentum_source
         Sm_nan_indices=numpy.isnan(Sm)
-        if any(Sm_nan_indices):
+        if Sm_nan_indices.any():
             # nan sources
             print "Some momentum sources are NaN. Interpreting NaN as 0."
             Sm[Sm_nan_indices] = 0.0
@@ -998,14 +999,35 @@ class perfect_simulation(object):
             return self.outputs[self.group_name+self.no_charge_source_name][()]    
         except KeyError:
             return 0
+
+    @property
+    def no_charge_source_momentum_source_species_dependence(self):
+        try:
+            return self.outputs[self.group_name+self.no_charge_source_momentum_source_species_dependence_name][()]
+        except KeyError:
+            return numpy.zeros(self.Nspecies)
         
     @property
     def no_charge_source_momentum_source(self):
         try:
-            return self.outputs[self.group_name+self.no_charge_source_momentum_source_name][()]
+            Sm=self.outputs[self.group_name+self.no_charge_source_momentum_source_name][()]
         except KeyError:
-            return numpy.nan*numpy.ones([self.Npsi,self.Nspecies])
-
+            Sm=numpy.nan*numpy.ones([self.Npsi,self.Nspecies])
+        Sm_nan_indices=numpy.isnan(Sm)
+        if Sm_nan_indices.any():
+            # nan sources
+            print "Some momentum sources are NaN. Interpreting NaN as 0."
+            Sm[Sm_nan_indices] = 0.0
+        return Sm
+        
+    @property
+    def no_charge_source_momentum_source_over_m52nPed(self):
+        psiN_point=self.core_point
+        psiN_index=get_index_range(self.actual_psiN,[psiN_point,psiN_point])[1]
+        npeds=[self.nHat[psiN_index,i] for i in range(self.num_species)]
+        Sm = self.no_charge_source_momentum_source/(self.masses**5./2.)/npeds
+        return Sm
+    
     @property
     def no_charge_source_momentum_source_filtered(self):
         a=self.no_charge_source_momentum_source
@@ -1023,9 +1045,7 @@ class perfect_simulation(object):
             return self.outputs[self.group_name+self.no_charge_source_particle_source_name][()]
         except KeyError:
             return numpy.nan*numpy.ones([self.Npsi,self.Nspecies])
-
         
-
     @property
     def FSAFlow(self):
         return self.outputs[self.group_name+self.FSAFlow_name][()]
@@ -1665,7 +1685,7 @@ class perfect_simulation(object):
     def num_species(self):
         try:
             return self.outputs[self.group_name+self.num_species_name][()]
-        except KeyError:
+        except (KeyError,TypeError):
             return len(self.masses)
 
     @property
