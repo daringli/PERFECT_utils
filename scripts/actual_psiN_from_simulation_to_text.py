@@ -8,4 +8,4 @@ normlist_filename,species_filename,psiN_to_psi = ("norms.namelist","species","ps
 simulList=perfect_simulations_from_dirs(dirlist,normlist_filename,species_filename,psiN_to_psi)
 simul = simulList[0]
 
-simul.export_attribute_to_h5("no_charge_source_momentum_source","constantSource","momentumSource.h5")
+simul.export_attribute_to_text("actual_psiN","actual_psiN.txt")

@@ -855,6 +855,21 @@ class perfect_simulation(object):
         a[-1]=0.0
         filtered=gaussian_filter(a, sigma, axis=0, order=order, output=None, mode='constant', cval=0.0, truncate=4.0)
         return filtered
+
+    @property
+    def nosum_mPiHat_source_source(self):
+        return self.masses*self.PiHat_source_source
+
+    @property
+    def nosum_mPiHat_source_source_filtered(self):
+        a=self.nosum_mPiHat_source_source
+        gaussian_filter=scipy.ndimage.filters.gaussian_filter1d
+        sigma = 3
+        order = 0
+        a[0]=0.0
+        a[-1]=0.0
+        filtered=gaussian_filter(a, sigma, axis=0, order=order, output=None, mode='constant', cval=0.0, truncate=4.0)
+        return filtered
         
         
     
