@@ -64,11 +64,18 @@ class perfect_simulation(object):
         self.deltaT_name="deltaT"
         self.num_species_name="Nspecies"
         self.heat_source_name="heatSourceProfile"
+        self.momentum_source_name="momentumSourceProfile"
         self.particle_source_name="particleSourceProfile"
         self.no_charge_source_name="noChargeSource"
         self.no_charge_source_momentum_source_name="noChargeSourceMomentumSourceProfile"
         self.no_charge_source_momentum_source_species_dependence_name = "momentumSourceSpeciesDependence"
         self.no_charge_source_particle_source_name="noChargeSourceParticleSourceProfile"
+        self.species_indep_source_particle_source_name="speciesIndepSourceParticleSourceProfile"
+        self.species_indep_source_heat_source_name="speciesIndepSourceHeatSourceProfile"
+        self.species_indep_source_momentum_source_name="speciesIndepSourceMomentumSourceProfile"
+        self.constant_source_particle_source_name="constantSourceParticleSourceProfile"
+        self.constant_source_heat_source_name="constantSourceHeatSourceProfile"
+        self.constant_source_momentum_source_name="constantSourceMomentumSourceProfile"
         
         self.flow_name="flow"
         self.toroidal_flow_name="toroidalFlow"
@@ -846,6 +853,10 @@ class perfect_simulation(object):
         return numpy.sum(self.masses*self.PiHat_source_source,axis=1)
 
     @property
+    def mPiHat_jHat_source(self):
+        return (self.Delta/self.psiAHat)*numpy.sum(self.masses*self.PiHat_source_source,axis=1)
+
+    @property
     def mPiHat_source_source_filtered(self):
         a=self.mPiHat_source_source
         gaussian_filter=scipy.ndimage.filters.gaussian_filter1d
@@ -906,8 +917,15 @@ class perfect_simulation(object):
 
         # Sources may be nonexisting at the boundary
         S = self.outputs[self.group_name+self.heat_source_name][()]
-        return self.pad_sources(S)
-    
+        return self.pad_sources(S) + self.constant_heat_source + self.species_indep_source_heat_source
+
+    @property
+    def momentum_source(self):
+        try:
+            S1 = self.outputs[self.group_name+self.momentum_source_name][()]
+        except KeyError:
+            S1=0
+        return self.pad_sources(S1) + self.constant_momentum_source + self.no_charge_source_momentum_source + self.species_indep_source_momentum_source
     
     @property
     def particle_source(self):
@@ -920,7 +938,8 @@ class perfect_simulation(object):
 
         # Sources may be nonexisting at the boundary
         S = self.outputs[self.group_name+self.particle_source_name][()]
-        return self.pad_sources(S)
+        return self.pad_sources(S) + self.constant_particle_source + self.species_indep_source_particle_source
+    
 
     @property
     def heat_source_over_m2(self):
@@ -977,7 +996,7 @@ class perfect_simulation(object):
     def PiHat_source_source(self):
         #for comparrison with dPiHat/dPsiN
         VPrimeHat=numpy.fabs(self.VPrimeHat)
-        Sm = self.no_charge_source_momentum_source
+        Sm = self.momentum_source
         Sm_nan_indices=numpy.isnan(Sm)
         if Sm_nan_indices.any():
             # nan sources
@@ -1034,13 +1053,13 @@ class perfect_simulation(object):
             print "Some momentum sources are NaN. Interpreting NaN as 0."
             Sm[Sm_nan_indices] = 0.0
         return Sm
-        
+
     @property
-    def no_charge_source_momentum_source_over_m52nPed(self):
+    def momentum_source_over_m52nPed(self):
         psiN_point=self.core_point
         psiN_index=get_index_range(self.actual_psiN,[psiN_point,psiN_point])[1]
         npeds=[self.nHat[psiN_index,i] for i in range(self.num_species)]
-        Sm = self.no_charge_source_momentum_source/(self.masses**5./2.)/npeds
+        Sm = self.momentum_source/(self.masses**5./2.)/npeds
         return Sm
     
     @property
@@ -1060,6 +1079,66 @@ class perfect_simulation(object):
             return self.outputs[self.group_name+self.no_charge_source_particle_source_name][()]
         except KeyError:
             return numpy.nan*numpy.ones([self.Npsi,self.Nspecies])
+
+    @property
+    def constant_particle_source(self):
+        try:
+            return self.outputs[self.group_name+self.constant_source_particle_source_name][()]
+        except KeyError:
+            return 0
+
+    @property
+    def constant_heat_source(self):
+        try:
+            return self.outputs[self.group_name+self.constant_source_heat_source_name][()]
+        except KeyError:
+            return 0
+
+    @property
+    def constant_momentum_source(self):
+        try:
+            return self.outputs[self.group_name+self.constant_source_momentum_source_name][()]
+        except KeyError:
+            return 0
+
+    @property
+    def species_indep_source_particle_source(self):
+        try:
+            S=self.outputs[self.group_name+self.species_indep_source_particle_source_name][()]
+        except KeyError:
+            S=numpy.nan*numpy.ones([self.Npsi,self.Nspecies])
+        S_nan_indices=numpy.isnan(S)
+        if S_nan_indices.any():
+            # nan sources
+            print "Some momentum sources are NaN. Interpreting NaN as 0."
+            S[Sm_nan_indices] = 0.0
+        return S
+
+    @property
+    def species_indep_source_heat_source(self):
+        try:
+            S=self.outputs[self.group_name+self.species_indep_source_heat_source_name][()]
+        except KeyError:
+            S=numpy.nan*numpy.ones([self.Npsi,self.Nspecies])
+        S_nan_indices=numpy.isnan(S)
+        if S_nan_indices.any():
+            # nan sources
+            print "Some momentum sources are NaN. Interpreting NaN as 0."
+            S[Sm_nan_indices] = 0.0
+        return S
+
+    @property
+    def species_indep_source_momentum_source(self):
+        try:
+            Sm=self.outputs[self.group_name+self.species_indep_source_momentum_source_name][()]
+        except KeyError:
+            Sm=numpy.nan*numpy.ones([self.Npsi,self.Nspecies])
+        Sm_nan_indices=numpy.isnan(Sm)
+        if Sm_nan_indices.any():
+            # nan sources
+            print "Some momentum sources are NaN. Interpreting NaN as 0."
+            Sm[Sm_nan_indices] = 0.0
+        return Sm
         
     @property
     def FSAFlow(self):
