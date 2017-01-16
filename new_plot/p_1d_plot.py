@@ -184,8 +184,10 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
 
                 if xattr=="theta":
                     x_scale=1/numpy.pi
+                    x_period = 2.0
                 else:
                     x_scale=1
+                    x_period = None
                 if xattr != None:
                     x=[getattr(simul,xattr)*x_scale for simul in simulList if s in simul.species]
                 else:
@@ -210,7 +212,7 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                 else:
                     ylim = ylims[i]
                     
-                psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,groups=[s,attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,linewidths=linewidths,colors=linecolors,markers=markers,yaxis_powerlimits=yaxis_powerlimits,hidden_xticklabels=hidden_xticklabels,yaxis_label_x=yaxis_label_x,ylims=ylim)) #yaxis_label=ylabels[i_a]
+                psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,groups=[s,attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,linewidths=linewidths,colors=linecolors,markers=markers,yaxis_powerlimits=yaxis_powerlimits,hidden_xticklabels=hidden_xticklabels,yaxis_label_x=yaxis_label_x,ylims=ylim,x_period=x_period)) #yaxis_label=ylabels[i_a]
                 
 
         else:
@@ -224,8 +226,10 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
             data=[getattr(simul,attrib) for simul in simulList]
             if xattr=="theta":
                 x_scale=1/numpy.pi
+                x_period = 2.0
             else:
                 x_scale=1
+                x_period = None
             x=[x_scale*getattr(simul,xattr) for simul in simulList]
             linecolors=all_linecolors
             coordinates=(i,0)
@@ -234,7 +238,7 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                 ylim = None
             else:
                 ylim = ylims[i]
-            psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,groups=[attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,colors=linecolors,markers=markers,ylims=ylim)) #yaxis_label=ylabels[i_a]
+            psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,groups=[attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,colors=linecolors,markers=markers,ylims=ylim,x_period=x_period)) #yaxis_label=ylabels[i_a]
             
         
         psp_lists.append(psp_list)

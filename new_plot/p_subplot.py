@@ -37,7 +37,9 @@ class perfect_subplot:
         #x_<X>axis: how to intepret the axes of the x array. <X>=x,(line),(y)
         #show_<X>axis: whether to show axis when plotting. <X>=x,y,(z)
         #show_<X>axis_label: whether to show axis label when plotting. <X>=x,y,(z)
-
+        #period_x: None if x coordinate is not periodic, otherwise period
+        #period_y: None if y coordinate is not periodic, otherwise period
+        
 
         
         #kwargs that may change how we intepret the data
@@ -138,10 +140,7 @@ class perfect_subplot:
             #kwarg needed to intepret x, which can be a list of arrays here
             x_xaxis=kwarg_default("x_xaxis",0,**kwargs)
             x_lineaxis=(x_xaxis+1)%2
-
             
-
-
             if type(arraylist_rank(x)) is not list:
                 if arraylist_rank(x) == 1:
                     if all(len(x) != len(self.data[i]) for i in range(len(self.data))):
@@ -169,8 +168,8 @@ class perfect_subplot:
             elif not all(len(self.x[i]) == len(self.data[i]) for i in range(len(self.data))):
                 print "perfect_subplot: 1D: error: some data and x have different lengths"
                 exit(1)
-
-            
+                
+            self.x_period=kwarg_default("x_period",None,**kwargs)
             #aesthetic kwargs
             self.xticks=kwarg_default("xticks",6,**kwargs)
             if self.yscale=='linear':
@@ -212,6 +211,9 @@ class perfect_subplot:
                 print "perfect_subplot: 2D: error: x and y should have rank 1"
             self.x=x
             self.y=y
+            self.x_period=kwarg_default("x_period",None,**kwargs)
+            self.y_period=kwarg_default("y_period",2*numpy.pi,**kwargs)
+            
             
             if (data_xaxis == 0) and (data_yaxis == 1):
                 self.data=data
@@ -266,7 +268,8 @@ class perfect_subplot:
             self.zlims=kwarg_default("zlims",None,**kwargs)
 
             #self.cm=kwarg_default("cm",invert_cm(cm_remove_middle(cm.RdBu,cut_radius=0.1)),**kwargs)
-            self.cm=kwarg_default("cm",cm_remove_middle(cmocean.cm.delta,cut_radius=0.05),**kwargs)
+            self.cm=kwarg_default("cm",cm_remove_middle(cmocean.cm.delta,cut_radius=0.05),**kwargs) #GB
+            #self.cm=kwarg_default("cm",cm_remove_middle(cmocean.cm.balance,cut_radius=0.05),**kwargs) #RB
             #self.cm=kwarg_default("cm",cmocean.cm.balance,**kwargs)
             #self.cm=kwarg_default("cm",invert_cm(cm.RdBu),**kwargs)
             #self.cm=kwarg_default("cm",diverging_rb_cm(),**kwargs)
@@ -290,18 +293,18 @@ class perfect_subplot:
         if self.dimensions==1:
             xs=[]
             for x in self.x:
-                ixrange=get_index_range(x,self.xlims,True)
+                ixrange=get_index_range(x,self.xlims,True,self.x_period)
                 xs=xs + [x[ixrange]]
             return xs
         if self.dimensions==2:
-            ixrange=get_index_range(self.x,self.xlims,True)
+            ixrange=get_index_range(self.x,self.xlims,True,self.x_period)
             return self.x[ixrange]
 
     def y_inrange(self):
         if self.dimensions==1:
             print "warning-error: Cannot take yrange of 1D data."
         if self.dimensions==2:
-            iyrange=get_index_range(self.y,self.ylims,True)
+            iyrange=get_index_range(self.y,self.ylims,True,self.y_period)
             return self.y[iyrange]
 
     def data_inrange(self):
@@ -310,14 +313,14 @@ class perfect_subplot:
             #since a subplot can have 1D data of different length
             data=[]
             for x,d in zip(self.x,self.data):
-                ixrange=get_index_range(x,self.xlims,True)
+                ixrange=get_index_range(x,self.xlims,True,self.x_period)
                 data=data+[d[ixrange]]
             return data
         if self.dimensions==2:
             xlims=self.xlims
             ylims=self.ylims
-            ixrange=numpy.array(get_index_range(self.x,xlims,True))
-            iyrange=numpy.array(get_index_range(self.y,ylims,True))
+            ixrange=numpy.array(get_index_range(self.x,xlims,True,self.x_period))
+            iyrange=numpy.array(get_index_range(self.y,ylims,True,self.y_period))
             data=self.data[ixrange[:,numpy.newaxis],iyrange]
             return data
 

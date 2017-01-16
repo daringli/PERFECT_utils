@@ -996,16 +996,16 @@ class perfect_simulation(object):
     def PiHat_source_source(self):
         #for comparrison with dPiHat/dPsiN
         VPrimeHat=numpy.fabs(self.VPrimeHat)
-        Sm = self.momentum_source
-        Sm_nan_indices=numpy.isnan(Sm)
-        if Sm_nan_indices.any():
+        S = self.momentum_source
+        S_nan_indices=numpy.isnan(S)
+        if S_nan_indices.any():
             # nan sources
             print "Some momentum sources are NaN. Interpreting NaN as 0."
-            Sm[Sm_nan_indices] = 0.0
+            S[S_nan_indices] = 0.0
 
         # NOTE: assumes that Theta_m = 1
         Theta_m = 1        
-        PiHat_source = (self.psiAHat/self.Delta)*numpy.sqrt(numpy.pi)/(2*self.masses**(5./2.))*numpy.expand_dims(self.FSA(Theta_m*self.IHat/self.BHat)*VPrimeHat,axis=1)*self.THat**2*Sm
+        PiHat_source = (self.psiAHat/self.Delta)*numpy.sqrt(numpy.pi)/(2*self.masses**(5./2.))*numpy.expand_dims(self.FSA(Theta_m*self.IHat/self.BHat)*VPrimeHat,axis=1)*self.THat**2*S
         return PiHat_source
 
     @property
@@ -1044,23 +1044,23 @@ class perfect_simulation(object):
     @property
     def no_charge_source_momentum_source(self):
         try:
-            Sm=self.outputs[self.group_name+self.no_charge_source_momentum_source_name][()]
+            S=self.outputs[self.group_name+self.no_charge_source_momentum_source_name][()]
         except KeyError:
-            Sm=numpy.nan*numpy.ones([self.Npsi,self.Nspecies])
-        Sm_nan_indices=numpy.isnan(Sm)
-        if Sm_nan_indices.any():
+            S=numpy.nan*numpy.ones([self.Npsi,self.Nspecies])
+        S_nan_indices=numpy.isnan(S)
+        if S_nan_indices.any():
             # nan sources
             print "Some momentum sources are NaN. Interpreting NaN as 0."
-            Sm[Sm_nan_indices] = 0.0
-        return Sm
+            S[S_nan_indices] = 0.0
+        return S
 
     @property
     def momentum_source_over_m52nPed(self):
         psiN_point=self.core_point
         psiN_index=get_index_range(self.actual_psiN,[psiN_point,psiN_point])[1]
         npeds=[self.nHat[psiN_index,i] for i in range(self.num_species)]
-        Sm = self.momentum_source/(self.masses**5./2.)/npeds
-        return Sm
+        S = self.momentum_source/(self.masses**5./2.)/npeds
+        return S
     
     @property
     def no_charge_source_momentum_source_filtered(self):
@@ -1111,7 +1111,7 @@ class perfect_simulation(object):
         if S_nan_indices.any():
             # nan sources
             print "Some momentum sources are NaN. Interpreting NaN as 0."
-            S[Sm_nan_indices] = 0.0
+            S[S_nan_indices] = 0.0
         return S
 
     @property
@@ -1124,25 +1124,29 @@ class perfect_simulation(object):
         if S_nan_indices.any():
             # nan sources
             print "Some momentum sources are NaN. Interpreting NaN as 0."
-            S[Sm_nan_indices] = 0.0
+            S[S_nan_indices] = 0.0
         return S
 
     @property
     def species_indep_source_momentum_source(self):
         try:
-            Sm=self.outputs[self.group_name+self.species_indep_source_momentum_source_name][()]
+            S=self.outputs[self.group_name+self.species_indep_source_momentum_source_name][()]
         except KeyError:
-            Sm=numpy.nan*numpy.ones([self.Npsi,self.Nspecies])
-        Sm_nan_indices=numpy.isnan(Sm)
-        if Sm_nan_indices.any():
+            S=numpy.nan*numpy.ones([self.Npsi,self.Nspecies])
+        S_nan_indices=numpy.isnan(S)
+        if S_nan_indices.any():
             # nan sources
             print "Some momentum sources are NaN. Interpreting NaN as 0."
-            Sm[Sm_nan_indices] = 0.0
-        return Sm
+            S[S_nan_indices] = 0.0
+        return S
         
     @property
     def FSAFlow(self):
         return self.outputs[self.group_name+self.FSAFlow_name][()]
+
+    @property
+    def parallel_current(self):
+        return numpy.sum(self.Z*self.FSAFlow,axis=1)
     
     
     @property
@@ -1173,6 +1177,8 @@ class perfect_simulation(object):
     @property
     def flow(self):
         return self.outputs[self.group_name+self.flow_name][()]
+
+    
 
     @property
     def flow_minus_FSAFlow(self):

@@ -579,8 +579,12 @@ def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,ol
     #simulated region is small enough that it doesn't change much.
     if mode == "periodic":
         generate_periodic_profiles(simul,xwidth,nonuniform,dxdpsiN,psiDiamFact,midShift,upShift_denom,leftBoundaryShift,rightBoundaryShift,**kwargs)
-        return 
-    
+        return
+
+    if mode == "mtanh_const_delta":
+        generate_mtanh_const_delta_profiles(simul,xwidth,nonuniform,dxdpsiN,psiDiamFact,midShift,upShift_denom,leftBoundaryShift,rightBoundaryShift,**kwargs)
+        return
+
     e=scipy.constants.e
     log=numpy.log
     exp=numpy.exp
@@ -662,7 +666,6 @@ def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,ol
     #list of psi where our profiles change slope
     psiList=[psiMinPed,psiMaxPed]
     print "pedestal start,stop: " + str(psiList)
-
 
     if specialEta and (mode == "const_ne"):
         print "generate_compatible_profiles: WARNING: specialEta and mode == const_ne is incompatible. specialEta will be ignored"
@@ -801,6 +804,158 @@ def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,ol
 def generate_compatible_profiles_constant_ne(simul,xwidth,nonuniform=False,sameflux=False,oldsameflux=False,sameeta=False,samefluxshift=0,specialEta=False,psiDiamFact=5,transitionFact=0.2,dxdpsiN=1,midShift=0,upShift_denom=3.0,m2tanh=False,T_transition_length=1.0,**kwargs):
     generate_compatible_profiles(simul,xwidth,nonuniform,sameflux,oldsameflux,sameeta,samefluxshift,specialEta,psiDiamFact,transitionFact,dxdpsiN,midShift,upShift_denom,m2tanh,mode="const_ne",T_transition_length=1.0,**kwargs)
 
+
+def generate_mtanh_const_delta_profiles(simul,xwidth,nonuniform,dxdpsiN,psiDiamFact,midShift,upShift_denom,leftBoundaryShift,rightBoundaryShift,**kwargs):
+
+    from const_delta import single_ion_all_eta_Phi, single_ion_all_eta_dPhidpsiN
+    from mtanh_const_delta import eta_parameter_wrapper, T_parameter_wrapper
+    from numpy import sqrt
+
+    global psiMinPed
+    global psiMaxPed
+
+    global main_index
+    global e_index
+
+    global psiMin
+    global psiMax
+    global Nspecies
+    global main_index
+    global Npsi
+
+    species=simul.species
+    Nspecies=len(species)
+
+    if Nspecies == 1:
+        main_index=kwargs["mI"]
+    
+    elif Nspecies == 2:
+        main_index=kwargs["mI"]
+        e_index=kwargs["eI"]
+    else:
+        print "Script is too poor to handle an arbitrary number of species!"
+        return -1
+
+    if dxdpsiN == 1:
+        print "Intepreting gradients as being given in psi_N."
+    else:
+        print "Intepreting gradients as being given in x space"
+        print "Will use function specified by dx_dpsi to convert"
+
+    dxdpsiN_at_a = dxdpsiN
+    x_ped_width=xwidth
+    psiN_ped_width=x_ped_width/dxdpsiN_at_a
+
+    #calculate new psiMid and diameter for this profile
+    midShift=midShift*psiN_ped_width
+
+    #2015-12-16: -psiN_ped_width/3.0 was the old default.
+    upShift=-psiN_ped_width/upShift_denom
+
+    update_domain_size(simul,psiN_ped_width,midShift,psiDiamFact,leftBoundaryShift,rightBoundaryShift)
+    (Delta,omega) = update_Delta_omega(simul)
+
+    Npsi=simul.inputs.Npsi
+    psiMid = simul.inputs.psiMid
+    psiMin = simul.inputs.psiMin
+    psiMax = simul.inputs.psiMax
+
+    #start and stop pedestal in physical psiN
+    psiMinPed=psiMid-psiN_ped_width/2.0
+    psiMaxPed=psiMid+psiN_ped_width/2.0+upShift
+    psiMidPed=(psiMinPed+psiMaxPed)/2.0
+
+    psiAHat=simul.inputs.psiAHat
+
+    #allocate arrays
+    THats = [None]*Nspecies
+    dTHatdss = [None]*Nspecies
+    nHats = [None]*Nspecies
+    dnHatdss = [None]*Nspecies
+    etaHats = [None]*Nspecies
+    detaHatdss = [None]*Nspecies    
+    TScale=[1.0]*Nspecies
+    
+    #this modifies the charge and mass of the species in the simulation to match species file, and reads the new parameters back
+    species_filename= os.path.join(os.path.dirname(__file__), 'species_database.namelist')
+    (Zs,ms)=update_species_parameters(simul.species,species_filename,simul.norm,simul)
+
+    
+    TiCoreGrad=kwargs["dTCoredx_"+species[main_index]]*dxdpsiN_at_a
+    TiPed=kwargs["Tped_"+species[main_index]]
+
+    TeCoreGrad=kwargs["dTCoredx_"+species[e_index]]*dxdpsiN_at_a
+    TePed=kwargs["Tped_"+species[e_index]]
+    
+    nePed=kwargs["nped_"+species[e_index]]
+    neCoreGrad=kwargs["dnCoredx_"+species[e_index]]*dxdpsiN_at_a
+
+
+    TiLCFS=kwargs["TLCFS_"+species[main_index]]
+    TeLCFS=kwargs["TLCFS_"+species[e_index]]
+    neLCFS=kwargs["nLCFS_"+species[e_index]]
+
+    mHati = ms[main_index]
+    mHate = ms[e_index]
+    Zi = Zs[main_index]
+    Ze = Zs[e_index]
+
+    FSARHat=1.0 # since RBar = major radius
+    RHat=FSARHat # simplify notation by "R=<R>"
+
+    w=psiN_ped_width
+    psiN0=psiMid-psiN_ped_width/2.0
+
+    #constant delta T
+
+    (Ti,ddx_Ti,ATi) = T_parameter_wrapper(Zi,TiPed,TiLCFS,TiCoreGrad,w,psiN0)
+    (Te,ddx_Te,ATe) = T_parameter_wrapper(Ze,TePed,TeLCFS,TeCoreGrad,w,psiN0)
+    deltaTi = ATi*(sqrt(mHati)*RHat*Delta)/psiAHat 
+    deltaTe = ATe*(sqrt(mHate)*RHat*Delta)/psiAHat 
+        
+    #constant delta eta
+    (etae,etai,ddx_etae,ddx_etai) = eta_parameter_wrapper(Zi,Ze,mHati,mHate,TiPed,TePed,deltaTi,deltaTe,ATi,ATe,Ti,Te,nePed,neCoreGrad,neLCFS,w,psiN0)
+
+    # Phi from eta
+    Phi = single_ion_all_eta_Phi(etai,etae,Ti,Te,Zi)
+    ddx_Phi = single_ion_all_eta_dPhidpsiN(etai,etae,Ti,Te,ddx_etai,ddx_etae,ddx_Ti,ddx_Te,Zi)
+
+    #insert into output arrays
+    THats[main_index] = Ti
+    THats[e_index] = Te
+    dTHatdss[main_index] = ddx_Ti
+    dTHatdss[e_index] = ddx_Te
+    etaHats[main_index] = etai
+    etaHats[e_index] = etae
+    detaHatdss[main_index] = ddx_etai
+    detaHatdss[e_index] = ddx_etae
+    PhiHat = Phi
+    dPhiHatds = ddx_Phi
+    
+    for i in range(Nspecies):
+        (nHats[i],dnHatdss[i]) = generate_n_from_eta_Phi_profile(etaHats[i],PhiHat,THats[i],detaHatdss[i],dPhiHatds,dTHatdss[i],Zs[i],Delta,omega)
+        
+    (psi,dpsi_ds) = get_psiN(nonuniform,simul,**kwargs)
+    if simul.inputs.useGlobalTermMultiplier == 1:
+        multiplier_delta_a = kwargs["multiplier_transition_shift"]
+        multiplier_delta_b = multiplier_delta_a
+        multiplier_c = kwargs["multiplier_edge_value"]
+        multiplier_Delta = kwargs["multiplier_transition_length"]
+        #multiplier_delta_a = 0.04
+        #multiplier_delta_b = 0.04
+        #multiplier_c =0.1
+        #multiplier_Delta = 1/200.0
+        C=generate_global_multiplier(psiMin,psiMax,Delta=multiplier_Delta,delta_a=multiplier_delta_a,delta_b=multiplier_delta_b,c=multiplier_c)
+    else:
+        C=lambda x: 1.0 + 0*x
+
+        
+    write_outputs(simul,THats,dTHatdss,nHats,dnHatdss,etaHats,detaHatdss,PhiHat,dPhiHatds,psi,dpsi_ds,C)
+    
+    
+    
+
+    
 def generate_periodic_profiles(simul,xwidth,nonuniform,dxdpsiN,psiDiamFact,midShift,upShift_denom,leftBoundaryShift,rightBoundaryShift,**kwargs):
     global psiMin
     global psiMax

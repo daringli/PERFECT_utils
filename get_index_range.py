@@ -1,9 +1,29 @@
 import numpy
 
-def get_index_range(data,drange,ret_range=False):
-    """For monotonically increasing data in a numpy.array
+def get_index_range(data,drange,ret_range=False,period=None):
+    """For increasing data in a numpy.array
     gets the indices that corresponds to the values in ranges.
-    The data[returned_indices] will if possible contain the endpoints."""
+    The data[returned_indices] will if possible contain the endpoints.
+    Period: if specified, the data can be non-increasing if it can be made increasing by adding this multiples of this value each time it decreases"""
+
+    if period is not None:
+        data = data.copy() # to not change the original array
+        j = 0
+        temp = data[0]
+        for i in range(1,len(data)):
+            if data[i]>temp:
+                temp = data[i]
+            else:
+                j = j+1
+            data[i] = data[i] + period*j
+        drange =list(drange)
+        drange[1] = drange[1] + period*j
+        
+    if not (numpy.diff(data) >= 0).all():
+        print "Error: get_index_range: data is decreasing!"
+        if period is not None:
+            print "Even though periodicity has been taken into account!"
+        return None
 
     start=numpy.argmin(numpy.fabs(data-drange[0]))
     if drange[0]<data[start]:

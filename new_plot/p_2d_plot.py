@@ -8,15 +8,13 @@ from sort_species_list import sort_species_list
 from generic_species_labels import generic_species_labels
 from is_attribute_species_dependent import is_attribute_species_dependent
 
-from get_index_range import get_index_range
-
 from matplotlib.pyplot import cm
 import matplotlib.pyplot as plt
 import numpy
 import sys
 
 
-def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,xlims=[90,100],ylims=[0,2],species=True,sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=[],hlines=[],share_scale=[],skip_species = [],simulList=None,outputname=None,colors=None,zlabels=None,zaxis_powerlimits=(0,0),pedestal_start_stop=None,pedestal_point=None,core_point=None):
+def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,xlims=[90,100],ylims=[0,2],species=True,sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","He":"z","N":"z","e":"e"},vlines=[],hlines=[],share_scale=[],skip_species = [],simulList=None,outputname=None,colors=None,linestyles=None,zlabels=None,zaxis_powerlimits=(0,0),pedestal_start_stop=None,pedestal_point=None,core_point=None):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -142,21 +140,26 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
 
                 if (yattr == "theta") or (yattr == "theta_shifted"):
                     y_scale = 1/numpy.pi
+                    y_period = 2.0
                 else:
                     y_scale=1
+                    y_period=None
                     
                 if (xattr == "theta") or (xattr == "theta_shifted"):
                     x_scale = 1/numpy.pi
+                    x_period = 2.0
                 elif (xattr == "psi") or (xattr == "actual_psiN"):
                     x_scale=100
+                    x_period = None
                 else:
                     x_scale=1
+                    x_period=None
 
                 if xattr=="psi_o":
                     vlines=simul.pedestal_start_stop_psi_o
                 x = getattr(simul,xattr)*x_scale
                 y = getattr(simul,yattr)*y_scale
-                psp_list.append(perfect_subplot(data,x=x,y=y,subplot_coordinates=subplot_coordinates,show_zaxis_ticklabel=show_zaxis_ticklabel,show_yaxis_ticklabel=show_yaxis_ticklabel,show_xaxis_ticklabel=show_xaxis_ticklabel,title=title,groups=[s,"sim"+str(i),gl_grp,"pair"+str(i/2),species_attrib_groupname],dimensions=2,zaxis_powerlimits=zaxis_powerlimits))
+                psp_list.append(perfect_subplot(data,x=x,y=y,subplot_coordinates=subplot_coordinates,show_zaxis_ticklabel=show_zaxis_ticklabel,show_yaxis_ticklabel=show_yaxis_ticklabel,show_xaxis_ticklabel=show_xaxis_ticklabel,title=title,groups=[s,"sim"+str(i),gl_grp,"pair"+str(i/2),species_attrib_groupname],dimensions=2,zaxis_powerlimits=zaxis_powerlimits,x_period=x_period,y_period=y_period))
         #end simulList loop
         for psp in psp_list:
             print psp.groups
@@ -187,8 +190,12 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
                 c=next(color)
                 pair_group.setattrs("border_color",c)
 
-        local_group.setattrs("border_linestyle","dashed")
-        
+        if linestyles is None:
+            local_group.setattrs("border_linestyle","dashed")
+        else:
+            for isg,grp in enumerate(sim_groups):
+                grp.setattrs("border_linestyle",linestyles[isg])
+            
         all_group.setattrs("xlims",xlims)
         #all_group.setattrs("ylims",[all_group.get_min("y",xlim=False,ylim=False),all_group.get_max("y",xlim=False,ylim=False)])
         all_group.setattrs("ylims",ylims)

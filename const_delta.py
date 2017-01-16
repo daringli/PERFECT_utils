@@ -28,6 +28,13 @@ def constant_delta_dXdpsiN(eta0,psiN0,Z,deltaEta,BT,deltaT):
 def single_ion_all_eta_Phi(etai,etae,Ti,Te,Zi):
     return lambda psiN: (Ti(psiN)*Te(psiN)/(Ti(psiN) + Zi*Te(psiN))) * log(Zi*etai(psiN)/etae(psiN))
 
+def single_ion_all_eta_dPhidpsiN(etai,etae,Ti,Te,ddx_etai,ddx_etae,ddx_Ti,ddx_Te,Zi):
+    return lambda psiN: (
+        (1/(Ti(psiN) + Zi*Te(psiN))) * (
+        (ddx_Ti(psiN) * Te(psiN) + Ti(psiN) * ddx_Te(psiN) - (ddx_Ti(psiN) + Zi*ddx_Te(psiN))*Ti(psiN)*Te(psiN)/(Ti(psiN) + Zi*Te(psiN))) * log(Zi*etai(psiN)/etae(psiN))
+        + Ti(psiN)*Te(psiN) * (ddx_etai(psiN)/etai(psiN) - ddx_etae(psiN)/etae(psiN)))
+    )
+
 
 def single_ion_n_e_eta_i_Phi(etai,ne,Te,Ti,Zi):
     return lambda psiN: - (Ti(psiN)/Zi) * log(ne(psiN)/etai(psiN))
