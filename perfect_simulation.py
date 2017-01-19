@@ -249,6 +249,10 @@ class perfect_simulation(object):
             self.actual_psiN = self.psi
 
     @property
+    def psiAHatArray_normed(self):
+        return self.psiAHatArray*self.psiAHat
+            
+    @property
     def global_term_multiplier(self):
         return self.global_term_multiplier_profile
 
@@ -1613,7 +1617,12 @@ class perfect_simulation(object):
         try:
             return self.outputs[self.group_name+self.detaHatdpsiN_name][()]
         except KeyError:
-            print "etaHat could not be obtained since no external profiles have been speciied and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate the inputs."
+            print "etaHat could not be obtained since no external profiles have been specified and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate the inputs."
+
+    @property
+    def numerical_detaHatdpsiN(self):
+        return self.ddpsiN(self.etaHat)
+        
 
     @property
     def pHat(self):

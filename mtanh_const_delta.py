@@ -14,16 +14,16 @@ def eta_parameter_wrapper(Zi,Ze,mi,me,T0i,T0e,deltaTi,deltaTe,ATi,ATe,Ti,Te,n_pe
     #eta and n overlap in the core:
     eta0 = n_ped
     eta0_core = eta0
+    eta0e=eta0
+    eta0i=eta0
     detadx_core = dndr_core
 
     #n_LFCS = n_ped + dndr_ped * ped_width # what we want
-    print n_LCFS
     x_LCFS = ped_pos + ped_width # where we want it
-    print x_LCFS
     deltaEtai = 0.1
     def f(deltaEtae): # that which gives it
-        etae = mtanh_const_delta_X(Ze,eta0,deltaEtae,T0e,ATe,deltaTe,eta0_core,detadx_core,ped_width,ped_pos)
-        etai = mtanh_const_delta_X(Zi,eta0,deltaEtai,T0i,ATi,deltaTi,eta0_core,detadx_core,ped_width,ped_pos)
+        etae = mtanh_const_delta_X(Ze,eta0e,deltaEtae,T0e,ATe,deltaTe,eta0_core,detadx_core,ped_width,ped_pos)
+        etai = mtanh_const_delta_X(Zi,eta0i,deltaEtai,T0i,ATi,deltaTi,eta0_core,detadx_core,ped_width,ped_pos)
         Phi = single_ion_all_eta_Phi(etai,etae,Ti,Te,Zi)
         return etae(x_LCFS)*exp(-Ze*Phi(x_LCFS)/Te(x_LCFS)) - n_LCFS
     #first_guess = -detadx_core/eta0_core # how we view it
@@ -31,14 +31,15 @@ def eta_parameter_wrapper(Zi,Ze,mi,me,T0i,T0e,deltaTi,deltaTe,ATi,ATe,Ti,Te,n_pe
     deltaEtae = scipy.optimize.fsolve(f,first_guess)[0] # how it is
     print "delta_eta_e:" + str(deltaEtae)
     #deltaEtai = sqrt(mi)/sqrt(me) * deltaEtae
-    etae = mtanh_const_delta_X(Ze,eta0,deltaEtae,T0e,ATe,deltaTe,eta0_core,detadx_core,ped_width,ped_pos)
-    etai = mtanh_const_delta_X(Zi,eta0,deltaEtai,T0i,ATi,deltaTi,eta0_core,detadx_core,ped_width,ped_pos)
-    ddx_etae = mtanh_const_delta_X_ddpsiN(Ze,eta0,deltaEtae,T0e,ATe,deltaTe,eta0_core,detadx_core,ped_width,ped_pos)
-    ddx_etai = mtanh_const_delta_X_ddpsiN(Zi,eta0,deltaEtai,T0i,ATi,deltaTi,eta0_core,detadx_core,ped_width,ped_pos)
+    etae = mtanh_const_delta_X(Ze,eta0e,deltaEtae,T0e,ATe,deltaTe,eta0_core,detadx_core,ped_width,ped_pos)
+    etai = mtanh_const_delta_X(Zi,eta0i,deltaEtai,T0i,ATi,deltaTi,eta0_core,detadx_core,ped_width,ped_pos)
+    ddx_etae = mtanh_const_delta_X_ddpsiN(Ze,eta0e,deltaEtae,T0e,ATe,deltaTe,eta0_core,detadx_core,ped_width,ped_pos)
+    ddx_etai = mtanh_const_delta_X_ddpsiN(Zi,eta0i,deltaEtai,T0i,ATi,deltaTi,eta0_core,detadx_core,ped_width,ped_pos)
     return (etae,etai,ddx_etae,ddx_etai)
 
 def T_parameter_wrapper(Z,T0,T_LCFS,ddx_T_core,ped_width,ped_pos):
     T0c = T0
+    T0=T0
     x_LCFS = ped_pos + ped_width # where we want it
     def f(AT): # that which gives it
         T=mtanh_const_delta_T(Z,T0,AT,T0c,ddx_T_core,ped_width,ped_pos)
@@ -48,14 +49,17 @@ def T_parameter_wrapper(Z,T0,T_LCFS,ddx_T_core,ped_width,ped_pos):
 
     T=mtanh_const_delta_T(Z,T0,AT,T0c,ddx_T_core,ped_width,ped_pos)
     ddx_T=mtanh_const_delta_T_ddpsiN(Z,T0,AT,T0c,ddx_T_core,ped_width,ped_pos)
-    return (T,ddx_T,AT)
+    BT = AT/(2*numpy.sqrt(T0))
+    T_SOL = constant_delta_T(T0,ped_pos,Z,BT)
+    ddx_T_SOL = constant_delta_dTdpsiN(T0,ped_pos,Z,BT)
+    return (T,ddx_T,AT,T_SOL,ddx_T_SOL)
     
 def generate_mtanh_const_delta_T(X_ped,dXdr_core,dXdr_ped,dXdr_sol,ped_width,ped_pos,dpsi_ds=1):
     (a_ped,a_sol,a_etb,a_delta,a_slope,b_slope) = parameter_wrapper(X_ped,dXdr_core,dXdr_ped,dXdr_sol,ped_width,ped_pos)
     return (m2tanh_profile(a_ped,a_sol,a_etb,a_delta,dXdr_core,dXdr_sol),lambda x: dpsi_ds*ddx_m2tanh_profile(a_ped,a_sol,a_etb,a_delta,dXdr_core,dXdr_sol)(x))
     
 def ped_pos_to_middle(ped_pos,ped_width):
-    return ped_pos + ped_width/5
+    return ped_pos +ped_width/5
 
 def ped_width_to_trans_width(ped_width):
     return ped_width/5.5
@@ -165,7 +169,10 @@ if __name__ == "__main__":
     (Ti,ddx_Ti,ATi) = T_parameter_wrapper(Zi,T0i,Ti_LCFS,ddx_Ti_core,w,psiN0)
     (Te,ddx_Te,ATe) = T_parameter_wrapper(Ze,T0e,Te_LCFS,ddx_Te_core,w,psiN0)
     deltaTi = ATi*(sqrt(mHati)*RHat*Delta)/psiAHat 
-    deltaTe = ATe*(sqrt(mHate)*RHat*Delta)/psiAHat 
+    deltaTe = ATe*(sqrt(mHate)*RHat*Delta)/psiAHat
+    BTi = ATi/(2*sqrt(T0i))
+    print "BTi: " + str(BTi)
+    print "deltaTi: " + str(deltaTi)
 
     #Ti=mtanh_const_delta_T(Zi,T0i,ATi,T0ci,dTidx_core,w,psiN0)
     #Te=mtanh_const_delta_T(Ze,T0e,ATe,T0ce,dTedx_core,w,psiN0)
