@@ -691,15 +691,15 @@ def generate_n_from_eta_X_profile(etaHat,X,detaHatds,dXds,Z):
     dnHatdpsi=lambda x : detaHatds(x)*X(x)**Z + etaHat(x)*Z*X(x)**(Z-1)*dXds(x)
     return (nHat,dnHatdpsi)
 
-def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,oldsameflux=False,sameeta=False,samefluxshift=0,specialEta=False,psiDiamFact=5,transitionFact=0.2,dxdpsiN=1,midShift=0,upShift_denom=3.0,m2tanh=False,m2tanh_const_delta=False,mode="const_Phi",leftBoundaryShift=0.0,rightBoundaryShift=0.0,T_transition_length=1.0,**kwargs):
+def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,oldsameflux=False,sameeta=False,samefluxshift=0,specialEta=False,psiDiamFact=5,transitionFact=0.2,dxdpsiN=1,midShift=0,upShift_denom=3.0,downShift_denom=float("Inf"),m2tanh=False,m2tanh_const_delta=False,mode="const_Phi",leftBoundaryShift=0.0,rightBoundaryShift=0.0,T_transition_length=1.0,**kwargs):
     #NOTE: uses the dx/dpsi at minor radius for both core and SOL, which assumes that
     #simulated region is small enough that it doesn't change much.
     if mode == "periodic":
-        generate_periodic_profiles(simul,xwidth,nonuniform,dxdpsiN,psiDiamFact,midShift,upShift_denom,leftBoundaryShift,rightBoundaryShift,**kwargs)
+        generate_periodic_profiles(simul,xwidth,nonuniform,dxdpsiN,psiDiamFact,midShift,upShift_denom,downShift_denom,leftBoundaryShift,rightBoundaryShift,**kwargs)
         return
 
     if (mode == "mtanh_const_delta_eta") or (mode == "mtanh_eta"):
-        generate_compatible_profiles_etas(simul,xwidth,nonuniform,dxdpsiN,psiDiamFact,midShift,upShift_denom,leftBoundaryShift,rightBoundaryShift,mode,**kwargs)
+        generate_compatible_profiles_etas(simul,xwidth,nonuniform,dxdpsiN,psiDiamFact,midShift,upShift_denom,downShift_denom,leftBoundaryShift,rightBoundaryShift,mode,**kwargs)
         return
 
     e=scipy.constants.e
@@ -769,6 +769,7 @@ def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,ol
 
     #2015-12-16: -psiN_ped_width/3.0 was the old default.
     upShift=-psiN_ped_width/upShift_denom
+    downShift=psiN_ped_width/downShift_denom
 
     
     update_domain_size(simul,psiN_ped_width,midShift,psiDiamFact,leftBoundaryShift,rightBoundaryShift)
@@ -787,7 +788,7 @@ def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,ol
     psiMax = simul.inputs.psiMax
     
     #start and stop pedestal in physical psiN
-    psiMinPed=psiMid-psiN_ped_width/2.0
+    psiMinPed=psiMid-psiN_ped_width/2.0+downShift
     psiMaxPed=psiMid+psiN_ped_width/2.0+upShift
     psiMidPed=(psiMinPed+psiMaxPed)/2.0
     
@@ -957,11 +958,11 @@ def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,ol
 # generate_compatible_profiles_constant_ne
 #########################################################
 
-def generate_compatible_profiles_constant_ne(simul,xwidth,nonuniform=False,sameflux=False,oldsameflux=False,sameeta=False,samefluxshift=0,specialEta=False,psiDiamFact=5,transitionFact=0.2,dxdpsiN=1,midShift=0,upShift_denom=3.0,m2tanh=False,T_transition_length=1.0,**kwargs):
-    generate_compatible_profiles(simul,xwidth,nonuniform,sameflux,oldsameflux,sameeta,samefluxshift,specialEta,psiDiamFact,transitionFact,dxdpsiN,midShift,upShift_denom,m2tanh,mode="const_ne",T_transition_length=1.0,**kwargs)
+def generate_compatible_profiles_constant_ne(simul,xwidth,nonuniform=False,sameflux=False,oldsameflux=False,sameeta=False,samefluxshift=0,specialEta=False,psiDiamFact=5,transitionFact=0.2,dxdpsiN=1,midShift=0,upShift_denom=3.0,downShift_denom=float("Inf"),m2tanh=False,T_transition_length=1.0,**kwargs):
+    generate_compatible_profiles(simul,xwidth,nonuniform,sameflux,oldsameflux,sameeta,samefluxshift,specialEta,psiDiamFact,transitionFact,dxdpsiN,midShift,upShift_denom,downShift_denom,m2tanh,mode="const_ne",T_transition_length=1.0,**kwargs)
 
 
-def generate_compatible_profiles_etas(simul,xwidth,nonuniform,dxdpsiN,psiDiamFact,midShift,upShift_denom,leftBoundaryShift,rightBoundaryShift,mode,**kwargs):
+def generate_compatible_profiles_etas(simul,xwidth,nonuniform,dxdpsiN,psiDiamFact,midShift,upShift_denom,downShift_denom,leftBoundaryShift,rightBoundaryShift,mode,**kwargs):
 
     from const_delta import single_ion_all_eta_Phi, single_ion_all_eta_dPhidpsiN
     from mtanh_const_delta import eta_parameter_wrapper, T_parameter_wrapper
@@ -1008,6 +1009,7 @@ def generate_compatible_profiles_etas(simul,xwidth,nonuniform,dxdpsiN,psiDiamFac
 
     #2015-12-16: -psiN_ped_width/3.0 was the old default.
     upShift=-psiN_ped_width/upShift_denom
+    downShift=psiN_ped_width/downShift_denom
 
     update_domain_size(simul,psiN_ped_width,midShift,psiDiamFact,leftBoundaryShift,rightBoundaryShift)
     (Delta,omega) = update_Delta_omega(simul)
@@ -1018,7 +1020,7 @@ def generate_compatible_profiles_etas(simul,xwidth,nonuniform,dxdpsiN,psiDiamFac
     psiMax = simul.inputs.psiMax
 
     #start and stop pedestal in physical psiN
-    psiMinPed=psiMid-psiN_ped_width/2.0
+    psiMinPed=psiMid-psiN_ped_width/2.0+downShift
     psiMaxPed=psiMid+psiN_ped_width/2.0+upShift
     psiMidPed=(psiMinPed+psiMaxPed)/2.0
 
@@ -1116,7 +1118,7 @@ def generate_compatible_profiles_etas(simul,xwidth,nonuniform,dxdpsiN,psiDiamFac
     
 
     
-def generate_periodic_profiles(simul,xwidth,nonuniform,dxdpsiN,psiDiamFact,midShift,upShift_denom,leftBoundaryShift,rightBoundaryShift,**kwargs):
+def generate_periodic_profiles(simul,xwidth,nonuniform,dxdpsiN,psiDiamFact,midShift,upShift_denom,downShift_denom,leftBoundaryShift,rightBoundaryShift,**kwargs):
     global psiMin
     global psiMax
     global Nspecies
@@ -1147,6 +1149,7 @@ def generate_periodic_profiles(simul,xwidth,nonuniform,dxdpsiN,psiDiamFact,midSh
 
     #2015-12-16: -psiN_ped_width/3.0 was the old default.
     upShift=-psiN_ped_width/upShift_denom
+    downShift=psiN_ped_width/downShift_denom
     
     update_domain_size(simul,psiN_ped_width,midShift,psiDiamFact,leftBoundaryShift,rightBoundaryShift)
     (Delta,omega) = update_Delta_omega(simul)
@@ -1154,7 +1157,7 @@ def generate_periodic_profiles(simul,xwidth,nonuniform,dxdpsiN,psiDiamFact,midSh
     psiMin = simul.inputs.psiMin
     psiMax = simul.inputs.psiMax
 
-    psiMinPed=psiMid-psiN_ped_width/2.0
+    psiMinPed=psiMid-psiN_ped_width/2.0+downShift
     psiMaxPed=psiMid+psiN_ped_width/2.0+upShift
 
     # update simulation domain to in fact only include pedestal and
