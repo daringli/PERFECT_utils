@@ -115,7 +115,7 @@ class perfect_simulation(object):
         self.FSA_density_perturbation_name="FSADensityPerturbation"
         self.FSA_pressure_perturbation_name="FSAPressurePerturbation"
 
-        
+        self.Nxi_for_x_name="Nxi_for_x"
         
         self.local_name="makeLocalApproximation"
         self.include_ddpsi_name= "includeddpsiTerm"
@@ -496,20 +496,118 @@ class perfect_simulation(object):
                 file.write(str(line))
             file.write('\n')
         file.close()
+
+    def get_index(self,ispecies,ix,L,itheta,ipsi,debug=False):
+        if ispecies < 1:
+            print "get_index Error: ispecies < 1"
+            return None
+        elif ispecies > self.Nspecies:
+            print "get_index Error: ispecies > Nspecies"
+            return None
+        if ix < 1:
+            print "get_index Error: ix < 1"
+            return None
+        elif ix > self.Nx:
+            print "get_index Error: ix > Nx"
+            return None
+        if L < 0:
+            print "get_index Error: L < 0"
+            return None
+        elif L > self.Nxi_for_x(ix)-1:
+            print "get_index Error: L > Nxi_for_x(ix)-1"
+            print "L: " + str(L)
+            print "ix: " + str(ix)
+            return None
+        if itheta < 1:
+            print "get_index Error: itheta < 1"
+            return None
+        elif itheta > self.Ntheta:
+            print "get_index Error: itheta > Ntheta"
+            return None
+        if ipsi < 1:
+            print "get_index Error: ipsi < 1"
+            return None
+        elif ipsi > self.Npsi:
+            print "get_index Error: ipsi > Npsi"
+            return None
+        
+        index = (ipsi-1)*self.local_matrix_size + (ispecies-1)*self.local_DKE_matrix_size + self.first_index_for_x(ix)*self.Ntheta + L*self.Ntheta + itheta - 1
+
+        if debug:
+            print "==get_index debug output==="
+            print (ispecies,ix,L,itheta,ipsi)
+            print index
+            print "============end============"
+        
+        return index
+
+    @property
+    def boundary_indices(self):
+        # calculate the grid-points that are at the boundary
+        # return a numpy.array with indices
+        if self.inputs.boundaryScheme == 3:
+            # periodic BC, no boundary
+            return numpy.array([])
+        
+        elif self.inputs.boundaryScheme == 1 or self.inputs.boundaryScheme == 2:
+            if self.inputs.boundaryScheme == 1:
+                # left BC only, where ipsi=1 (fortran indexing)
+                ipsi = 1
+            elif self.inputs.boundaryScheme == 2:
+            # right BC only, where ipsi=Npsi (fortran indexing)
+                ipsi = self.Npsi
+           
+            # size of matrix for one Npsi is given by local_matrix_size
+            # thus also size of boundaries
+            a = numpy.zeros(self.local_matrix_size,dtype=numpy.uint64) 
+            i = 0
+            for itheta in range(1,self.Ntheta+1):
+                for ix in range(1,self.Nx+1):
+                    for L in range(0,self.Nxi_for_x(ix)): #L is zero indexed
+                        for ispecies in range(1,self.Nspecies+1):
+                            a[i] = self.get_index(ispecies,ix,L,itheta,ipsi)
+                            i = i + 1
+            return a[0:i]
+        elif self.inputs.boundaryScheme == 0:
+            # WARNING: this is based on simple geometry with
+            # dot(psiN) pointing upwards/downwards for different species
+            a = numpy.zeros(self.local_matrix_size,dtype=numpy.uint64) 
+            i = 0
+            for itheta in range(1,self.Ntheta+1):
+                for ix in range(1,self.Nx+1):
+                    for L in range(0,self.Nxi_for_x(ix)+1): #L=0 OK
+                        for ispecies in range(1,self.Nspecies+1):
+                            if ispecies == self.Nspecies:
+                                #electrons
+                                if itheta <= self.Ntheta/2:
+                                    ipsi=self.Npsi
+                                else:
+                                    ipsi=1
+                            else:
+                                if itheta <= self.Ntheta/2:
+                                    ipsi=1
+                                else:
+                                    ipsi=self.Npsi
+                            a[i] = self.get_index(ispecies,ix,L,itheta,ipsi)
+                            i = i + 1
+            return a[0:i]
+        else:
+            print "perfect_simulation: boundary_indices: ERROR, invalid boundaryScheme!"
+            return None
                 
     def attrib_at_psi_of_theta(self,attrib,psiN):
-        indices=get_index_range(self.actual_psiN,[psiN,psiN],ret_range=False)
+        index=get_index_range(self.actual_psiN,[psiN,psiN],ret_range=False)[0]
         if type(attrib) == str:
             a=getattr(self,attrib)
         else:
             a=attrib
         rank=arraylist_rank(a)
         if rank==3:
-            return a[indices[0],:,:]
+            return a[index,:,:]
         elif rank==2:
-            return a[indices[0],:]
+            return a[index,:]
         elif rank==1:
-            return a[indices[0]]
+            return a[index]
 
     def attrib_at_theta_of_psi(self,attrib,theta):
         indices=get_index_range(self.theta,[theta,theta],ret_range=False,period=2*numpy.pi)
@@ -912,36 +1010,27 @@ class perfect_simulation(object):
 
     @property
     def heat_source(self):
-        #first_i=5
-        #last_i=203
-        #print self.output_dir
-        #S_h = self.outputs[self.group_name+self.heat_source_name][()][first_i:last_i,:]
-        #psiN=self.actual_psiN[first_i:last_i]
-        #print "Integrated heat sources: " + str(scipy.integrate.simps(S_h,psiN,axis=0))
-
-        # Sources may be nonexisting at the boundary
-        S = self.outputs[self.group_name+self.heat_source_name][()]
+        try:
+            S = self.outputs[self.group_name+self.heat_source_name][()]
+        except KeyError:
+            S=0
         return self.pad_sources(S) + self.constant_heat_source + self.species_indep_source_heat_source
 
     @property
     def momentum_source(self):
         try:
-            S1 = self.outputs[self.group_name+self.momentum_source_name][()]
+            S = self.outputs[self.group_name+self.momentum_source_name][()]
         except KeyError:
-            S1=0
-        return self.pad_sources(S1) + self.constant_momentum_source + self.no_charge_source_momentum_source + self.species_indep_source_momentum_source
+            S=0
+        return self.pad_sources(S) + self.constant_momentum_source + self.no_charge_source_momentum_source + self.species_indep_source_momentum_source
     
     @property
     def particle_source(self):
-        #first_i=5
-        #last_i=203
-        #print self.output_dir
-        #S_p = self.outputs[self.group_name+self.particle_source_name][()][first_i:last_i,:]
-        #psiN=self.actual_psiN[first_i:last_i]
-        #print "Integrated particle sources: " + str(scipy.integrate.simps(S_p,psiN,axis=0))
-
         # Sources may be nonexisting at the boundary
-        S = self.outputs[self.group_name+self.particle_source_name][()]
+        try:
+            S = self.outputs[self.group_name+self.particle_source_name][()]
+        except KeyError:
+            S=0
         return self.pad_sources(S) + self.constant_particle_source + self.species_indep_source_particle_source
     
 
@@ -1152,7 +1241,6 @@ class perfect_simulation(object):
     def parallel_current(self):
         return numpy.sum(self.Z*self.FSAFlow,axis=1)
     
-    
     @property
     def flow_inboard(self):
         return self.outputs[self.group_name+self.flow_inboard_name][()]
@@ -1164,7 +1252,6 @@ class perfect_simulation(object):
     @property
     def FSAkPar(self):
         return self.outputs[self.group_name+self.FSAkPar_name][()]
-    
     
     @property
     def kPar_inboard(self):
@@ -1182,8 +1269,17 @@ class perfect_simulation(object):
     def flow(self):
         return self.outputs[self.group_name+self.flow_name][()]
 
-    
+    @property
+    def lboundary_flow(self):
+        psiN_point=self.actual_psiN[0]
+        return self.attrib_at_psi_of_theta("flow",psiN_point)
 
+    @property
+    def rboundary_flow(self):
+        psiN_point=self.actual_psiN[-1]
+        return self.attrib_at_psi_of_theta("flow",psiN_point)
+    
+    
     @property
     def flow_minus_FSAFlow(self):
         return self.flow-numpy.expand_dims(self.FSAFlow,axis=1)
@@ -1682,6 +1778,55 @@ class perfect_simulation(object):
         return len(self.theta)
 
     @property
+    def Nxi(self):
+        return self.inputs.Nxi
+
+    def Nxi_for_x(self,ix,f=True):
+        if f==True:
+            # ix input is fortran indexed
+            # subtract by one to translate to python indexing
+            ix = ix-1
+        return self.outputs[self.group_name+self.Nxi_for_x_name][()][ix]
+
+    def first_index_for_x(self,ix,f=True):
+        if f:
+            # ix input is fortran indexed
+            # subtract by one to translate to python indexing
+            ix = ix-1
+        if ix == 0:
+            return 0
+        else:
+            return self.first_index_for_x(ix-1,f=False) + self.Nxi_for_x(ix-1,f=False)
+
+    def min_x_for_L(self,L):
+        if L==0:
+            return 1
+        a=numpy.ones(self.Nxi,dtype=numpy.uint64)
+        for j in range(1,self.Nx):
+            # print self.Nxi_for_x(j)
+            a[self.Nxi_for_x(j):] = j+1
+        return a[L]
+  
+    @property
+    def Nx(self):
+        return self.inputs.Nx
+
+    @property
+    def NL(self):
+        # L for rosenbluth potential
+        return self.inputs.NL
+
+    @property
+    def local_matrix_size(self):
+        # 2017-02-06: matches interneally computed in local simulation
+        return self.local_DKE_matrix_size*self.Nspecies
+
+    @property
+    def local_DKE_matrix_size(self):
+        # 2017-02-06: matches interneally computed in local simulation
+        return self.Ntheta * sum([self.Nxi_for_x(i) for i in range(self.Nx)]) 
+
+    @property
     def Nspecies(self):
         #stupidity wrapper since I did not realise I had a num_species and made a new one.
         return self.num_species 
@@ -1831,7 +1976,7 @@ class perfect_simulation(object):
     
     @property
     def total_density_perturbation(self):
-        #non-adiabatic part
+        # n_1/n_0
         ZoT=numpy.expand_dims(self.Z/self.THat, axis=1)
         ret=self.density_perturbation - (2*self.omega/self.Delta)*ZoT*self.potential_perturbation[:,:,numpy.newaxis]
         return ret

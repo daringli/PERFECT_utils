@@ -294,8 +294,10 @@ def generate_ni_profile(**kwargs):
         print "actual n_LCFS: " + str(niHat(psiMaxPed)) 
         
     elif mtanh:
+        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        extrapolation_offset=0.0
         (niHat,dniHatds) = generate_m2tanh_profile(niPed,niCoreGrad,nipedGrad,niSOLGrad,psiMaxPed-psiMinPed,psiMinPed)
-        (core,ped,sol,ddx_core,ddx_ped,ddx_sol) = extrapolate_m2tanh_sections(niHat,dniHatds,psiMin,psiMinPed,psiMaxPed,psiMax)
+        (core,ped,sol,ddx_core,ddx_ped,ddx_sol) = extrapolate_m2tanh_sections(niHat,dniHatds,psiMin,psiMinPed,psiMaxPed,psiMax,offset=extrapolation_offset)
         niHatPed = ped
         niHatAft = sol
         dniHatAftdpsi = ddx_sol
@@ -601,7 +603,7 @@ def generate_etai_profile(Delta,omega,**kwargs):
     elif mtanh: # or mtanh_const_delta:
         #PhiTopPoint=psiMax/2.0 + psiMaxPed/2.0
         PhiTopPoint=psiMaxPed
-        width = (psiMaxPed - psiMinPed)
+        
         
         prefactor=1.0
         if mtanh_const_delta:
@@ -613,8 +615,9 @@ def generate_etai_profile(Delta,omega,**kwargs):
         etaiHatAft =(lambda psiN: niHatAft(psiN)*numpy.exp(PhiTop*Zs[main_index]/TiHatAft(psiN)))
         detaiHatAftdpsi = (lambda psiN: (dniHatAftdpsi(psiN) - niHatAft(psiN)*PhiTop*Zs[main_index]*dTiHatAftdpsi(psiN)/(TiHatAft(psiN))**2)*numpy.exp(PhiTop*Zs[main_index]/TiHatAft(psiN)))
 
-       
-        (etaiHat,detaiHatds) = derivative_m3tanh_transition([etaiHatPre,etaiHatAft],[detaiHatPredpsi,detaiHatAftdpsi],psiMaxPed,width)
+        #!!!!!!!!!!!!!!!!!!!!!!!!!
+        width = (psiMaxPed - psiMinPed)
+        (etaiHat,detaiHatds) = derivative_m3tanh_transition([etaiHatPre,etaiHatAft],[detaiHatPredpsi,detaiHatAftdpsi],psiMaxPed-width,width)
 
         #DEBUG PLOT
         if verbose:
@@ -691,7 +694,7 @@ def generate_n_from_eta_X_profile(etaHat,X,detaHatds,dXds,Z):
     dnHatdpsi=lambda x : detaHatds(x)*X(x)**Z + etaHat(x)*Z*X(x)**(Z-1)*dXds(x)
     return (nHat,dnHatdpsi)
 
-def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,oldsameflux=False,sameeta=False,samefluxshift=0,specialEta=False,psiDiamFact=5,transitionFact=0.2,dxdpsiN=1,midShift=0,upShift_denom=3.0,m2tanh=False,m2tanh_const_delta=False,mode="const_Phi",leftBoundaryShift=0.0,rightBoundaryShift=0.0,T_transition_length=1.0,**kwargs):
+def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,oldsameflux=False,sameeta=False,samefluxshift=0,specialEta=False,psiDiamFact=5,transitionFact=0.2,dxdpsiN=1,midShift=0,upShift_denom=3.0,downShift_denom=float("Inf"),m2tanh=False,m2tanh_const_delta=False,mode="const_Phi",leftBoundaryShift=0.0,rightBoundaryShift=0.0,T_transition_length=1.0,**kwargs):
     #NOTE: uses the dx/dpsi at minor radius for both core and SOL, which assumes that
     #simulated region is small enough that it doesn't change much.
     if mode == "periodic":
@@ -769,6 +772,7 @@ def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,ol
 
     #2015-12-16: -psiN_ped_width/3.0 was the old default.
     upShift=-psiN_ped_width/upShift_denom
+    downShift=psiN_ped_width/downShift_denom
 
     
     update_domain_size(simul,psiN_ped_width,midShift,psiDiamFact,leftBoundaryShift,rightBoundaryShift)
@@ -787,7 +791,7 @@ def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,ol
     psiMax = simul.inputs.psiMax
     
     #start and stop pedestal in physical psiN
-    psiMinPed=psiMid-psiN_ped_width/2.0
+    psiMinPed=psiMid-psiN_ped_width/2.0+downShift
     psiMaxPed=psiMid+psiN_ped_width/2.0+upShift
     psiMidPed=(psiMinPed+psiMaxPed)/2.0
     

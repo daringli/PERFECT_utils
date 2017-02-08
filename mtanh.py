@@ -69,7 +69,7 @@ def ddx_m2tanh_profile(a_ped,a_sol,a_etb,a_delta,ddx_P_core,ddx_P_sol):
     
 def parameter_wrapper(X_ped,dXdr_core,dXdr_ped,dXdr_sol,ped_width,ped_pos):
     #takes parameters from spline profile generation and maps them to
-    #modified modified arctangens hyperbolicus profiles
+    #modified modified arcustangens hyperbolicus profiles
     a_delta = ped_width/4.0
     a_ped = X_ped + dXdr_core * ped_width/2.0
     X_sol = X_ped + dXdr_ped * ped_width
@@ -88,7 +88,7 @@ def generate_m2tanh_profile(X_ped,dXdr_core,dXdr_ped,dXdr_sol,ped_width,ped_pos,
     (a_ped,a_sol,a_etb,a_delta,a_slope,b_slope) = parameter_wrapper(X_ped,dXdr_core,dXdr_ped,dXdr_sol,ped_width,ped_pos)
     return (m2tanh_profile(a_ped,a_sol,a_etb,a_delta,dXdr_core,dXdr_sol),lambda x: dpsi_ds*ddx_m2tanh_profile(a_ped,a_sol,a_etb,a_delta,dXdr_core,dXdr_sol)(x))
 
-def extrapolate_m2tanh_sections(P,dPdx,x_core_stop,x_ped_start,x_ped_stop,x_sol_start,dpsi_ds=1):
+def extrapolate_m2tanh_sections(P,dPdx,x_core_stop,x_ped_start,x_ped_stop,x_sol_start,dpsi_ds=1,offset=0.0):
     #for some parts of the profile generation, we need to extrapolate certain
     #segments of the profiles
     #this creates linearly extrapolated functions for the core, pedestal
@@ -97,22 +97,24 @@ def extrapolate_m2tanh_sections(P,dPdx,x_core_stop,x_ped_start,x_ped_stop,x_sol_
     # x_ped_start : x where pedestal starts
     # x_ped_stop : x where pedestal stops
     # x_sol_start: x where sol starts
+    # offset: can be used to sample further into the regions
+    # to avoid transition region
     
-    slope_core_stop = dpsi_ds * dPdx(x_core_stop)
-    slope_ped_start = dpsi_ds * dPdx(x_ped_start)
-    slope_ped_stop = dpsi_ds * dPdx(x_ped_stop)
-    slope_sol_start = dpsi_ds * dPdx(x_sol_start)
+    slope_core_stop = dpsi_ds * dPdx(x_core_stop - offset)
+    slope_ped_start = dpsi_ds * dPdx(x_ped_start + offset)
+    slope_ped_stop = dpsi_ds * dPdx(x_ped_stop - offset)
+    slope_sol_start = dpsi_ds * dPdx(x_sol_start + offset)
     
-    value_core_stop = P(x_core_stop)
-    value_ped_start = P(x_ped_start)
-    value_ped_stop = P(x_ped_stop)
-    value_sol_start = P(x_sol_start)
+    value_core_stop = P(x_core_stop - offset)
+    value_ped_start = P(x_ped_start + offset)
+    value_ped_stop = P(x_ped_stop  - offset)
+    value_sol_start = P(x_sol_start + offset)
 
     #create extrapolations
-    after_core = lambda x: value_core_stop + slope_core_stop*(x-x_core_stop)
-    before_ped = lambda x: value_ped_start + slope_ped_start*(x-x_ped_start)
-    after_ped = lambda x: value_ped_stop + slope_ped_stop*(x-x_ped_stop)
-    before_sol = lambda x: value_sol_start + slope_sol_start*(x-x_sol_start)
+    after_core = lambda x: value_core_stop + slope_core_stop*(x-(x_core_stop - offset))
+    before_ped = lambda x: value_ped_start + slope_ped_start*(x-(x_ped_start + offset))
+    after_ped = lambda x: value_ped_stop + slope_ped_stop*(x-(x_ped_stop - offset))
+    before_sol = lambda x: value_sol_start + slope_sol_start*(x-(x_sol_start + offset))
 
     ddx_after_core = lambda x: slope_core_stop
     ddx_before_ped = lambda x: slope_ped_start

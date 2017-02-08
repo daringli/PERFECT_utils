@@ -72,7 +72,7 @@ if __name__=="__main__":
     Z=1
     deltaT=0.123142398652 #from AUG #27963 #27963
     BT=1.66786235477 #from AUG
-    (n2,ddx_n2) = n_mtanh_const_delta_from_n_LCFS(n_ped,n_LCFS,ddx_n_core,ped_width,ped_pos,Z,BT,deltaT)
+    (n2,ddx_n2,n2_SOL,ddx_n2_SOL) = n_mtanh_const_delta_from_n_LCFS(n_ped,n_LCFS,ddx_n_core,ped_width,ped_pos,Z,BT,deltaT)
     x=numpy.linspace(0.8,1.2)
     plt.subplot(3,1,1)
     plt.plot(numpy.sqrt(x),n(x))
