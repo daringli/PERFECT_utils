@@ -1,0 +1,117 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath}
+%\usepackage{relsize}
+
+%\usepackage{fixmath}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage[usenames,dvipsnames]{color}
+%\usepackage[small,font=it]{caption}
+\usepackage{amssymb}
+%\usepackage{icomma}
+%\usepackage{hyperref}
+%\usepackage{mcode}
+\usepackage{verbatim}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{units}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead{\footnotesize \parbox{11cm}{PERFECT profile generation}}
+\rhead{\footnotesize \parbox{2cm}{Stefan Buller}}
+\renewcommand\headheight{24pt}
+%\usepackage{dirtytalk} \say{} command for quotations
+
+\makeatletter
+\newenvironment{tablehere}
+  {\def\@captype{table}}
+  {}
+
+\newenvironment{figurehere}
+  {\def\@captype{figure}}
+  {}
+
+\newsavebox\myboxA
+\newsavebox\myboxB
+\newlength\mylenA
+
+\newcommand*\obar[2][0.75]{% OverBAR, adds bar over an element
+    \sbox{\myboxA}{$\m@th#2$}%
+    \setbox\myboxB\null% Phantom box
+    \ht\myboxB=\ht\myboxA%
+    \dp\myboxB=\dp\myboxA%
+    \wd\myboxB=#1\wd\myboxA% Scale phantom
+    \sbox\myboxB{$\m@th\overline{\copy\myboxB}$}%  Overlined phantom
+    \setlength\mylenA{\the\wd\myboxA}%   calc width diff
+    \addtolength\mylenA{-\the\wd\myboxB}%
+    \ifdim\wd\myboxB<\wd\myboxA%
+       \rlap{\hskip 0.5\mylenA\usebox\myboxB}{\usebox\myboxA}%
+    \else
+        \hskip -0.5\mylenA\rlap{\usebox\myboxA}{\hskip 0.5\mylenA\usebox\myboxB}%
+    \fi}
+
+\makeatother
+
+
+%\def\equationautorefname{ekvation}
+%\def\tableautorefname{tabell}
+%\def\figureautorefname{figur}
+%\def\sectionautorefname{sektion}
+%\def\subsectionautorefname{sektion}
+
+\DeclareMathOperator\erf{erf}
+
+\newcommand{\ordo}[1]{{\cal O}\left( #1 \right)}
+\DeclareMathOperator{\sgn}{sgn}
+%\renewcommand{\vec}[1]{\boldsymbol{#1}}
+\newcommand{\im}{\ensuremath{\mathrm{i}}}
+\newcommand{\e}{\ensuremath{\mathrm{e}}}
+\newcommand{\p}{\ensuremath{\partial}}
+
+\newcommand{\bra}[1]{\langle #1 \mid}
+\newcommand{\ket}[1]{\mid #1 \rangle}
+\newcommand\matris[4]{\ensuremath{\begin{pmatrix} #1 & #2 \\ #3 & #4\end{pmatrix}}}
+\renewcommand{\d}{\ensuremath{\mathrm{d}}}
+%\DeclareMathOperator*{\sgn}{sgn}
+\newcommand{\todo}[1]{\textcolor{red}{#1}}
+
+%to get leftrightarrow over tensors of rank-2.
+\def\shrinkage{2.1mu}
+\def\vecsign{\mathchar"017E}
+\def\dvecsign{\smash{\stackon[-1.95pt]{\mkern-\shrinkage\vecsign}{\rotatebox{180}{$\mkern-\shrinkage\vecsign$}}}}
+\def\dvec#1{\def\useanchorwidth{T}\stackon[-4.2pt]{#1}{\,\dvecsign}}
+\usepackage{stackengine}
+\stackMath
+\def\perfect{\textsc{Perfect}}
+\newcommand{\code}[1]{\lstinline{#1}}
+
+
+\lstset{language=[90]Fortran,
+  basicstyle=\ttfamily,
+  keywordstyle=\color{red},
+  commentstyle=\color{green},
+  morecomment=[l]{!\ }% Comment only with space after !
+   frame=single,
+   breaklines=true,
+   postbreak=\raisebox{0ex}[0ex][0ex]{\ensuremath{\color{blue}\hookrightarrow\space}}
+}
+
+%=================================================================
+\begin{document}
+\section{Background}
+Linearization about a stationary Maxwellian in $\delta f$ drift-kinetics will break down if the zeroth order temperature $T$ and pseudo-density $\eta=n \e^{Ze\Phi/T}$ have scale-lengths comparable to a poloidal gyroradius. This goes for all species, although it is more severe for ions due to their wider orbit width.
+
+Specifically, we need the parameters
+\begin{equation}
+  \delta_X \equiv \rho_p^{-1} \d_r \log{X} 
+\end{equation}
+to be much smaller than one. Here $\d_$ refers to a derivative with respect to minor radius, and $X$ is the $T$ or $\eta$ profile for each species, $\rho_p = mv_T/(eB_p)$ is the (thermal) poloidal gyroradius. PERFECT uses a normalized poloidal magnetic flux $\psi_N  = \psi/\psi_a$, where $\psi_a$ is $\psi$ at the LCFS (at $r=a$). Since $|\nabla \psi| \sim \d\psi/\d r = RB_p$, we have
+\begin{equation}
+  \delta_X \equiv \rho_p^{-1} \frac{\d \psi}{\d r} \frac{\d}{\d \psi}  \frac{}{}\log{X} 
+\end{equation}
+\end{document}
