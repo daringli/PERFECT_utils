@@ -883,6 +883,16 @@ class perfect_simulation(object):
         return self.internal_grid_fft(self.conductive_heat_flux)
 
     @property
+    def n_ped(self):
+        #species wise LCFS density
+        return self.nHat[self.pedestal_start_stop_indices[0]]
+    
+    @property
+    def n_LCFS(self):
+        #species wise LCFS density
+        return self.nHat[self.pedestal_start_stop_indices[1]]
+    
+    @property
     def q_max(self):
         #species wise maximum in q
         q=self.conductive_heat_flux
@@ -958,6 +968,10 @@ class perfect_simulation(object):
     def mPiHat_jHat_source(self):
         return (self.Delta/self.psiAHat)*numpy.sum(self.masses*self.PiHat_source_source,axis=1)
 
+    @property
+    def electron_particle_flux(self):
+        return self.particle_flux[:,-1]
+    
     @property
     def mPiHat_source_source_filtered(self):
         a=self.mPiHat_source_source

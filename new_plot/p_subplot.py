@@ -132,6 +132,7 @@ class perfect_subplot:
             
             #split 2D array into list of 1D arrays
             self.data=array2D_to_array_list(data,data_otheraxis)
+            #print data
             #print  self.data
 
             #terminology suitable for 1D case
@@ -181,6 +182,8 @@ class perfect_subplot:
             self.hidden_yticklabels=kwarg_default("hidden_yticklabels",[0,-1],**kwargs)
             self.linestyles=kwarg_default("linestyles",["solid"]*len(x),**kwargs)
             self.markers=kwarg_default("markers",[""]*len(x),**kwargs)
+            self.markeverys=kwarg_default("markeverys",[1]*len(x),**kwargs)
+            self.markersizes=kwarg_default("markersizes",[3]*len(x),**kwargs)
             self.fillstyles=kwarg_default("fillstyles",["full"]*len(x),**kwargs)
             self.linewidths=kwarg_default("linewidths",[1]*len(x),**kwargs)
             self.colors=kwarg_default("colors",["k"]*len(x),**kwargs)
@@ -337,13 +340,15 @@ class perfect_subplot:
                 self.linewidths=[self.linewidths]*len(y)
             for i in range(len(y)):
                 try:
-                    ax.plot(x[i],y[i],linestyle=self.linestyles[i],color=self.colors[i],linewidth=self.linewidths[i],marker=self.markers[i],fillstyle=self.fillstyles[i])
+                    ax.plot(x[i],y[i],linestyle=self.linestyles[i],color=self.colors[i],linewidth=self.linewidths[i],marker=self.markers[i],markevery=self.markeverys[i],fillstyle=self.fillstyles[i],markersize=self.markersizes[i],)
                 except IndexError:
                     print "Index error in ax.plot(). Most likely, linestyles, linewidths and colors have the wrong lengths."
                     print "len(colors): " + str(len(self.colors))
                     print "len(linestyles): " + str(len(self.linestyles))
                     print "len(linewidths): " + str(len(self.linewidths))
                     print "len(markers): " + str(len(self.markers))
+                    print "len(markersizes: " + str(len(self.markersizes))
+                    print "len(markeverys): " + str(len(self.markeverys))
                     print "len(fillstyles): " + str(len(self.fillstyles))
                     print "len(x): " + str(len(x))
                     print "len(y): " + str(len(y))

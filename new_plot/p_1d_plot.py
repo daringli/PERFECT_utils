@@ -18,7 +18,7 @@ import scipy.integrate
 from mpldatacursor import datacursor
 
 
-def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,markers=None,linestyles=None,linewidths=None,xlims=None,same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","H":"i","T":"i","He":"z","N":"z","e":"e"},vlines=[],hlines=[],share_scale=[],interactive=False,colors=None,skip_species = [],yaxis_powerlimits=(0,0),hidden_xticklabels=[],yaxis_label_x=-0.15,ylims=None,simulList=None,pedestal_start_stop=None,pedestal_point=None,core_point=None):
+def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,markers=None,markeverys=None,fillstyles=None,linestyles=None,linewidths=None,xlims=None,same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","H":"i","T":"i","He":"z","N":"z","e":"e"},vlines=[],hlines=[],share_scale=[],interactive=False,colors=None,skip_species = [],yaxis_powerlimits=(0,0),hidden_xticklabels=[],yaxis_label_x=-0.15,ylims=None,simulList=None,pedestal_start_stop=None,pedestal_point=None,core_point=None):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -68,8 +68,27 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
         simulList=perfect_simulations_from_dirs(dirlist, normlist, specieslist, psiN_to_psiList, global_term_multiplierList, pedestal_start_stop_list=pedestal_start_stop, pedestal_point_list=pedestal_point, core_point_list=core_point)      
     else:
         "p_1d_plot: simulList specified externally, ignoring dirlist, etc."
-    if markers == None:
-        markers=['']*len(simulList)
+    if markers != None:
+        if markeverys == None:
+            markeverys = [None]*len(simulList)
+
+        if fillstyles == None:
+            if lg:
+                fillstyles=[]
+                for n,l in zip(noddpsi,local):
+                    # local overrides noddpsi in code as well
+                    if l:
+                        fillstyles=linestyles+["none"]
+                    elif n:
+                        fillstyles=linestyles+["left"]
+                    else:
+                        fillstyles=linestyles+["full"]
+            else:
+                fillstyles = ['full']*len(simulList)
+    else:
+        markers = [None]*len(simulList)
+        fillstyles = ["none"]*len(simulList)
+        markeverys = [None]*len(simulList)
 
     #some logic to differentiate between species independent
     #and species quantities further down will fail if there are simulations
@@ -136,15 +155,21 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
         all_linecolors=colors
 
     if linestyles == None:
-        linestyles=[] #linestyles generated from local or global
-        for n,l in zip(noddpsi,local):
-            # local overrides noddpsi in code as well
-            if l:
-                linestyles=linestyles+["dashed"]
-            elif n:
-                linestyles=linestyles+["dashdot"]
-            else:
-                linestyles=linestyles+["solid"]
+        if lg:
+            linestyles=[] #linestyles generated from local or global
+            for n,l in zip(noddpsi,local):
+                # local overrides noddpsi in code as well
+                if l:
+                    linestyles=linestyles+["dashed"]
+                elif n:
+                    linestyles=linestyles+["dashdot"]
+                else:
+                    linestyles=linestyles+["solid"]
+        else:
+            linestyles = ['solid']*len(simulList)
+                
+    
+                    
 
     if linewidths == None:
         linewidths = [1]*len(simulList)
@@ -212,7 +237,7 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                 else:
                     ylim = ylims[i]
                     
-                psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,groups=[s,attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,linewidths=linewidths,colors=linecolors,markers=markers,yaxis_powerlimits=yaxis_powerlimits,hidden_xticklabels=hidden_xticklabels,yaxis_label_x=yaxis_label_x,ylims=ylim,x_period=x_period)) #yaxis_label=ylabels[i_a]
+                psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,groups=[s,attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,linewidths=linewidths,colors=linecolors,markers=markers,fillstyles=fillstyles,markeverys=markeverys,yaxis_powerlimits=yaxis_powerlimits,hidden_xticklabels=hidden_xticklabels,yaxis_label_x=yaxis_label_x,ylims=ylim,x_period=x_period)) #yaxis_label=ylabels[i_a]
                 
 
         else:
@@ -238,7 +263,7 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                 ylim = None
             else:
                 ylim = ylims[i]
-            psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,groups=[attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,colors=linecolors,markers=markers,ylims=ylim,x_period=x_period)) #yaxis_label=ylabels[i_a]
+            psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,groups=[attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,colors=linecolors,markers=markers,fillstyles=fillstyles,markeverys=markeverys,yaxis_powerlimits=yaxis_powerlimits,hidden_xticklabels=hidden_xticklabels,yaxis_label_x=yaxis_label_x,ylims=ylim,x_period=x_period)) #yaxis_label=ylabels[i_a]
             
         
         psp_lists.append(psp_list)
@@ -345,8 +370,6 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
             plt.savefig(outputname+".pdf")
         else:
             plt.savefig(attribs[i_li]+".pdf")
-
-        
 
     
         
