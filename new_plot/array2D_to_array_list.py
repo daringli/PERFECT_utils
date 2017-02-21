@@ -34,3 +34,17 @@ if __name__ == "__main__":
     a2=numpy.array([1,2,3])
     b2=array2D_to_array_list(a2,0)
     print b2
+
+    anew =numpy.array([1,2])[:,numpy.newaxis]
+    bnew=array2D_to_array_list(anew)
+    cnew=array2D_to_array_list(anew,0)
+    print anew
+    print bnew
+    print cnew
+
+    anew2 =numpy.array([1,2])[numpy.newaxis,:]
+    bnew2=array2D_to_array_list(anew2)
+    cnew2=array2D_to_array_list(anew2,0)
+    print anew2
+    print bnew2
+    print cnew2

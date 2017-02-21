@@ -241,7 +241,8 @@ def generate_ne_profile(simul,**kwargs):
     
     elif mtanh:
         (neHat,dneHatds) = generate_m2tanh_profile(nePed,neCoreGrad,nepedGrad,neSOLGrad,psiMaxPed-psiMinPed,psiMinPed)
-        (core,ped,sol,ddx_core,ddx_ped,ddx_sol) = extrapolate_m2tanh_sections(neHat,dneHatds,psiMin,psiMinPed,psiMaxPed,psiMax)
+        #(core,ped,sol,ddx_core,ddx_ped,ddx_sol) = extrapolate_m2tanh_sections(neHat,dneHatds,psiMin,psiMinPed,psiMaxPed,psiMax)
+        (core,ped,sol,ddx_core,ddx_ped,ddx_sol) = extrapolate_m2tanh_sections(neHat,dneHatds,psiMinPed,psiMinPed,psiMaxPed,psiMaxPed)
         neHatPre = core
         dneHatPredpsi = ddx_core
     else:
@@ -295,7 +296,8 @@ def generate_ni_profile(**kwargs):
         
     elif mtanh:
         (niHat,dniHatds) = generate_m2tanh_profile(niPed,niCoreGrad,nipedGrad,niSOLGrad,psiMaxPed-psiMinPed,psiMinPed)
-        (core,ped,sol,ddx_core,ddx_ped,ddx_sol) = extrapolate_m2tanh_sections(niHat,dniHatds,psiMin,psiMinPed,psiMaxPed,psiMax)
+        #(core,ped,sol,ddx_core,ddx_ped,ddx_sol) = extrapolate_m2tanh_sections(niHat,dniHatds,psiMin,psiMinPed,psiMaxPed,psiMax)
+        (core,ped,sol,ddx_core,ddx_ped,ddx_sol) = extrapolate_m2tanh_sections(niHat,dniHatds,psiMinPed,psiMinPed,psiMaxPed,psiMaxPed)
         niHatPed = ped
         niHatAft = sol
         dniHatAftdpsi = ddx_sol
@@ -391,7 +393,8 @@ def generate_T_profiles_sameflux(nt,nb,breakpoint_shift,T_transition_length,**kw
             deltaT = deltaTi
             TPed = Tpeds[main_index]
             (THats[main_index],dTHatdss[main_index]) = match_heat_flux_proxy(TPed,TpedGrads[main_index],TpedGrads[main_index],TSOLGrads[main_index],transition_length,transition_start,nt,nb,psiMin,psiMax)
-            (core,ped,sol,ddx_core,ddx_ped,ddx_sol) = extrapolate_m2tanh_sections(THats[main_index],dTHatdss[main_index],psiMin,psiMinPed,psiMaxPed,psiMax)
+            #(core,ped,sol,ddx_core,ddx_ped,ddx_sol) = extrapolate_m2tanh_sections(THats[main_index],dTHatdss[main_index],psiMin,psiMinPed,psiMaxPed,psiMax)
+            (core,ped,sol,ddx_core,ddx_ped,ddx_sol) = extrapolate_m2tanh_sections(THats[main_index],dTHatdss[main_index],psiMinPed,psiMinPed,psiMaxPed,psiMaxPed)
         else:
             print "generate_compatible_profiles: ERROR: Unrecognized mode!"
             sys.exit(2)
@@ -408,8 +411,10 @@ def generate_T_profiles_sameflux(nt,nb,breakpoint_shift,T_transition_length,**kw
         #... and change the Tped
         Tped = Tpeds[main_index] - TpedGrads[main_index]*(T_transition_length -1)*(psiMaxPed-psiMinPed)
         
-        (THats[main_index],dTHatdss[main_index]) = match_heat_flux_proxy(Tped,TpedGrads[main_index],TpedGrads[main_index],TSOLGrads[main_index],transition_length,transition_start,nt,nb,psiMin,psiMax)
-        (core,ped,sol,ddx_core,ddx_ped,ddx_sol) = extrapolate_m2tanh_sections(THats[main_index],dTHatdss[main_index],psiMin,psiMinPed,psiMaxPed,psiMax)
+        #(THats[main_index],dTHatdss[main_index]) = match_heat_flux_proxy(Tped,TpedGrads[main_index],TpedGrads[main_index],TSOLGrads[main_index],transition_length,transition_start,nt,nb,psiMin,psiMax)
+        (THats[main_index],dTHatdss[main_index]) = match_heat_flux_proxy(Tped,TpedGrads[main_index],TpedGrads[main_index],TSOLGrads[main_index],transition_length,transition_start,nt,nb,psiMin,psiMaxPed)
+        #(core,ped,sol,ddx_core,ddx_ped,ddx_sol) = extrapolate_m2tanh_sections(THats[main_index],dTHatdss[main_index],psiMin,psiMinPed,psiMaxPed,psiMax)
+        (core,ped,sol,ddx_core,ddx_ped,ddx_sol) = extrapolate_m2tanh_sections(THats[main_index],dTHatdss[main_index],psiMinPed,psiMinPed,psiMaxPed,psiMaxPed)
         
         TiHatPed = ped
         TiHatAft = sol
@@ -563,7 +568,7 @@ def generate_T_profiles(**kwargs):
     elif mtanh:
         for i in range(Nspecies):
             (THats[i],dTHatdss[i]) = generate_m2tanh_profile(Tpeds[i],TCoreGrads[i],TpedGrads[i],TSOLGrads[i],psiMaxPed-psiMinPed,psiMinPed)
-        (core,ped,sol,ddx_core,ddx_ped,ddx_sol) = extrapolate_m2tanh_sections(THats[main_index],dTHatdss[main_index],psiMin,psiMinPed,psiMaxPed,psiMax)
+        (core,ped,sol,ddx_core,ddx_ped,ddx_sol) = extrapolate_m2tanh_sections(THats[main_index],dTHatdss[main_index],psiMinPed,psiMinPed,psiMaxPed,psiMaxPed)
 
         TiHatPed = ped
         TiHatAft = sol
@@ -593,6 +598,9 @@ def generate_T_profiles(**kwargs):
 def generate_etai_profile(Delta,omega,**kwargs):    
     etaiHatPre =(lambda psiN: (niPed+  niCoreGrad* (psiN-psiMinPed)))
     detaiHatPredpsi =(lambda psiN: niCoreGrad + 0*psiN)
+    linear_eta = True
+    if linear_eta:
+        return (etaiHatPre,detaiHatPredpsi) 
     if mtanh_const_delta:
         etaiHatAft = lambda psiN: 8*niHatAft(psiN)
         detaiHatAftdpsi =lambda psiN: 8*dniHatAftdpsi(psiN)
@@ -601,7 +609,9 @@ def generate_etai_profile(Delta,omega,**kwargs):
     elif mtanh: # or mtanh_const_delta:
         #PhiTopPoint=psiMax/2.0 + psiMaxPed/2.0
         PhiTopPoint=psiMaxPed
+        print "PhiTopPoint: " +str(PhiTopPoint)
         width = (psiMaxPed - psiMinPed)
+        print "width: " +str(width)
         
         prefactor=1.0
         if mtanh_const_delta:
@@ -609,6 +619,9 @@ def generate_etai_profile(Delta,omega,**kwargs):
             PhiTop=prefactor*(TiHatAft(PhiTopPoint)/Zs[main_index])*numpy.log(etaiHatPre(PhiTopPoint)*1.0/niHatAft(PhiTopPoint))*(2.0*omega/Delta)
         else:
             PhiTop=prefactor*(TiHatPed(PhiTopPoint)/Zs[main_index])*numpy.log(etaiHatPre(PhiTopPoint)*1.0/niHatAft(PhiTopPoint))*(2.0*omega/Delta)
+            print "niHatAft: " +str(niHatAft(PhiTopPoint))
+            print "etaiHatPre: " +str(etaiHatPre(PhiTopPoint))
+            print "TiHatPed: " +str(TiHatPed(PhiTopPoint))
 
         etaiHatAft =(lambda psiN: niHatAft(psiN)*numpy.exp(PhiTop*Zs[main_index]/TiHatAft(psiN)))
         detaiHatAftdpsi = (lambda psiN: (dniHatAftdpsi(psiN) - niHatAft(psiN)*PhiTop*Zs[main_index]*dTiHatAftdpsi(psiN)/(TiHatAft(psiN))**2)*numpy.exp(PhiTop*Zs[main_index]/TiHatAft(psiN)))
@@ -869,7 +882,8 @@ def generate_compatible_profiles(simul,xwidth,nonuniform=False,sameflux=False,ol
     if mtanh_const_delta == False:  
         if sameflux==True:
             nt=nHats[main_index](psiMin)
-            nb=nHats[main_index](psiMax)
+            #nb=nHats[main_index](psiMax)
+            nb=nHats[main_index](psiMaxPed)
             (THats,dTHatdss) = generate_T_profiles_sameflux(nt,nb,samefluxshift,T_transition_length,**kwargs)
         elif (oldsameflux==True):
             #this setting uses the old ni profile generation to generatea  temporary
