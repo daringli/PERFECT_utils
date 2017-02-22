@@ -114,4 +114,46 @@ to be much smaller than one. Here $\d_$ refers to a derivative with respect to m
 \begin{equation}
   \delta_X \equiv \rho_p^{-1} \frac{\d \psi}{\d r} \frac{\d}{\d \psi}  \frac{}{}\log{X} 
 \end{equation}
+
+\section{Design}
+The basic blocks of the profile generation procedure are \profs and \profGens objects. Each \profGen takes various inputs, including \profs, and outputs a new \prof{}. Each \prof object has various properties, represented as a list of strings. Properties include meta-information, such as what kind of profile it is (temperature, density, pseudo-density or potential), for which species; but also optional information, such as ``const-$\delta$'', etc. \profGens then use this information to see whether the inputs satisfy the assumptions of their model. Const-$\delta$ density profiles, for example, assume two species and a const-$\delta$ T profile for their model to be valid.
+
+In the main program, a list of \profGens are accepted as inputs, and the \profs are generated in the order specified by the list, with all resulting \profs being passed to successive \profgens. When the list has been iterated through, each profile is sampled on a grid and output together with that grid as an input file to PERFECT.
+
+\subsection{\prof class}
+There is only one profile class. 
+At its core, it describes objects containing a function $f$ and properties of this function, describing what kind of profile $f$ is. 
+It has methods to evaluate $f(x)$ with $x$ being numpy arrays or just numbers, and to add, divide and multiply with another profile containing the function $g$, producing a new profile with $f \odot g$ as its function. Since intermediate steps in such operations may not have a clear meaning, the result will not have set properties. It is up to the user to set appropriate properties before the profile is returned from the \profGen; errors will be generated if the required properties are not set.
+
+Requires properties: \\
+Type of profile (.type)
+Species, if applicable (.species)
+Generator ID (.genID)
+
+
+\subsection{\profGen class}
+The \profGen class is an abstract class that takes a list of profiles and generates a new profile. The list of profiles may be empty.
+ 
+The \profGen constructor may accept other inputs, such as experimental data to interpolate, and details on the interpolation scheme, or anything. 
+
+
+\subsection{The controller}
+The controlled accept as input a list of profile generators or profiles: [prof_1, prof_2], [gen_1, gen_2]. Each generator will be run in the order of the list, with the profile list as an input, and the result will be appended to the profile list. This is repeated until the list has been exhausted, at which point the profiles will be sampled and output as a PERFECT input. 
+
+In addition to PERFECT input profiles, a mapping between uniform to non-uniform grid can also be specified by a profile generator. This will generate the non-uniform grid to be sampled on, and allows the nonuniform grid to take properties of the input profiles into account.
+In the same manner, $C(\psi)$ can be specified as a profile to suppress radial coupling. 
+If the grid and $C$ profile generators are not specified, a uniform grid and $C=1$ will be used.
+
+\subsection{Work flow}
+This is the suggested work-flow
+\begin{enumerate}
+\item Init desired profile generators
+\item Attach generators to a list, taking profile-interdependecies into account
+\item Pass the list to the controller and let it generate all the profiles
+\end{enumerate}
+Alternatively, part of the profiles can be generated externally and passed as inputs to the controller. I'm not sure if there are any good reasons to do this, so the profile list is empty by default, while the profileGen list needs to be specified. 
+It may be required if the profiles have complex interdependencies such that iterations between different profiles are needed to find a consistent solution. 
+For example, matching heat fluxes at the boundary that requires adjusting the T profile, which depends
+
+
 \end{document}
