@@ -1,9 +1,7 @@
 from profile import Profile
 from scipy.interpolate import UnivariateSpline
-from scipy.interpolate import UnivariateSpline
 
-
-class ProfileGeneratorFromData(object):
+class ProfileFromData(object):
     """Profile generator that takes data y sampled at points x and interpolates/fits using the kind of interpolation specified by kind."""
     
     def __init__(self,x,y,kind=3,profile='',species=''):
@@ -21,14 +19,16 @@ class ProfileGeneratorFromData(object):
             f = UnivariateSpline(self.x, self.y, k=self.order,s=self.smoothing)
             ddx_f = f.derivative()
         else: 
-            print "ProfileGeneratorFromData : error: unsupported interpolation scheme!"
+            print "ProfileFromData : error: unsupported interpolation scheme!"
             raise ValueError('Unsupported interpolation scheme!')
         p = Profile(f)
         ddx_p = Profile(ddx_f)
         p.profile = self.profile
         p.species = self.species
-        ddx_p.profile = self.profile
+        p.generator = 'fromData'
+        ddx_p.profile = "ddx_" + self.profile
         ddx_p.species = self.species
+        ddx_p.generator = 'fromData'
         return (p, ddx_p)
         
 if __name__ == "__main__":
@@ -44,17 +44,17 @@ if __name__ == "__main__":
 
     x=numpy.linspace(0,1,50)
     # cubic interpolating spline
-    gen1 = ProfileGeneratorFromData(xp,yp)
+    gen1 = ProfileFromData(xp,yp)
     (f1, ddx_f1) = gen1.generate()
     plt.plot(x,f1(x))
     plt.plot(x,ddx_f1(x))
     # linear interpolating spline
-    gen2 = ProfileGeneratorFromData(xp,yp,1)
+    gen2 = ProfileFromData(xp,yp,1)
     (f2,ddx_f2) = gen2.generate()
     plt.plot(x,f2(x))
     plt.plot(x,ddx_f2(x))
     # crazy interpolating spline
-    gen3 = ProfileGeneratorFromData(xp,yp,5,profile="test",species="dog")
+    gen3 = ProfileFromData(xp,yp,5,profile="test",species="dog")
     (f3,ddx_f3) = gen3.generate()
     plt.plot(x,f3(x))
     plt.plot(x,ddx_f3(x))
