@@ -28,7 +28,7 @@ class Profile3Linear(ProfileSplineFromLinear):
         self.ddx_YSOL = ddx_YSOL
         self.width = width
         self.XPedStop = XPedStart + width
-        self.transXs = [self.XStart,self.XPedStart,self.XPedStop,self.XStop]
+        self.transXs = [float("-inf"),self.XPedStart,self.XPedStop,float("inf")]
         self.ddx_Ys = [self.ddx_YCore,self.ddx_YPed,self.ddx_YSOL]
         super(Profile3Linear,self).__init__(self.transXs,self.ddx_Ys,self.XPedStart,self.YPed,profile=profile,species=species)
 
