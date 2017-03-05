@@ -26,6 +26,7 @@ def setPedestalParams(YPed=None,ddx_YPed=None, width=None,YLCFS=None):
             width = (YLCFS - YPed)/ddx_YPed
         else:
             YLCFS = YPed + ddx_YPed * width
+        #print (YPed,ddx_YPed,width,YLCFS)
         return (YPed,ddx_YPed,width,YLCFS)
 
 def setPedestalStartStop(XPedStart=None,XPedStop=None,width=None):

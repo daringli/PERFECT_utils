@@ -1,4 +1,4 @@
-from generateConstPhi import generateConstPhi
+from generateConstPhiIsoScan import generateConstPhi
 from updateInputFile import syncSpeciesParams, updateDeltaOmega, updateNuR
 from findInProfileList import extractProfilesFromList
 from writeProfileListToOutput import writeProfileListToOutput

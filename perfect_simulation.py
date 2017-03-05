@@ -953,6 +953,10 @@ class perfect_simulation(object):
         return numpy.sum(self.Z*self.particle_flux,axis=1)
 
     @property
+    def sum_QHat(self):
+        return numpy.sum(self.heat_flux,axis=1)
+
+    @property
     def mPiHat_source_jHat(self):
         return (self.psiAHat/self.Delta)*self.jHat
 
@@ -1070,6 +1074,15 @@ class perfect_simulation(object):
         npeds=[self.nHat[psiN_index,i] for i in range(self.num_species)]
         return self.heat_source_over_m2/npeds
     
+    @property
+    def kinetic_energy_source(self):
+        VPrimeHat = numpy.fabs(self.VPrimeHat)
+        return self.heat_source + (2*self.omega)/(3*numpy.sqrt(numpy.pi)*self.psiAHat) * (self.Z*self.masses**2 *numpy.expand_dims(self.dPhiHatdpsiN,axis=1) *self.particle_flux)/(self.THat**(5./2.) * numpy.expand_dims(VPrimeHat,axis=1))
+
+    @property
+    def kinetic_energy_source_addition(self):
+        VPrimeHat = numpy.fabs(self.VPrimeHat)
+        return (2*self.omega)/(3*numpy.sqrt(numpy.pi)*self.psiAHat) * (self.Z*self.masses**2 *numpy.expand_dims(self.dPhiHatdpsiN,axis=1) *self.particle_flux)/(self.THat**(5./2.) * numpy.expand_dims(VPrimeHat,axis=1))
     
     #@property
     #def THat32_new_massfac_particle_source(self):
@@ -1092,13 +1105,68 @@ class perfect_simulation(object):
         #for comparrison with dQHat/dPsiN
         VPrimeHat=numpy.fabs(self.VPrimeHat)
         return -self.THat**(5./2.)*self.psiAHat*numpy.expand_dims(VPrimeHat,axis=1)*numpy.sqrt(numpy.pi)/(2*self.Delta*self.masses**2)*(3*self.heat_source) -((2*self.omega/self.Delta)*self.Z*numpy.expand_dims(self.dPhiHatdpsiN,axis=1))*self.particle_flux*self.masses**(1.0/2.0)
+
+    @property
+    def QHat_source_source(self):
+        #for comparrison with dQHat/dPsiN
+        VPrimeHat=numpy.fabs(self.VPrimeHat)
+        return -self.THat**(5./2.)*self.psiAHat*numpy.expand_dims(VPrimeHat,axis=1)*numpy.sqrt(numpy.pi)/(2*self.Delta*self.masses**2)*(3*self.heat_source)
+
+
+    @property
+    def sum_QHat_source(self):
+        #for comparrison with \sum dQHat/dPsiN
+        return numpy.sum(self.QHat_source,axis=1)
+
+    
+    @property
+    def sum_QHat_source_minus_ddpsiN_sum_QHat(self):
+        return self.sum_QHat_source - self.ddpsiN_sum_QHat
+
+    @property
+    def sum_QHat_source_source(self):
+        #for comparrison with \sum dQHat/dPsiN
+        return numpy.sum(self.QHat_source_source,axis=1)
+
+    @property
+    def sum_QHat_source_source_minus_ddpsiN_sum_QHat(self):
+        return self.sum_QHat_source_source - self.ddpsiN_sum_QHat
+
+        
+
+    @property
+    def QHat_source_addition(self):
+        #for comparrison with dQHat/dPsiN
+        VPrimeHat=numpy.fabs(self.VPrimeHat)
+        return -((2*self.omega/self.Delta)*self.Z*numpy.expand_dims(self.dPhiHatdpsiN,axis=1))*self.particle_flux*self.masses**(1.0/2.0)
     
     @property
     def qHat_source(self):
-        #for comparrison with dQHat/dPsiN
+        #for comparrison with dqHat/dPsiN
         VPrimeHat=numpy.fabs(self.VPrimeHat)
         return -self.THat**(5./2.)*self.psiAHat*numpy.expand_dims(VPrimeHat,axis=1)*numpy.sqrt(numpy.pi)/(2*self.Delta*self.masses**2)*(5*self.particle_source + 3*self.heat_source) -((2*self.omega/self.Delta)*self.Z*numpy.expand_dims(self.dPhiHatdpsiN,axis=1) + (5./2.)*self.dTHatdpsiN)*self.particle_flux
 
+    @property
+    def heat_source_Parra(self):
+        #do not sum over electrons
+        #assumes electron is the last index
+        VPrimeHat=numpy.fabs(self.VPrimeHat) 
+        return (numpy.sqrt(numpy.pi)/4) * VPrimeHat * numpy.sum((self.THat**(5./2)/(self.Z*self.masses) * numpy.expand_dims(self.FSA(self.IHat**2/(self.BHat*self.RHat)**2),axis=1) * self.heat_source)[:,:-1],axis=1)
+
+    @property
+    def kinetic_energy_source_Parra(self):
+        #do not sum over electrons
+        #assumes electron is the last index
+        VPrimeHat=numpy.fabs(self.VPrimeHat) 
+        return (numpy.sqrt(numpy.pi)/4) * VPrimeHat * numpy.sum((self.THat**(5./2)/(self.Z*self.masses) * numpy.expand_dims(self.FSA(self.IHat**2/(self.BHat*self.RHat)**2),axis=1) * self.kinetic_energy_source)[:,:-1],axis=1)
+    
+    @property
+    def kinetic_energy_source_Parra_addition(self):
+        #do not sum over electrons
+        #assumes electron is the last index
+        VPrimeHat=numpy.fabs(self.VPrimeHat) 
+        return (numpy.sqrt(numpy.pi)/4) * VPrimeHat * numpy.sum((self.THat**(5./2)/(self.Z*self.masses) * numpy.expand_dims(self.FSA(self.IHat**2/(self.BHat*self.RHat)**2),axis=1) * self.kinetic_energy_source_addition)[:,:-1],axis=1)
+    
     @property
     def PiHat_source_source(self):
         #for comparrison with dPiHat/dPsiN
@@ -1659,7 +1727,7 @@ class perfect_simulation(object):
         try:
             return self.input_profiles[self.input_profiles_groupname+"THats"][()]
         except AttributeError:
-            pass
+            print "perfect_simulatio: Warning: THat not found in input profiles"
         try:
             return self.outputs[self.group_name+self.THat_name][()]
         except KeyError:
@@ -1668,13 +1736,18 @@ class perfect_simulation(object):
     @property
     def dTHatdpsiN(self):
         try:
-            return numpy.true_divide(self.psiAHat,self.psiAHatArray)[:,numpy.newaxis]*self.input_profiles[self.input_profiles_groupname+"dTHatdpsis"][()]
+            scale_factor=(self.psiAHat/self.psiAHatArray)
+            return scale_factor[:,numpy.newaxis]*self.input_profiles[self.input_profiles_groupname+"dTHatdpsis"][()]
         except AttributeError:
             pass
         try:
             return self.outputs[self.group_name+self.dTHatdpsiN_name][()]
         except KeyError:
             print "PhiHat could not be obtained since no external profiles have been speciied and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate the inputs."
+
+    @property
+    def numerical_dTHatdpsiN(self):
+        return self.ddpsiN(self.THat)
 
     @property
     def dlogTHatdpsiN(self):
@@ -2047,6 +2120,10 @@ class perfect_simulation(object):
         return self.ddpsiN(QHat,order=4)
 
     @property
+    def ddpsiN_sum_QHat(self):
+        return self.ddpsiN(self.sum_QHat,order=4)
+
+    @property
     def IHat(self):
         return nstack(self.outputs[self.group_name+self.IHat_name][()],axis=1,n=len(self.theta)) #add theta axis
 
@@ -2383,8 +2460,7 @@ class normalized_perfect_simulation(perfect_simulation):
         else:
             print "Units not supported, cannot calculate Delta."
         Delta_sim=self.Delta
-        print "Delta in simulation: " + str(Delta_sim)
-        print "Delta calculated from normalization constants: " + str(Delta_norm)
+        
         if (Delta_sim <= (1+tolerance)*Delta_norm)and (Delta_sim >= (1-tolerance)*Delta_norm):
 
             return True
@@ -2397,8 +2473,7 @@ class normalized_perfect_simulation(perfect_simulation):
         else:
             print "Units not supported, cannot calculate omega."
         omega_sim=self.omega
-        print "omega in simulation: " + str(omega_sim)
-        print "omega calculated from normalization constants: " + str(omega_norm)
+        
         if (omega_sim <= (1+tolerance)*omega_norm)and (omega_sim >= (1-tolerance)*omega_norm):
             return True
         else:

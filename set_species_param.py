@@ -1,5 +1,6 @@
 import f90nml
 import numpy
+import os
 
 def calc_species_param(species_list,species_filename,norm_filename):
     norm_file = f90nml.read(norm_filename)
@@ -23,6 +24,12 @@ def set_species_param(species_list,species_filename,norm_filename,simulation):
     [Z,mHat]=calc_species_param(species_list,species_filename,norm_filename)
     simulation.inputs.charges=Z
     simulation.inputs.masses=mHat
+
+def species_Z(species_list,species_filename="species_database.namelist"):
+    species_filename= os.path.join(os.path.dirname(__file__), species_filename)
+    species_file = f90nml.read(species_filename)
+    Z=numpy.array([species_file["speciesZ"][x] for x in species_list])
+    return Z
 
 
 if __name__=="__main__":

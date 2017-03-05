@@ -24,22 +24,37 @@ def generateConstPhi(XStart=None,XStop=None,width=None,XPedStart=None,XPedStop=N
     Z = speciesZ([ion])[0]
     Zs=[Z,-1] # add e
 
-    print "ADAPTING T"
+
+    # OVERRIDE TEMPERATURE GENERATION TO ALWAYS YIELD THE SAME TEMPERATURE PROFILE
+    # NO TEMPERATURE PEDESTAL
+
+    Twidth = 0.05224 # base width. Should no longer correspond to a pedestal width, since SOL and ped have same gradient.
+    (TiPed,ddx_TiPed, width, TiLCFS) = setPedestalParams(TiPed,ddx_TiPed, width, TiLCFS)
+    (TiPed,ddx_TiPed, Twidth, TiLCFS) = setPedestalParams(TiPed,ddx_TiSOL, Twidth, None)
+    TiGen = Profile3Linear(XStart,XStop,ddx_TiCore,ddx_TiSOL,Twidth,XPedStart,XPedStart +Twidth,TiPed,ddx_TiPed,TiLCFS,profile="T",species=ion,kind=TiKind, transWidth = TiTransWidth)
     
-    TeGen = Profile3Linear(XStart,XStop,ddx_TeCore,ddx_TeSOL,width,XPedStart,XPedStop,TePed,ddx_TePed,TeLCFS,profile="T",species="e",kind=TeKind, transWidth = TeTransWidth)
-    TiGen = Profile3Linear(XStart,XStop,ddx_TiCore,ddx_TiSOL,width,XPedStart,XPedStop,TiPed,ddx_TiPed,TiLCFS,profile="T",species=ion,kind=TiKind, transWidth = TiTransWidth)
+    (TePed,ddx_TePed, width, TeLCFS) = setPedestalParams(TePed, ddx_TePed, width, TeLCFS)
+    (TePed,ddx_TePed, Twidth, TeLCFS) = setPedestalParams(TePed, ddx_TeSOL, Twidth, None)
+    (TePed,ddx_TePed, Twidth, TeLCFS) = (0.42, -1.4, 0.05224, 0.346864)
+    TeGen = Profile3Linear(XStart,XStop,ddx_TeCore,ddx_TeSOL,Twidth,XPedStart,XPedStart +Twidth,TePed,ddx_TePed,TeLCFS,profile="T",species="e",kind=TeKind, transWidth = TeTransWidth)
+    
+    
     niGen = Profile3Linear(XStart,XStop,ddx_nCore,ddx_nSOL,width,XPedStart,XPedStop,nPed,ddx_nPed,nLCFS,profile="n",species=ion,kind=nKind, transWidth = nTransWidth)
     neGen = ProfileNFromQuasiNeutrality(Zs,species="e")
-    #neGen = Profile3Linear(XStart,XStop,ddx_nCore,ddx_nSOL,width,XPedStart,XPedStop,nPed,ddx_nPed,nLCFS,profile="n",species="e",kind=nKind)
+    
     (nPed,ddx_nPed, width, nLCFS) = setPedestalParams(nPed,ddx_nPed, width,nLCFS)
-    (etaPed,ddx_etaPed, width, etaLCFS) = setPedestalParams(nPed,ddx_nSOL, width,None)
-    etaiGen = Profile3Linear(XStart,XStop,ddx_nCore,ddx_nSOL,width,XPedStart,XPedStop,etaPed,ddx_etaPed,YLCFS=etaLCFS,profile="eta",species=ion,kind=nKind, transWidth = nTransWidth)
+    etawidth = 0.05224 # base width. Should no longer correspond to a pedestal width, since SOL and ped have same gradient.
+    (etaPed,ddx_etaPed, etawidth, etaLCFS) = setPedestalParams(nPed,ddx_nSOL, etawidth,None)
+    #etaTransWidth = (nTransWidth/width)*etawidth
+    etaTransWidth = nTransWidth
+    etaiGen = Profile3Linear(XStart,XStop,ddx_nCore,ddx_nSOL,etawidth,XPedStart,XPedStart + etawidth,etaPed,ddx_etaPed,YLCFS=etaLCFS,profile="eta",species=ion,kind=nKind, transWidth = etaTransWidth)
+
     PhiGen = ProfilePhiFromEtaN(Z,useSpecies=ion,DeltaOver2omega=DeltaOver2omega)
     etaeGen = ProfileEtaFromPhiN(-1,species="e",DeltaOver2omega=DeltaOver2omega)
 
     # gridGen = GridFromPedestalBoundaries
     
-    generatorList = [niGen,neGen,etaiGen,TiGen,TeGen,PhiGen,etaeGen]
+    generatorList = [TiGen,TeGen,etaiGen,niGen,neGen,PhiGen,etaeGen]
 
     profileList=[]
     for gen in generatorList:

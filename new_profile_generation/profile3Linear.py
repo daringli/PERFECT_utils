@@ -1,7 +1,7 @@
 from profile import Profile
 from profileSplineFromLinear import ProfileSplineFromLinear
 from scipy.interpolate import UnivariateSpline
-from bezier_transition import derivative_bezier_transition
+from bezierTransition import derivativeBezierTransition
 from mtanh import generate_m2tanh_profile
 from setPedestalParams import setPedestalParams,setPedestalStartStop
 
@@ -10,8 +10,8 @@ class Profile3Linear(ProfileSplineFromLinear):
     """Profile generator that takes 3 linear splines and implements a smooth transition between them."""
     def __init__(self,XStart,XStop,ddx_YCore,ddx_YSOL,width=None,XPedStart=None,XPedStop=None,YPed=None,ddx_YPed=None,YLCFS=None,transWidth=None,transWidthToPedWidth=0.2,kind="bezier",profile='',species=''):
         # calculate
-        (XPedStart,XPedStop,width) = setPedestalStartStop(XPedStart,XPedStop,width)
-        (YPed,ddx_YPed, width, YLCFS) = setPedestalParams(YPed,ddx_YPed, width,YLCFS)
+        (self.XPedStart,self.XPedStop,self.width) = setPedestalStartStop(XPedStart,XPedStop,width)
+        (self.YPed,self.ddx_YPed, self.width, self.YLCFS) = setPedestalParams(YPed,ddx_YPed, width,YLCFS)
 
         self.kind = kind
         if transWidth is None:
@@ -20,21 +20,17 @@ class Profile3Linear(ProfileSplineFromLinear):
             self.transWidth = transWidth
         self.XStart = XStart
         self.XStop = XStop
-        self.XPedStart = XPedStart
-        self.XPedStop = XPedStop
-        self.YPed = YPed
         self.ddx_YCore = ddx_YCore 
-        self.ddx_YPed = ddx_YPed
         self.ddx_YSOL = ddx_YSOL
-        self.width = width
-        self.XPedStop = XPedStart + width
         self.transXs = [float("-inf"),self.XPedStart,self.XPedStop,float("inf")]
         self.ddx_Ys = [self.ddx_YCore,self.ddx_YPed,self.ddx_YSOL]
         super(Profile3Linear,self).__init__(self.transXs,self.ddx_Ys,self.XPedStart,self.YPed,profile=profile,species=species)
 
     def generate(self,profileList=[]):
         if self.kind is "bezier":
-            self.f,self.ddx_f = derivative_bezier_transition(self.flist,self.ddx_flist,self.x[1:-1],[[self.transWidth,self.transWidth],[self.transWidth,self.transWidth]])
+            self.f,self.ddx_f = derivativeBezierTransition(self.flist,self.ddx_flist,self.x[1:-1],[[self.transWidth,self.transWidth],[self.transWidth,self.transWidth]])
+            print "y skeleton: " + str(self.y)
+            print "x skeleton: " + str(self.x)
         elif self.kind is "mtanh":
             self.f,self.ddx_f = generate_m2tanh_profile(self.YPed,self.ddx_YCore,self.ddx_YPed, self.ddx_YSOL, self.width, self.XPedStart)
         p = Profile(self.f)

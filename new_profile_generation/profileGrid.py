@@ -17,12 +17,9 @@ class ProfileGrid(object):
         
         # calculate
         (XPedStart,XPedStop,width) = setPedestalStartStop(XPedStart,XPedStop,width)
-        
         if gridType == "uniform":
-            actual_psi = lambda x: x*psiAHat
-            dactual_psi_ds = lambda x:  psiAHat + 0*x #trivial mapping 
-            #psi= lambda x: x
-            #dpsi_ds = lambda x:  1.0 + 0*x #trivial mapping
+            self.psi = lambda x: x*psiAHat
+            self.dds_psi = lambda x:  psiAHat + 0*x #trivial mapping 
         elif gridType == "IntArctan":
             a = kwargs["transitionLength"]
             b = kwargs["pedestalGridDensity"]
@@ -43,14 +40,11 @@ class ProfileGrid(object):
             X1= XPedStart - self.leftshift
             X2= XPedStop + self.rightshift
 
-            actual_psi,dactual_psi_ds = generate_nonuniform_grid_Int_arctan(s,psiAHat,a,b,c,X1,X2)
+            self.psi,self.dds_psi = generate_nonuniform_grid_Int_arctan(s,psiAHat,a,b,c,X1,X2)
         else:
             "generate_compatible_profiles: ERROR: unrecognized grid type!"
             raise ValueError('Unrecognized non-uniform grid option')
 
-        #function psiN(s) (here: psi) in terms of psi(s) (here: actual_psi)
-        self.psi=lambda x: actual_psi(x)#/psiAHat #nonuniform psiN
-        self.dds_psi = lambda x: dactual_psi_ds(x)#/psiAHat
         
     
     def generate(self,profileList=[]):
