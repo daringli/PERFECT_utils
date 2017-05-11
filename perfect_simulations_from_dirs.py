@@ -39,6 +39,7 @@ def perfect_simulations_from_dirs(dirlist,normlist,species,psiN_to_psi=None,glob
     i=0
     simuls=[]
     for dir in dirlist:
+        print dir
         input_filename=dir+"/"+input
         output_filename=dir+"/"+output
         norm_filename=normlist[i]
@@ -61,8 +62,12 @@ def perfect_simulations_from_dirs(dirlist,normlist,species,psiN_to_psi=None,glob
         
         simuls.append(normalized_perfect_simulation(input_filename,norm_filename,species_filename,output_filename,psiN_to_psi_filename,global_term_multiplier_filename,pedestal_start_stop = pedestal_start_stop,pedestal_point = pedestal_point,core_point = core_point))
         simuls[i].description=dir
+        if simuls[i].did_it_converge is False:
+            print "WARNING: simulation did not converge!!"
         #simuls[i].species=species
         i=i+1
+
+        
     return simuls
         
 if __name__=='__main__':

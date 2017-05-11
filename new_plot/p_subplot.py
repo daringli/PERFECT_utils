@@ -17,13 +17,13 @@ from symmetrize_colormap import symmetrize_colormap
 from streamplot import streamplot
 
 import cmocean # has some nice perceptually uniform diverging colormaps
-
+from radar_marker_plot import radar_marker_plot
 
 import matplotlib
 
 
 class perfect_subplot:
-    def __init__(self,data,x,subplot_coordinates,dimensions=None,y=None,x_data=None, y_data=None,**kwargs):
+    def __init__(self,data,x,subplot_coordinates,dimensions=None,y=None,x_data=None, y_data=None,radarvalues=None,**kwargs):
         #this object contains instructions for what to plot in a numpy subplot with gridspec
         
         #dimensions: whether to visualize data as a 2D colormap (2), or several 1D plots in the same subplot (1)
@@ -72,7 +72,7 @@ class perfect_subplot:
             else:
                 print rank
                 print "perfect_subplot: error: input list has array(s) of rank above 1."
-                exit(1)
+                raise ValueError
             
 
         #Kwargs related to tagging this subplot
@@ -94,9 +94,12 @@ class perfect_subplot:
         
         self.xaxis_label=kwarg_default("xaxis_label",None,**kwargs)
         self.yaxis_label=kwarg_default("yaxis_label",None,**kwargs)
-            
-        self.show_xaxis_ticklabel=kwarg_default("show_xaxis_ticklabel",False,**kwargs)
-        self.show_yaxis_ticklabel=kwarg_default("show_yaxis_ticklabel",False,**kwargs)
+
+        self.show_xaxis_label=kwarg_default("show_xaxis_label",True,**kwargs)
+        self.show_yaxis_label=kwarg_default("show_yaxis_label",True,**kwargs)
+        
+        self.show_xaxis_ticklabel=kwarg_default("show_xaxis_ticklabel",True,**kwargs)
+        self.show_yaxis_ticklabel=kwarg_default("show_yaxis_ticklabel",True,**kwargs)
 
         self.xscale=kwarg_default("xscale",'linear',**kwargs)
         self.yscale=kwarg_default("yscale",'linear',**kwargs)
@@ -106,9 +109,13 @@ class perfect_subplot:
 
         self.vlines=kwarg_default("vlines",[],**kwargs)
         self.hlines=kwarg_default("hlines",[],**kwargs)
+        self.vlines_colors=kwarg_default("vlines_colors","k",**kwargs)
+        self.hlines_colors=kwarg_default("hlines_colors","silver",**kwargs)
 
         self.yaxis_label_x=kwarg_default("yaxis_label_x",-0.15,**kwargs)
         self.yaxis_label_y=kwarg_default("yaxis_label_y",0.5,**kwargs)
+        self.xaxis_label_x=kwarg_default("xaxis_label_x",0.5,**kwargs)
+        self.xaxis_label_y=kwarg_default("xaxis_label_y",-0.35,**kwargs)
 
         self.datastyle=kwarg_default("datastyle","color",**kwargs)
         
@@ -124,6 +131,7 @@ class perfect_subplot:
         #############################################################################
         
         if dimensions==1:
+            self.radarvalues = radarvalues
             #going to visualize 1D data
             self.dimensions=1
 
@@ -146,7 +154,7 @@ class perfect_subplot:
                 if arraylist_rank(x) == 1:
                     if all(len(x) != len(self.data[i]) for i in range(len(self.data))):
                         print "perfect_subplot: 1D: error: data and x have different dimensions"
-                        exit(1)
+                        raise ValueError
                     else:
                         #make the x list the same size as the data list
                         self.x=[x]*len(self.data)                       
@@ -154,21 +162,21 @@ class perfect_subplot:
                     self.x=array2D_to_array_list(x,x_lineaxis)
                 else:
                     print "perfect_subplot: 1D: error: x has too high rank to be plotted"
-                    exit(1)
+                    raise ValueError
             else:
                 if all(len(x[i]) != len(self.data[i]) for i in range(len(self.data))):
                     print "perfect_subplot: 1D: error: data and x have different dimensions"
-                    exit(1)
+                    raise ValueError
                 else:
                     self.x=x
   
             #x is now a list of 1D arrays. Check compatiblity with data
             if len(self.x) != len(self.data):
                 print "perfect_subplot: 1D: error: data and x list have different lengths"
-                exit(1)
+                raise ValueError
             elif not all(len(self.x[i]) == len(self.data[i]) for i in range(len(self.data))):
                 print "perfect_subplot: 1D: error: some data and x have different lengths"
-                exit(1)
+                raise ValueError
                 
             self.x_period=kwarg_default("x_period",None,**kwargs)
             #aesthetic kwargs
@@ -225,12 +233,12 @@ class perfect_subplot:
                 self.data=numpy.transpose(data)
             else:
                 print "perfect_subplot: 2D: error: data has too high rank to be plotted"
-                exit(1)
+                raise ValueError
 
             
             if y is None:
                 print "perfect_subplot: 2D: error: need y for 2D plot."
-                exit(1)
+                raise ValueError
             if (x_data!=None) and (y_data!=None):
                 self.xy_data_exists=True
                 #default plot-type is streamplot
@@ -246,7 +254,7 @@ class perfect_subplot:
                     
             elif (x_data==None and y_data!=None) or (x_data!=None and y_data==None):
                 print "perfect_subplot: 2D: error: need x_data and y_data for vector plot."
-                exit(1)
+                raise ValueError
             else:
                 self.xy_data_exists=False
                 #default plot-type is pcolormesh 
@@ -339,20 +347,30 @@ class perfect_subplot:
                 self.linestyles=[self.linestyles]*len(y)
                 self.linewidths=[self.linewidths]*len(y)
             for i in range(len(y)):
-                try:
-                    ax.plot(x[i],y[i],linestyle=self.linestyles[i],color=self.colors[i],linewidth=self.linewidths[i],marker=self.markers[i],markevery=self.markeverys[i],fillstyle=self.fillstyles[i],markersize=self.markersizes[i],)
-                except IndexError:
-                    print "Index error in ax.plot(). Most likely, linestyles, linewidths and colors have the wrong lengths."
-                    print "len(colors): " + str(len(self.colors))
-                    print "len(linestyles): " + str(len(self.linestyles))
-                    print "len(linewidths): " + str(len(self.linewidths))
-                    print "len(markers): " + str(len(self.markers))
-                    print "len(markersizes: " + str(len(self.markersizes))
-                    print "len(markeverys): " + str(len(self.markeverys))
-                    print "len(fillstyles): " + str(len(self.fillstyles))
-                    print "len(x): " + str(len(x))
-                    print "len(y): " + str(len(y))
-            ax.yaxis.set_label_coords(-0.15, 0.5)
+                if self.plot_type == "line":
+                    try:
+                        ax.plot(x[i],y[i],linestyle=self.linestyles[i],color=self.colors[i],linewidth=self.linewidths[i],marker=self.markers[i],markevery=self.markeverys[i],fillstyle=self.fillstyles[i],markersize=self.markersizes[i],)
+                    except IndexError:
+                        print "Index error in ax.plot(). Most likely, linestyles, linewidths and colors have the wrong lengths."
+                        print "len(colors): " + str(len(self.colors))
+                        print "len(linestyles): " + str(len(self.linestyles))
+                        print "len(linewidths): " + str(len(self.linewidths))
+                        print "len(markers): " + str(len(self.markers))
+                        print "len(markersizes: " + str(len(self.markersizes))
+                        print "len(markeverys): " + str(len(self.markeverys))
+                        print "len(fillstyles): " + str(len(self.fillstyles))
+                        print "len(x): " + str(len(x))
+                        print "len(y): " + str(len(y))
+                elif self.plot_type == "radarmarker":
+                    try:
+                        radar_marker_plot(ax,x[i],y[i],values=self.radarvalues[i],colors=self.colors[i],radius=self.markersizes[i],markeredgewidth=0.1)
+                    except IndexError:
+                        print "Index error radar_marker_plot(). Most likely, linestyles, linewidths and colors have the wrong lengths."
+                        print "len(colors): " + str(len(self.colors))
+                        print "len(markersizes): " + str(len(self.markersizes))
+                        print "len(radarvalues): " + str(len(self.radarvalues))
+                    
+                ax.yaxis.set_label_coords(-0.15, 0.5)
 
         ############ 2D #################
             
@@ -399,7 +417,7 @@ class perfect_subplot:
                     #rasterizes collection of lines and arrows in streamplot as one
                 else:
                     print "perfect_subplot: 2D: error: unrecognized plot-type for vector data"
-                    exit(1)
+                    raise ValueError
             else:
                 #pcolor
                 X,Y=numpy.meshgrid(self.x,self.y)
@@ -411,7 +429,7 @@ class perfect_subplot:
                     ax.contour(X, Y, z,colors='k',rasterized=True,levels=levels)
                 else:
                     print "perfect_subplot: 2D: error: unrecognized plot-type for 2D data"
-                    exit(1)
+                    raise ValueError
                 
             if self.show_zaxis == True:
                 divider = make_axes_locatable(ax)

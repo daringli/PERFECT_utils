@@ -1,8 +1,38 @@
 from __future__ import division
 
 class Profile(object):
+    
+    def __repr__(self):
+        d = vars(self)
+        l = []
+        keys=d.keys()
+        keys.remove("generator_dict")
+        for k in keys:
+            l.append(k + " : " + str(d[k]))
+            
+        l.append("###generator parameters###")
+        gen_d = self.generator_dict
+        gen_keys = gen_d.keys()
+        for k in gen_keys:
+            l.append(k + " . " + str(gen_d[k]))
+
+        return "\n".join(l)
+
+    def __str__(self):
+        return str(vars(self))
+    
+    def print_to_file(self):
+        f=open(self.profile + "_" + self.species + ".profiledata",'w')
+        f.write(repr(self))
+        f.close()
+        
+
+    
     def __init__(self,f):
+        # this is a profile created without a profile generator
         self.f = f
+        self.generator_dict = dict()
+        
     def __call__(self,x):
         return self.f(x)
 
@@ -124,3 +154,11 @@ if __name__ == "__main__":
     print p4(x) # 0 1.2 2.4
     print p5(x) # 0 0.83333 1.666666
 
+    # print, repr and save to file
+    p1 = Profile(lambda x : x)
+    p1.profile="test"
+    p1.species="yourmum"
+    p1.test=float("inf")
+    print str(p1)
+    print repr(p1)
+    p1.print_to_file()

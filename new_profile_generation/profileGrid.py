@@ -1,4 +1,5 @@
 from profile import Profile
+from generator import Generator
 from profileSplineFromLinear import ProfileSplineFromLinear
 from scipy.interpolate import UnivariateSpline
 from bezier_transition import derivative_bezier_transition
@@ -8,7 +9,7 @@ from setPedestalParams import setPedestalParams,setPedestalStartStop
 from nonuniformGrid import generate_nonuniform_grid_Int_arctan
 
 
-class ProfileGrid(object):
+class ProfileGrid(Generator):
     """Generates a non-uniform grid"""
     def __init__(self,s,psiAHat,XPedStart=None,XPedStop=None,width=None,gridType = "uniform",**kwargs):
         self.profile="grid"
@@ -53,9 +54,11 @@ class ProfileGrid(object):
         p.species = self.species
         p.profile = self.profile
         p.generator = 'grid'
+        p.generator_dict = vars(self)
         ddx_p.species = self.species
         ddx_p.profile = "ddx_" + self.profile
         ddx_p.generator = 'grid'
+        ddx_p.generator_dict = vars(self)
 
         return (p,ddx_p)
         

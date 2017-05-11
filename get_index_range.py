@@ -4,7 +4,7 @@ def get_index_range(data,drange,ret_range=False,period=None):
     """For increasing data in a numpy.array
     gets the indices that corresponds to the values in ranges.
     The data[returned_indices] will if possible contain the endpoints.
-    Period: if specified, the data can be non-increasing if it can be made increasing by adding this multiples of this value each time it decreases"""
+    Period: if specified, the data can be non-increasing if it can be made increasing by adding this multiples of this value each time it decreases. The intended use is to allow 0+x to be larger than 2pi in periodic variables."""
 
     if period is not None:
         data = data.copy() # to not change the original array

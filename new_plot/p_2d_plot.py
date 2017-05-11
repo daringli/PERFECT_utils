@@ -14,7 +14,7 @@ import numpy
 import sys
 
 
-def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,xlims=[90,100],ylims=[0,2],species=True,sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","H":"i","T":"i","He":"z","N":"z","e":"e"},vlines=[],hlines=[],share_scale=[],skip_species = [],simulList=None,outputname=None,colors=None,linestyles=None,zlabels=None,zaxis_powerlimits=(0,0),pedestal_start_stop=None,pedestal_point=None,core_point=None):
+def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,xlims=[90,100],ylims=[0,2],zlims=None,species=True,sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","H":"i","T":"i","He":"z","N":"z","e":"e"},vlines=[],hlines=[],share_scale=[],skip_species = [],simulList=None,outputname=None,colors=None,linestyles=None,zlabels=None,zaxis_powerlimits=(0,0),pedestal_start_stop=None,pedestal_point=None,core_point=None,putboxes=[]):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -113,10 +113,11 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
                 else:
                     data=data0
                 subplot_coordinates=(i,i_s)
-                #print subplot_coordinates 
+                #print subplot_coordinates
+
+                
                 if i == 0:
                     show_zaxis_ticklabel=True
-                    show_xaxis_ticklabel=False
                     if zlabels is None:
                         title = s
                     else:
@@ -124,10 +125,13 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
                 else:
                     show_zaxis_ticklabel=False
                     title=''
-                    if i == len(simulList)-1:
-                        show_xaxis_ticklabel=True
-                    else:
-                        show_xaxis_ticklabel=False
+                    
+                if i == len(simulList)-1:
+                    show_xaxis_ticklabel=True
+                else:
+                    show_xaxis_ticklabel=False
+
+
                 if i_s == 0:
                     show_yaxis_ticklabel=True
                 else:
@@ -201,16 +205,19 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
         all_group.setattrs("ylims",ylims)
         all_group.setattrs("vlines",vlines)
         all_group.setattrs("hlines",hlines)
-        
-        for species_group in species_groups:
-            species_group.setattrs("zlims",[species_group.get_min("data"),species_group.get_max("data")])
-            print [species_group.get_min("data"),species_group.get_max("data")]
-            
-        if len(share_scale_group.p_subplot_list)>0:
-            share_scale_group.setattrs("zlims",[share_scale_group.get_min("data"),share_scale_group.get_max("data")])
 
-        if len(nospecies_group.p_subplot_list)>0:
-            nospecies_group.setattrs("zlims",[nospecies_group.get_min("data"),nospecies_group.get_max("data")])
+        if zlims is None:
+            for species_group in species_groups:
+                species_group.setattrs("zlims",[species_group.get_min("data"),species_group.get_max("data")])
+                print [species_group.get_min("data"),species_group.get_max("data")]
+
+            if len(share_scale_group.p_subplot_list)>0:
+                share_scale_group.setattrs("zlims",[share_scale_group.get_min("data"),share_scale_group.get_max("data")])
+
+            if len(nospecies_group.p_subplot_list)>0:
+                nospecies_group.setattrs("zlims",[nospecies_group.get_min("data"),nospecies_group.get_max("data")])
+        else:
+            all_group.setattrs("zlims",zlims)
             
         for i,sim_group in enumerate(sim_groups):
             if i != 0:
@@ -220,8 +227,8 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
         if xattr is not "psi_o":
             global_xlabel=r"$100\psi_N$"
         else:
-            global_xlabel=r"$\psi^\mathrm{o}$"
-        perfect_visualizer(psp_list,gridspec,global_xlabel=global_xlabel,dimensions=2,global_ylabel=r"$\theta/\pi$")
+            global_xlabel=r"$\psi^{\circ}$"
+        perfect_visualizer(psp_list,gridspec,global_xlabel=global_xlabel,dimensions=2,global_ylabel=r"$\theta/\pi$",putboxes=putboxes)
 
         if outputname is None:
             plt.savefig(attrib+'.pdf')

@@ -1,13 +1,14 @@
 from __future__ import division
 
 from profile import Profile
+from generator import Generator
 from scipy.interpolate import UnivariateSpline
 from findInProfileList import extractProfilesFromList
 from numpy import log
 from setSpeciesParameters import speciesZ
 from findUnsharedElements import findUnsharedElements
 
-class ProfileNFromQuasiNeutrality(object):
+class ProfileNFromQuasiNeutrality(Generator):
     """Profile generator that takes n profile of all but one species"""
     
     def __init__(self,Zs,species=""):
@@ -53,9 +54,11 @@ class ProfileNFromQuasiNeutrality(object):
         p.profile = self.profile
         p.species = self.species
         p.generator = 'NFromQuasiNeutrality'
+        p.generator_dict = vars(self)
         ddx_p.profile = "ddx_" + self.profile
         ddx_p.species = self.species
         ddx_p.generator = 'NFromQuasiNeutrality'
+        ddx_p.generator_dict = vars(self)
         return (p, ddx_p)
         
 if __name__ == "__main__":

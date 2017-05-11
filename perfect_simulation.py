@@ -20,6 +20,7 @@ from get_index_range import get_index_range
 from nstack import nstack
 from diff_matrix import diff_matrix
 from array_rank import arraylist_rank
+from peakfinder import PPV,PPV_x
 
 
 class perfect_simulation(object):
@@ -38,6 +39,7 @@ class perfect_simulation(object):
         #Different group in the same output can in principle
         #be handled by different simulation objects
         #hiding implementation details
+        self.did_it_converge_name = "didItConverge"
         self.psi_name="psi"
         self.psiAHat_name="psiAHat"
         self.theta_name="theta"
@@ -168,7 +170,7 @@ class perfect_simulation(object):
         self.species_filename="." + "/" + species_filename
         self.species_dir = self.species_filename.rsplit('/',1)[:-1][0]
         self.species_filename_nodir = "." + "/" + self.species_filename.rsplit('/',1)[-1]
-        print open(species_filename,'r').read()
+        #print open(species_filename,'r').read()
         self.species_list=[x.strip() for x in open(species_filename,'r').read().split('\n')[0].split(',')]
         
     @property
@@ -213,6 +215,17 @@ class perfect_simulation(object):
                 self.output_dir = self.output_filename.rsplit('/',1)[:-1][0]
                 self.output_filename_nodir = "." + "/" + self.output_filename.rsplit('/',1)[-1]
 
+                
+    @property
+    def did_it_converge(self):
+        conv = self.outputs[self.group_name+self.did_it_converge_name][()]
+        if conv == -1:
+            return False
+        elif conv == 1:
+            return True
+        else:
+            print "perfect_simulation ERROR: Invalid convergence status."
+            
     @property
     def psiN_to_psi(self):
         return self.psiN_to_psi_filename
@@ -852,9 +865,13 @@ class perfect_simulation(object):
 
     def Prandtl_proxy_dVtdpsiN(self,ion_index = 0):
         #more correct Prandtl proxy
-        psiN_point = self.pedestal_point
-        psiN_index=get_index_range(self.actual_psiN,[psiN_point,psiN_point],ret_range=False)[0]
+        # use this!
+        psiN_index=self.mid_pedestal_point_index
         return self.masses*self.momentum_flux*((1/self.conductive_heat_flux[:,ion_index])*(self.nHat[:,ion_index]*self.dTHatdpsiN[:,ion_index])/(self.Delta*self.masses[ion_index]*self.ddpsiN_n_FSA_toroidal_flow[:,ion_index]))[psiN_index]
+
+    @property
+    def Prandtli_proxy_dVtdpsiN(self):
+        return self.Prandtl_proxy_dVtdpsiN(ion_index = 0)
     
     @property
     def heat_flux(self):
@@ -886,11 +903,53 @@ class perfect_simulation(object):
     def n_ped(self):
         #species wise LCFS density
         return self.nHat[self.pedestal_start_stop_indices[0]]
+        # psiMid = (self.pedestal_start_stop[0] + self.pedestal_start_stop[1])/2.0
+        # i = self.mid_pedestal_point_index
+        # if psiMid > self.actual_psiN[i]:
+        #     d1 = (psiMid - self.actual_psiN[i])
+        #     d2 = (self.actual_psiN[i+1] - psiMid)
+        #     d = self.actual_psiN[i+1] - self.actual_psiN[i]
+        #     n0 = self.nHat[i]*(d-d1)/d + self.nHat[i+1]*(d-d2)/d
+        #     ddpsiN_n0 = self.dnHatdpsiN[i]*(d-d1)/d + self.dnHatdpsiN[i+1]*(d-d2)/d
+        # if psiMid < self.actual_psiN[i]:
+        #     d1 = (self.actual_psiN[i] - psiMid )
+        #     d2 = (psiMid - self.actual_psiN[i-1])
+        #     d = self.actual_psiN[i] - self.actual_psiN[i-1]
+        #     n0 = self.nHat[i]*(d-d1)/d + self.nHat[i-1]*(d-d2)/d
+        #     ddpsiN_n0 = self.dnHatdpsiN[i]*(d-d1)/d + self.dnHatdpsiN[i+1]*(d-d2)/d
+        # print n0
+        # print ddpsiN_n0
+        # ddpsiN_n0 = -12.251148545176108
+        # n0 = numpy.array([0.38])
+        # w = self.pedestal_width_psiN
+        # return n0 - ddpsiN_n0 * w/2
     
     @property
     def n_LCFS(self):
         #species wise LCFS density
         return self.nHat[self.pedestal_start_stop_indices[1]]
+        #
+        #i = self.mid_pedestal_point_index
+        #n0 = self.nHat[i]
+        #ddpsiN_n0 = self.dnHatdpsiN[i]
+        # psiMid = (self.pedestal_start_stop[0] + self.pedestal_start_stop[1])/2.0
+        # i = self.mid_pedestal_point_index
+        # if psiMid > self.actual_psiN[i]:
+        #     d1 = (psiMid - self.actual_psiN[i])
+        #     d2 = (self.actual_psiN[i+1] - psiMid)
+        #     d = self.actual_psiN[i+1] - self.actual_psiN[i]
+        #     n0 = self.nHat[i]*(d-d1)/d + self.nHat[i+1]*(d-d2)/d
+        #     ddpsiN_n0 = self.dnHatdpsiN[i]*(d-d1)/d + self.dnHatdpsiN[i+1]*(d-d2)/d
+        # if psiMid < self.actual_psiN[i]:
+        #     d1 = (self.actual_psiN[i] - psiMid )
+        #     d2 = (psiMid - self.actual_psiN[i-1])
+        #     d = self.actual_psiN[i] - self.actual_psiN[i-1]
+        #     n0 = self.nHat[i]*(d-d1)/d + self.nHat[i-1]*(d-d2)/d
+        #     ddpsiN_n0 = self.dnHatdpsiN[i]*(d-d1)/d + self.dnHatdpsiN[i+1]*(d-d2)/d
+        # n0 = numpy.array([0.38])
+        # ddpsiN_n0 = -12.251148545176108
+        # w = self.pedestal_width_psiN
+        # return n0 + ddpsiN_n0 * w/2
     
     @property
     def q_max(self):
@@ -905,7 +964,81 @@ class perfect_simulation(object):
         q=self.conductive_heat_flux
         imax=numpy.argmax(numpy.fabs(q),axis=0)
         return self.actual_psiN[imax]
-    
+
+    @property
+    def Q_PPV(self):
+        return [PPV(self.heat_flux[:,ispecies],self.psiN2,self.pedestal_start_stop_psiN2,tol=1e-10,order=4) for ispecies in range(self.Nspecies)] 
+
+        
+    @property
+    def Q_PPV_psiN(self):
+        return [PPV_x(self.heat_flux[:,ispecies],self.psiN2,self.pedestal_start_stop_psiN2,tol=1e-10,order=4) for ispecies in range(self.Nspecies)] 
+
+    @property
+    def q_PPV(self):
+        return [PPV(self.conductive_heat_flux[:,ispecies],self.psiN2,self.pedestal_start_stop_psiN2,tol=1e-10,order=4) for ispecies in range(self.Nspecies)] 
+
+
+    @property
+    def q_PPV_psiN(self):
+        return [PPV_x(self.conductive_heat_flux[:,ispecies],self.psiN2,self.pedestal_start_stop_psiN2,tol=1e-10,order=4) for ispecies in range(self.Nspecies)] 
+
+
+    @property
+    def Pi_PPV(self):
+        return [PPV(self.momentum_flux[:,ispecies],self.psiN2,self.pedestal_start_stop_psiN2,tol=1e-10,order=4) for ispecies in range(self.Nspecies)] 
+
+
+    @property
+    def Pi_PPV_psiN(self):
+        return [PPV_x(self.momentum_flux[:,ispecies],self.psiN2,self.pedestal_start_stop_psiN2,tol=1e-10,order=4) for ispecies in range(self.Nspecies)]
+
+    @property
+    def Prandtl_PPV(self):
+        return [PPV(self.Prandtli_proxy_dVtdpsiN[:,ispecies],self.psiN2,self.pedestal_start_stop_psiN2,tol=1e-10,order=4) for ispecies in range(self.Nspecies)] 
+
+
+    @property
+    def Prandtl_PPV_psiN(self):
+        return [PPV_x(self.Prandtli_proxy_dVtdpsiN[:,ispecies],self.psiN2,self.pedestal_start_stop_psiN2,tol=1e-10,order=4) for ispecies in range(self.Nspecies)]
+
+    @property
+    def Gamma_PPV(self):
+        return [PPV(self.particle_flux[:,ispecies],self.psiN2,self.pedestal_start_stop_psiN2,tol=1e-10,order=4) for ispecies in range(self.Nspecies)] 
+
+        
+    @property
+    def Gamma_PPV_psiN(self):
+        return [PPV_x(self.particle_flux[:,ispecies],self.psiN2,self.pedestal_start_stop_psiN2,tol=1e-10,order=4) for ispecies in range(self.Nspecies)] 
+
+    @property
+    def Sh_PPV(self):
+        factor = 0.6
+        pedestal_width = (self.pedestal_start_stop_psiN2[1]-self.pedestal_start_stop_psiN2[0])
+        shift = factor*pedestal_width
+        return [PPV(self.heat_source_over_m2[:,ispecies],self.psiN2,[self.pedestal_start_stop_psiN2[0]-shift,self.pedestal_start_stop_psiN2[1]],tol=1e-10,order=4,retmode="absy") for ispecies in range(self.Nspecies)]
+
+    @property
+    def Sh_PPV_psiN(self):
+        factor = 0.6
+        pedestal_width = (self.pedestal_start_stop_psiN2[1]-self.pedestal_start_stop_psiN2[0])
+        shift = factor*pedestal_width
+        return [PPV_x(self.heat_source_over_m2[:,ispecies],self.psiN2,[self.pedestal_start_stop_psiN2[0]-shift,self.pedestal_start_stop_psiN2[1]],tol=1e-10,order=4) for ispecies in range(self.Nspecies)]
+        #return [PPV_x(self.heat_source_over_m2[:,ispecies],self.psiN2,self.pedestal_start_stop_psiN2,tol=1e-10,order=4) for ispecies in range(self.Nspecies)]
+
+    @property
+    def special_Pi_PPV(self):
+        factor = 0.6
+        pedestal_width = (self.pedestal_start_stop_psiN2[1]-self.pedestal_start_stop_psiN2[0])
+        shift = factor*pedestal_width
+        return [PPV(self.momentum_flux[:,ispecies],self.psiN2,[self.pedestal_start_stop_psiN2[0]-shift,self.pedestal_start_stop_psiN2[1]],tol=1e-10,order=4,retmode="absy") for ispecies in range(self.Nspecies)]
+
+    @property
+    def special_Pi_PPV_psiN(self):
+        factor = 0.6
+        pedestal_width = (self.pedestal_start_stop_psiN2[1]-self.pedestal_start_stop_psiN2[0])
+        shift = factor*pedestal_width
+        return [PPV_x(self.momentum_flux[:,ispecies],self.psiN2,[self.pedestal_start_stop_psiN2[0]-shift,self.pedestal_start_stop_psiN2[1]],tol=1e-10,order=4) for ispecies in range(self.Nspecies)]
     
     @property
     def conductive_heat_flux_psi_unit_vector(self):        
@@ -1410,11 +1543,15 @@ class perfect_simulation(object):
     @property
     def FSA_toroidal_flow_test(self):
         return self.FSA("toroidal_flow",jacobian=True)
-    
+
     @property
     def toroidal_flow_over_vT(self):
         return self.Delta*nstack(numpy.sqrt(self.masses/self.THat),axis=1,n=len(self.theta))*self.toroidal_flow
 
+    @property
+    def FSA_toroidal_flow_over_vT(self):
+        return self.Delta*self.FSA_toroidal_flow/numpy.sqrt(self.THat/self.masses)
+        
     @property
     def toroidal_flow_difference(self):
         if self.num_species>1:
@@ -1425,7 +1562,15 @@ class perfect_simulation(object):
             print "perfect_simulation: toroidal_flow_difference: warning: no impurity species. Difference will be just the main ion toroidal flow"
             return self.toroidal_flow[:,:,main_index]
 
-    
+    @property
+    def FSA_toroidal_flow_shear(self):
+        # assumes local Miller
+        dRdr = self.inputs.Miller_dRdr
+        epsil = self.epsilon
+        q = self.q
+        gamma = (epsil/q) * ((self.FSA_toroidal_flow/numpy.expand_dims(self.FSARHat,axis=1)) * dRdr - numpy.expand_dims((self.FSA(self.RHat *self.Bp)/self.psiAHat),axis=1) *self.ddpsiN(self.FSA_toroidal_flow))
+        return gamma
+        
     @property
     def poloidal_flow(self):
         #next line commented out since Bp seem to have the wrong sign in the code, and since we want to use higher order stencil:
@@ -1698,6 +1843,10 @@ class perfect_simulation(object):
             return self.outputs[self.group_name+self.deltaN_name][()]
         except KeyError:
             return numpy.abs(self.ddpsilog_to_delta_factor * self.dnHatdpsiN/self.nHat)
+
+    @property
+    def deltaN_ped(self):
+        return self.deltaN[self.mid_pedestal_point_index]
         
     @property
     def deltaEta(self):
@@ -2135,6 +2284,10 @@ class perfect_simulation(object):
         elif arraylist_rank(RHat) == 1:
             #for compatibility with old 1D RHat output
             return nstack(RHat,axis=0,n=len(self.psi)) #add psi axis
+
+    @property
+    def FSARHat(self):
+        return self.FSA(self.RHat)
 
     @property
     def JHat(self):
@@ -2802,10 +2955,21 @@ class normalized_perfect_simulation(perfect_simulation):
         psiN_point=self.pedestal_point
         return self.attrib_at_psi_of_theta(self.orbit_width,psiN_point)
 
-
     @property
     def FSA_orbit_width(self):
         return self.FSA(self.orbit_width)
+
+
+    @property
+    def FSA_orbit_width_over_ped_width(self):
+        return self.FSA_orbit_width/(self.pedestal_start_stop[-1] - self.pedestal_start_stop[0])
+
+    @property
+    def ped_FSA_ion_orbit_width_over_ped_width(self):
+        ii = 0 # ion species index
+        psiN_point=(self.pedestal_start_stop[-1] - self.pedestal_start_stop[0])/2.0
+        psiN_index=get_index_range(self.actual_psiN,[psiN_point,psiN_point])[1]
+        return self.FSA_orbit_width_over_ped_width[ii,psiN_index]
 
     @property
     def orbit_width_over_rN(self):
@@ -2826,6 +2990,10 @@ class normalized_perfect_simulation(perfect_simulation):
         return self.FSA(self.orbit_width_old)
 
 
+    @property
+    def psiN2(self):
+        return self.actual_psiN/self.actual_psiN[self.pedestal_start_stop_indices[-1]]
+    
     @property
     def psi_o(self,i_s=0):
         #i_s : index of species for which to calculate orbit width for
@@ -2863,12 +3031,29 @@ class normalized_perfect_simulation(perfect_simulation):
     def pedestal_width(self):
         #in meters
         return numpy.fabs((self.pedestal_start_stop[0] - self.pedestal_start_stop[-1])*self.FSA_RBar_nabla_psiN[0]/self.RBar)
+
+    @property
+    def pedestal_width_psiN(self):
+        return numpy.fabs(self.pedestal_start_stop[-1] - self.pedestal_start_stop[0])
+
+    @property
+    def pedestal_width_psiN2(self):
+        return numpy.fabs(self.pedestal_start_stop_psiN2[-1] - self.pedestal_start_stop_psiN2[0])
     
     @property
     def r_old(self, dr_dpsiN=0.591412216405):
         #dr_dpsiN : dr/dpsiN
         return (self.actual_psiN - self.pedestal_start_stop[-1])*dr_dpsiN
+
+    @property
+    def pedestal_start_stop_psiN(self):
+        return self.pedestal_start_stop
+
     
+    @property
+    def pedestal_start_stop_psiN2(self):
+        return [self.psiN2[point] for point in self.pedestal_start_stop_indices]
+
     
     @property
     def pedestal_start_stop_psi_o(self):

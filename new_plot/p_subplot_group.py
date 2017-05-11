@@ -31,35 +31,35 @@ class perfect_subplot_group:
             return [getattr(p_subplot,attr_name) for p_subplot in self.p_subplot_list]
 
 
-    def get_max(self,attr_name,margin=0):
+    def get_max(self,attr_name,margin=0,range=True):
         #get the maximum values for all quantites in all subplots in this group
         maxes=[]
-        for subplot in self.getattrs(attr_name):
+        for subplot in self.getattrs(attr_name,range=range):
             for simulation in subplot:
                 maxes=maxes+[numpy.max(simulation)]
         max=numpy.nanmax(maxes) #ignores nan values
         if margin == 0:
             return max
         else:
-            return max + margin*self.get_range(attr_name)
+            return max + margin*self.get_range(attr_name,range=range)
 
-    def get_min(self,attr_name,margin=0):
+    def get_min(self,attr_name,margin=0,range=True):
         #get the maximum values for all quantites in all subplots in this group
         mines=[]
-        for subplot in self.getattrs(attr_name):
+        for subplot in self.getattrs(attr_name,range=range):
             for simulation in subplot:
                 mines=mines+[numpy.min(simulation)]
         min = numpy.nanmin(mines) #ignores nan values
         if margin == 0:
             return min
         else:
-            return min - margin*self.get_range(attr_name)
+            return min - margin*self.get_range(attr_name,range=range)
 
-    def get_range(self,attr_name):
-        ret = numpy.fabs(self.get_max(attr_name)-self.get_min(attr_name))
-        if numpy.fabs(ret) <= numpy.fabs(self.get_max(attr_name)*1e-10):
+    def get_range(self,attr_name,range=True):
+        ret = numpy.fabs(self.get_max(attr_name,range=range)-self.get_min(attr_name,range=range))
+        if numpy.fabs(ret) <= numpy.fabs(self.get_max(attr_name,range=range)*1e-10):
             print "Warning: p_subplot_group: get_range: range is effectively zero. Artificially padding to make plot work."
-            ret = self.get_max(attr_name)*0.1
+            ret = self.get_max(attr_name,range=range)*0.1
         return ret
         
     def set_middle_attr(self,attr_name,value):

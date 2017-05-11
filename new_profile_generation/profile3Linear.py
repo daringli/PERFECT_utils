@@ -38,9 +38,11 @@ class Profile3Linear(ProfileSplineFromLinear):
         p.species = self.species
         p.profile = self.profile
         p.generator = '3Linear'
+        p.generator_dict = vars(self)
         ddx_p.species = self.species
         ddx_p.profile = "ddx_" + self.profile
         ddx_p.generator = '3Linear'
+        ddx_p.generator_dict = vars(self)
         return (p,ddx_p)
         
         
@@ -86,5 +88,5 @@ if __name__ == "__main__":
     plt.plot(x,ddx_f1(x))
     plt.plot(x,ddx_f2(x))
     plt.plot(x,ddx_f3(x))
-    
+    print repr(f3)
     plt.show()

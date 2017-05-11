@@ -1,7 +1,8 @@
 from profile import Profile
+from generator import Generator
 from scipy.interpolate import UnivariateSpline
 
-class ProfileFromData(object):
+class ProfileFromData(Generator):
     """Profile generator that takes data y sampled at points x and interpolates/fits using the kind of interpolation specified by kind."""
     
     def __init__(self,x,y,kind=3,profile='',species=''):
@@ -26,9 +27,11 @@ class ProfileFromData(object):
         p.profile = self.profile
         p.species = self.species
         p.generator = 'fromData'
+        p.generator_dict = vars(self)
         ddx_p.profile = "ddx_" + self.profile
         ddx_p.species = self.species
         ddx_p.generator = 'fromData'
+        ddx_p.generator_dict = vars(self)
         return (p, ddx_p)
         
 if __name__ == "__main__":

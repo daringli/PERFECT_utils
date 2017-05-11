@@ -1,4 +1,5 @@
 from profile import Profile
+from generator import Generator
 from profileSplineFromLinear import ProfileSplineFromLinear
 from scipy.interpolate import UnivariateSpline
 from bezier_transition import derivative_bezier_transition
@@ -9,7 +10,7 @@ from numpy import sqrt
 from findInProfileList import findInProfileList
 from profileConstDeltaT import ProfileConstDeltaT
 
-class ProfileConstDeltaY(object):
+class ProfileConstDeltaY(Generator):
     """Profile generator that takes a deltaY, etc and gives a const-delta Y"""
     def __init__(self, Y0, X0, Z, deltaY, BT, deltaT, species='', profile=''):
         self.Y0 = Y0
@@ -32,9 +33,11 @@ class ProfileConstDeltaY(object):
         p.species = self.species
         p.profile = self.profile
         p.generator = 'constDeltaEta'
+        p.generator_dict = vars(self)
         ddx_p.species = self.species
         ddx_p.profile = "ddx_" + self.profile
         ddx_p.generator = 'constDeltaEta'
+        ddx_p.generator_dict = vars(self)
         
         return (p,ddx_p)
         

@@ -1,9 +1,10 @@
 from profile import Profile
+from generator import Generator
 from scipy.interpolate import UnivariateSpline
 from findInProfileList import extractProfilesFromList
 from numpy import log
 
-class ProfilePhiFromEtaN(object):
+class ProfilePhiFromEtaN(Generator):
     """Profile generator that takes eta and n profile of some species and gives Phi."""
     
     def __init__(self,Z,useSpecies,DeltaOver2omega=1.0):
@@ -27,9 +28,11 @@ class ProfilePhiFromEtaN(object):
         p.profile = self.profile
         p.species = self.species
         p.generator = 'PhiFromEtaN'
+        p.generator_dict = vars(self)
         ddx_p.profile = "ddx_" + self.profile
         ddx_p.species = self.species
         ddx_p.generator = 'PhiFromEtaN'
+        ddx_p.generator_dict = vars(self)
         return (p, ddx_p)
         
 if __name__ == "__main__":

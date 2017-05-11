@@ -33,7 +33,15 @@ def generateConstPhi(XStart=None,XStop=None,width=None,XPedStart=None,XPedStop=N
     (TiPed,ddx_TiPed, Twidth, TiLCFS) = setPedestalParams(TiPed,ddx_TiSOL, Twidth, None)
     TiGen = Profile3Linear(XStart,XStop,ddx_TiCore,ddx_TiSOL,Twidth,XPedStart,XPedStart +Twidth,TiPed,ddx_TiPed,TiLCFS,profile="T",species=ion,kind=TiKind, transWidth = TiTransWidth)
 
+    (TePed,ddx_TePed, width, TeLCFS) = setPedestalParams(TePed,ddx_TePed, width, TeLCFS)
+    print (TePed,ddx_TePed, width, TeLCFS)
     TeGen = Profile3Linear(XStart,XStop,ddx_TeCore,ddx_TeSOL,width,XPedStart,XPedStop,TePed,ddx_TePed,TeLCFS,profile="T",species="e",kind=TeKind, transWidth = TeTransWidth)
+
+    (nPed,ddx_nPed,width,nLCFS) = setPedestalParams(nPed,ddx_nPed,width,nLCFS)
+    print "ddx_nPed: " + "{0:.2e}".format(ddx_nPed)
+    print "width: " + "{0:.2e}".format(width)
+    print "nPed: " + "{0:.2e}".format(nPed)
+    print "nLCFS: " + "{0:.2e}".format(nLCFS)
     
     niGen = Profile3Linear(XStart,XStop,ddx_nCore,ddx_nSOL,width,XPedStart,XPedStop,nPed,ddx_nPed,nLCFS,profile="n",species=ion,kind=nKind, transWidth = nTransWidth)
     neGen = ProfileNFromQuasiNeutrality(Zs,species="e")

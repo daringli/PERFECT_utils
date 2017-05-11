@@ -65,4 +65,8 @@ def writeProfileListToOutput(profileList,simul):
     # write profiles to file
     pP = perfectProfiles(outputname)
     pP.create_profiles_for_Npsi(Npsi,Nspecies, Phi, dds_Phi, T, dds_T, n, dds_n, eta, dds_eta)
+
+    #write profile parameters to profile specific output file for documentation
+    for profile in profileList:
+        profile.print_to_file()
     

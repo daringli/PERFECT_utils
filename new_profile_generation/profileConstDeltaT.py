@@ -30,9 +30,11 @@ class ProfileConstDeltaT(object):
         p.species = self.species
         p.profile = self.profile
         p.generator = 'constDeltaT'
+        p.generator_dict = vars(self)
         ddx_p.species = self.species
         ddx_p.profile = "ddx_" + self.profile
         ddx_p.generator = 'constDeltaT'
+        ddx_p.generator_dict = vars(self)
         
         return (p,ddx_p)
         

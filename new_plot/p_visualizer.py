@@ -26,11 +26,14 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
     
     dimensions=kwarg_default("dimensions",1,**kwargs)
     height=kwarg_default("height",0.15,**kwargs)
+    width=kwarg_default("width",None,**kwargs)
     textcols=kwarg_default("textcols",1,**kwargs)
     rows=kwarg_default("rows",gridspec_params[0],**kwargs)
     cols=kwarg_default("cols",gridspec_params[1],**kwargs)
 
     interactive=kwarg_default("interactive",False,**kwargs)
+
+    putboxes = kwarg_default("putboxes",[],**kwargs)
 
     
     #set the height differently depending on if most plots are colormaps (2D), and thus need colorbars
@@ -57,7 +60,7 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
     adjust_bottom=adjust_bottom*base_height/height
     adjust_top=1-(1-adjust_top)*base_height/height
     
-    latexify(fig_height=height,columns=textcols)
+    latexify(fig_height=height,fig_width=width,columns=textcols)
     fig=plt.figure()
 
 
@@ -81,10 +84,14 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
     
     global_ylabel=kwarg_default("global_ylabel",None,**kwargs)
     if global_ylabel is not None:
+        global_ylabel_x=kwarg_default("global_ylabel_x",0.01,**kwargs)
         if dimensions == 1:
-            fig.text(0.01, 0.5+adjust_bottom/4, global_ylabel, va='center', rotation='vertical')
+            fig.text(global_ylabel_x, 0.5+adjust_bottom/4, global_ylabel, va='center', rotation='vertical')
         elif dimensions == 2:
-            fig.text(0.01, 0.5+adjust_bottom/4.0, global_ylabel, va='center', rotation='vertical')
+            fig.text(global_ylabel_x, 0.5+adjust_bottom/4.0, global_ylabel, va='center', rotation='vertical')
+
+    for putbox in putboxes:
+        fig.text(putbox[0],putbox[1],putbox[2], ha='center')
 
     
     gs=gridspec.GridSpec(gridspec_params[0],gridspec_params[1])
@@ -109,11 +116,18 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
         ax.spines['left'].set_linestyle(p_subplot.border_linestyle)
         ax.spines['right'].set_linestyle(p_subplot.border_linestyle)
         if p_subplot.vlines is not None:
-            for p in p_subplot.vlines:
-                ax.axvline(x=p,color='k',linestyle=':')
+            vlines_colors = p_subplot.vlines_colors
+            if type(vlines_colors) is not list:
+                vlines_colors = [vlines_colors]*len(p_subplot.vlines)
+            assert(len(vlines_colors) == len(p_subplot.vlines))
+            for i_vlines, p in enumerate(p_subplot.vlines):
+                ax.axvline(x=p,color=vlines_colors[i_vlines],linestyle=':')
         if p_subplot.hlines is not None:
-            for p in p_subplot.hlines:
-                ax.axhline(y=p,color='silver',linestyle=':')
+            hlines_colors = p_subplot.hlines_colors
+            if type(hlines_colors) is not list:
+                hlines_colors = [hlines_colors]*len(p_subplot.hlines)
+            for i_hlines,p in enumerate(p_subplot.hlines):
+                ax.axhline(y=p,color=hlines_colors[i_hlines],linestyle=':')
         
         if p_subplot.show_xaxis_ticklabel == False:
             plt.setp(ax.get_xticklabels(), visible=False)
@@ -155,9 +169,10 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
 
         #we need to sort out ticks after plotting, since they are generated
         #during the plot operation
-        if p_subplot.xaxis_label is not None:
+        if p_subplot.xaxis_label is not None and p_subplot.show_xaxis_label == True:
             ax.set_xlabel(p_subplot.xaxis_label)
-        if p_subplot.yaxis_label is not None:
+            ax.xaxis.set_label_coords(p_subplot.xaxis_label_x,p_subplot.xaxis_label_y) 
+        if p_subplot.yaxis_label is not None and p_subplot.show_yaxis_label == True:
             #print str(p_subplot.yaxis_label)+": " +"("+str(p_subplot.yaxis_label_x)+","+str(p_subplot.yaxis_label_y)+")"
             ax.set_ylabel(p_subplot.yaxis_label)
             ax.yaxis.set_label_coords(p_subplot.yaxis_label_x,p_subplot.yaxis_label_y) 

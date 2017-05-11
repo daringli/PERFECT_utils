@@ -73,13 +73,11 @@ def derivative_bezier_transition(funcListIn,derivListIn,pointList,pairList):
     funcList=list(funcListIn)
     derivList=list(derivListIn)
     breakpoints=[-float("inf")]
-    print pairList
     for point,pair in zip(pointList,pairList):
         breakpoints.append(point-pair[0])
         breakpoints.append(point+pair[1])
     breakpoints.append(float("inf"))
 
-    print breakpoints
 
     k=0 #since we will add elements to funclist
     for i in range(len(pointList)):
@@ -92,7 +90,6 @@ def derivative_bezier_transition(funcListIn,derivListIn,pointList,pairList):
         P2=numpy.array([x2i,funcList[k+i+1](x2i)])
 
         if x0i == x2i:
-            print "yes!"
             #there is no need to insert a transition
             #since the transition region has 0 width
             #fill with dummy since rest of script assumes
@@ -102,7 +99,6 @@ def derivative_bezier_transition(funcListIn,derivListIn,pointList,pairList):
                 return lambda x: 0*x
             
         else:
-            print "no!"
             def B(P0,P1,P2,x0i,x2i):
                 return lambda x: ddt_bezier_func_y(P0,P1,P2)((x-x0i)/(x2i-x0i))*(1/(x2i-x0i))
             def C(P0,P1,P2,x0i,x2i):

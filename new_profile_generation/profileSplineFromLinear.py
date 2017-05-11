@@ -1,8 +1,9 @@
 from profile import Profile
+from generator import Generator
 from scipy.interpolate import UnivariateSpline
 
 
-class ProfileSplineFromLinear(object):
+class ProfileSplineFromLinear(Generator):
     """Profile generator that takes linear splines and implements a smooth transition between them.
     transXs: list of X at which unsmoothened spline transitions
     ddx_Ys: list of slope in each interval (transXs[i],transXs[i+1]), should have length len(transXs)-1
@@ -89,9 +90,11 @@ class ProfileSplineFromLinear(object):
         p.profile = self.profile
         p.species = self.species
         p.generator = 'splineFromLinear'
+        p.generator_dict = vars(self)
         ddx_p.profile = "ddx_" + self.profile
         ddx_p.species = self.species
         ddx_p.generator = 'splineFromLinear'
+        ddx_p.generator_dict = vars(self)
         return (p, ddx_p)
         
 if __name__ == "__main__":
@@ -129,4 +132,5 @@ if __name__ == "__main__":
     #plt.plot(x,ddx_f3(x))
     print f3.profile
     print f3.species
+    print repr(f3)
     plt.show()
