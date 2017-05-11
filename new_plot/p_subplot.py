@@ -335,13 +335,24 @@ class perfect_subplot:
             data=self.data[ixrange[:,numpy.newaxis],iyrange]
             return data
 
-    def plot(self,fig,ax):        
+    def plot(self,fig,ax):
         if self.dimensions == 1:
             x=self.x
-            y=self.data            
-            ax.yaxis.offset_text_position="there"
-            
+            y=self.data
+            if self.plot_type == "csv_all":
+                f = open(str(ax)+".perfect_subplot",'w')
+                #export this subplot to a csv file
+                l=[]
+                for (_x,_y) in zip(x,y):
+                    for (__x,__y) in zip(_x,_y):
+                        l.append(str(__x)+","+str(__y))
+                f.write("\n".join(l))
+                f.close()
+                return None
 
+
+            
+            ax.yaxis.offset_text_position="there"
             
             if type(self.linestyles) is not list:
                 self.linestyles=[self.linestyles]*len(y)
@@ -369,6 +380,16 @@ class perfect_subplot:
                         print "len(colors): " + str(len(self.colors))
                         print "len(markersizes): " + str(len(self.markersizes))
                         print "len(radarvalues): " + str(len(self.radarvalues))
+
+
+                elif self.plot_type == "csv":
+                    #export this dataset in this subplot to a csv file
+                    f = open(str(i)+".perfect_subplot",'w')
+                    for (_x,_y) in zip(x[i],y[i]):
+                        f.write(str(_x)+","+str(_y)+"\n")
+                    f.close()
+
+                
                     
                 ax.yaxis.set_label_coords(-0.15, 0.5)
 
