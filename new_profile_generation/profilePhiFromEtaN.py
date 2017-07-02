@@ -19,7 +19,6 @@ class ProfilePhiFromEtaN(Generator):
         wantedProfiles = ["T","ddx_T","n","ddx_n","eta","ddx_eta"]
                 
         [T,ddx_T,n,ddx_n,eta,ddx_eta] = extractProfilesFromList(profileList,wantedProfiles,self.useSpecies)
-        
         Phi=lambda x : log(eta(x)/n(x))*T(x)*self.DeltaOver2omega/self.Z
         ddx_Phi=lambda x : ((ddx_eta(x)/eta(x) - ddx_n(x)/n(x))*T(x) + log(eta(x)/n(x))*ddx_T(x))*self.DeltaOver2omega/self.Z
     

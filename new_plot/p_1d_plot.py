@@ -18,7 +18,7 @@ import scipy.integrate
 from mpldatacursor import datacursor
 
 
-def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,markers=None,markeverys=None,fillstyles=None,linestyles=None,linewidths=None,xlims=None,same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","H":"i","T":"i","He":"z","N":"z","e":"e"},vlines=[],hlines=[],share_scale=[],interactive=False,colors=None,skip_species = [],yaxis_powerlimits=(0,0),hidden_xticklabels=[],yaxis_label_x=-0.15,ylims=None,simulList=None,pedestal_start_stop=None,pedestal_point=None,core_point=None,putboxes=[]):
+def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,markers=None,markeverys=None,fillstyles=None,linestyles=None,linewidths=None,xlims=None,same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","H":"i","T":"i","He":"z","N":"z","e":"e"},vlines=[],hlines=[],share_scale=[],interactive=False,colors=None,skip_species = [],yaxis_powerlimits=(0,0),hidden_xticklabels=[],yaxis_label_x=-0.15,ylims=None,simulList=None,pedestal_start_stop=None,pedestal_point=None,core_point=None,putboxes=[],return_psps=False,set_species_title=True,group_mode="species"):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -36,6 +36,8 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                 exit(1)
     else:
         ylabels=['']*len(attribs)
+
+    all_linestyles = linestyles
                 
     if simulList == None:
         normlist=[x + "/" + normname for x in dirlist]
@@ -78,11 +80,11 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                 for n,l in zip(noddpsi,local):
                     # local overrides noddpsi in code as well
                     if l:
-                        fillstyles=linestyles+["none"]
+                        fillstyles=all_linestyles+["none"]
                     elif n:
-                        fillstyles=linestyles+["left"]
+                        fillstyles=all_linestyles+["left"]
                     else:
-                        fillstyles=linestyles+["full"]
+                        fillstyles=all_linestyles+["full"]
             else:
                 fillstyles = ['full']*len(simulList)
     else:
@@ -154,19 +156,19 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
     else:
         all_linecolors=colors
 
-    if linestyles == None:
+    if all_linestyles == None:
         if lg:
-            linestyles=[] #linestyles generated from local or global
+            all_linestyles=[] #linestyles generated from local or global
             for n,l in zip(noddpsi,local):
                 # local overrides noddpsi in code as well
                 if l:
-                    linestyles=linestyles+["dashed"]
+                    all_linestyles=all_linestyles+["dashed"]
                 elif n:
-                    linestyles=linestyles+["dashdot"]
+                    all_linestyles=all_linestyles+["dashdot"]
                 else:
-                    linestyles=linestyles+["solid"]
+                    all_linestyles=all_linestyles+["solid"]
         else:
-            linestyles = ['solid']*len(simulList)
+            all_linestyles = ['solid']*len(simulList)
                 
     
                     
@@ -195,17 +197,30 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
         else:
             perhaps_last=True
         if attrib_sp_dep:
-            for i_sp,s in enumerate(species_set):
+            this_iterable = None
+            if group_mode == "species":
+                this_iterable = species_set
+            elif group_mode == "simulations":
+                this_iterable = range(len(simulList))
+                set_species_title = False
+            
+            for i_sp,s in enumerate(this_iterable):
                 i=i+1
-                #data is taken for a given species for all simulations
-                #index of species in simulation given by index to index
-                index=[[ind for ind,spec in enumerate(simul.species) if spec==s] for simul in simulList]
+                data = None
                 
-                if all(len(ind)<=1 for ind in index):
-                    data=[getattr(simul,attrib)[:,index[i_si][0]] for i_si,simul in enumerate(simulList) if s in simul.species]
-                else:
-                    print "p_1d_plot: warning: more than one of the same species in the simulation. Will add contributions."
-                    data=[numpy.sum(getattr(simul,attrib)[:,index[i_si]],axis=1) for i_si,simul in enumerate(simulList) if s in simul.species]
+                if group_mode == "species":
+                    #data is taken for a given species for all simulations
+                    #index of species in simulation given by index to index
+                    index=[[ind for ind,spec in enumerate(simul.species) if spec==s] for simul in simulList]
+                    if all(len(ind)<=1 for ind in index):
+                        data=[getattr(simul,attrib)[:,index[i_si][0]] for i_si,simul in enumerate(simulList) if s in simul.species]
+                    else:
+                        print "p_1d_plot: warning: more than one of the same species in the simulation. Will add contributions."
+                        data=[numpy.sum(getattr(simul,attrib)[:,index[i_si]],axis=1) for i_si,simul in enumerate(simulList) if s in simul.species]
+                        
+                elif group_mode == "simulations":
+                    data=[getattr(simulList[i_sp],attrib)[:,i_si] for i_si in range(len(simul.species))]
+                    
 
                 if xattr=="theta":
                     x_scale=1/numpy.pi
@@ -213,20 +228,33 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                 else:
                     x_scale=1
                     x_period = None
+                    
                 if xattr != None:
-                    x=[getattr(simul,xattr)*x_scale for simul in simulList if s in simul.species]
+                    if group_mode == "species":
+                        x=[getattr(simul,xattr)*x_scale for simul in simulList if s in simul.species]
+                    elif group_mode == "simulations":
+                        x=[getattr(simulList[i_sp],xattr)*x_scale for s in simulList[i_sp].species]
                 else:
                     # If xattrib is None, we plot against the index of the data
                     # This probably will not work if we are not plotting against
                     # the first index of data
-                    x=[numpy.array(range(len(getattr(simul,attrib)))) for simul in simulList if s in simul.species]
+                    if group_mode == "species":
+                        x=[numpy.array(range(len(getattr(simul,attrib)))) for simul in simulList if s in simul.species]
+                    elif group_mode == "simulations":
+                        x=[numpy.array(range(len(getattr(simulList[i_sp],attrib)))) for s in simulList[i_sp].species]
                 if xlims == None:
                     # min to max among all the simulations
                     xlims = [numpy.min(x),numpy.max(x)]
-                    
-                linecolors=[all_linecolors[i_si] for i_si,simul in enumerate(simulList) if s in simul.species]
+
+                if group_mode == "species":
+                    linecolors=[all_linecolors[i_si] for i_si,simul in enumerate(simulList) if s in simul.species]
+                    linestyles=[all_linestyles[i_si] for i_si,simul in enumerate(simulList) if s in simul.species]
+                elif group_mode == "simulations":
+                    linecolors=[all_linecolors[i_si] for i_si in range(len(simulList[i_sp].species))]
+                    linestyles=[all_linestyles[i_si] for i_si in range(len(simulList[i_sp].species))]
                 coordinates=(i,0)
-                if perhaps_last and (i_sp == len(species_set) - 1):
+
+                if perhaps_last and (i_sp == len(this_iterable) - 1):
                     last_groupname="last"
                     gridspec_list.append([i+1,1])
                 else:
@@ -236,8 +264,7 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                     ylim = None
                 else:
                     ylim = ylims[i]
-                    
-                psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,groups=[s,attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,linewidths=linewidths,colors=linecolors,markers=markers,fillstyles=fillstyles,markeverys=markeverys,yaxis_powerlimits=yaxis_powerlimits,hidden_xticklabels=hidden_xticklabels,yaxis_label_x=yaxis_label_x,ylims=ylim,x_period=x_period)) #yaxis_label=ylabels[i_a]
+                psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,dimensions=1,groups=[s,attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,linewidths=linewidths,colors=linecolors,markers=markers,fillstyles=fillstyles,markeverys=markeverys,yaxis_powerlimits=yaxis_powerlimits,hidden_xticklabels=hidden_xticklabels,yaxis_label_x=yaxis_label_x,ylims=ylim,x_period=x_period)) #yaxis_label=ylabels[i_a]
                 
 
         else:
@@ -249,21 +276,43 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                 last_groupname="not_last"
             #species independent plot
             data=[getattr(simul,attrib) for simul in simulList]
+
             if xattr=="theta":
                 x_scale=1/numpy.pi
                 x_period = 2.0
             else:
                 x_scale=1
                 x_period = None
-            x=[x_scale*getattr(simul,xattr) for simul in simulList]
+
+            if xattr != None:
+                x=[x_scale*getattr(simul,xattr) for simul in simulList]
+
+            else:
+                # If xattrib is None, we plot against the index of the data
+                # This probably will not work if we are not plotting against
+                # the first index of data
+                try:
+                    L=len(getattr(simul,attrib))
+                except TypeError:
+                    # does not have a length, so probably a single element
+                    L=1
+                
+                x=[numpy.array(range(L)) for simul in simulList]
+            if xlims == None:
+                # min to max among all the simulations
+                xlims = [numpy.min(x),numpy.max(x)]
+            
+            
+
             linecolors=all_linecolors
+            linestyles=all_linestyles
             coordinates=(i,0)
             
             if ylims is None:
                 ylim = None
             else:
                 ylim = ylims[i]
-            psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,groups=[attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,colors=linecolors,markers=markers,fillstyles=fillstyles,markeverys=markeverys,yaxis_powerlimits=yaxis_powerlimits,hidden_xticklabels=hidden_xticklabels,yaxis_label_x=yaxis_label_x,ylims=ylim,x_period=x_period)) #yaxis_label=ylabels[i_a]
+            psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,dimensions=1,groups=[attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,colors=linecolors,markers=markers,fillstyles=fillstyles,markeverys=markeverys,yaxis_powerlimits=yaxis_powerlimits,hidden_xticklabels=hidden_xticklabels,yaxis_label_x=yaxis_label_x,ylims=ylim,x_period=x_period)) #yaxis_label=ylabels[i_a]
             
         
         psp_lists.append(psp_list)
@@ -309,9 +358,10 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
         global_group = perfect_subplot_group(psp_list,groups=["global"])
         last_group = perfect_subplot_group(psp_list,groups=["last"])
         all_group=perfect_subplot_group(psp_list,groups='',get_all=True)
-        
-        for species_group,s in zip(species_groups,species_set):
-            species_group.setattrs("title",s)
+
+        if set_species_title:
+            for species_group,s in zip(species_groups,species_set):
+                species_group.setattrs("title",s)
 
         
 
@@ -338,6 +388,10 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
         #print gridspec_list[i_li]
         if xattr=="psi":
             global_xlabel=r"$\psi_N$"
+        elif xattr=="psiN2":
+            global_xlabel=r"$\psi_N$"
+        elif xattr=="psiN3":
+            global_xlabel=r"$\psi_N$"
         elif xattr=="theta":
             global_xlabel=r"$\theta/\pi$"
         elif xattr=="sqrtpsi":
@@ -363,8 +417,13 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
         all_group.setattrs("show_yaxis_ticklabel",True)
         all_group.setattrs("vlines",this_vlines)
         all_group.setattrs("hlines",hlines)
+        all_group.setattrs("show_xaxis_ticklabel",False)
         last_group.setattrs("show_xaxis_ticklabel",True)
-        
+
+        if return_psps:
+            return psp_list
+
+        print gridspec_list[i_li]
         perfect_visualizer(psp_list,gridspec_list[i_li],global_xlabel=global_xlabel,dimensions=1,global_ylabel=global_ylabel,interactive=interactive,putboxes=putboxes)
         if same_plot:
             plt.savefig(outputname+".pdf")

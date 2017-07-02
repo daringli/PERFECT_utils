@@ -8,11 +8,15 @@ from setPedestalParams import setPedestalParams,setPedestalStartStop
 
 class Profile3Linear(ProfileSplineFromLinear):
     """Profile generator that takes 3 linear splines and implements a smooth transition between them."""
-    def __init__(self,XStart,XStop,ddx_YCore,ddx_YSOL,width=None,XPedStart=None,XPedStop=None,YPed=None,ddx_YPed=None,YLCFS=None,transWidth=None,transWidthToPedWidth=0.2,kind="bezier",profile='',species=''):
+    def __init__(self,XStart,XStop,ddx_YCore,ddx_YSOL,width=None,XPedStart=None,XPedStop=None,YPed=None,ddx_YPed=None,YLCFS=None,transWidth=None,transWidthToPedWidth=0.2,kind="bezier",profile='',species='', scale=1.0):
         # calculate
         (self.XPedStart,self.XPedStop,self.width) = setPedestalStartStop(XPedStart,XPedStop,width)
         (self.YPed,self.ddx_YPed, self.width, self.YLCFS) = setPedestalParams(YPed,ddx_YPed, width,YLCFS)
-
+        self.YPed = scale * self.YPed
+        self.ddx_YPed = scale * self.ddx_YPed
+        self.YLCFS = scale * self.YLCFS
+        
+        
         self.kind = kind
         if transWidth is None:
             self.transWidth= width * transWidthToPedWidth
@@ -20,8 +24,8 @@ class Profile3Linear(ProfileSplineFromLinear):
             self.transWidth = transWidth
         self.XStart = XStart
         self.XStop = XStop
-        self.ddx_YCore = ddx_YCore 
-        self.ddx_YSOL = ddx_YSOL
+        self.ddx_YCore = scale * ddx_YCore 
+        self.ddx_YSOL = scale * ddx_YSOL
         self.transXs = [float("-inf"),self.XPedStart,self.XPedStop,float("inf")]
         self.ddx_Ys = [self.ddx_YCore,self.ddx_YPed,self.ddx_YSOL]
         super(Profile3Linear,self).__init__(self.transXs,self.ddx_Ys,self.XPedStart,self.YPed,profile=profile,species=species)

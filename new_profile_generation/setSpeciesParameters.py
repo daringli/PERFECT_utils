@@ -19,5 +19,6 @@ def speciesZ(speciesList,speciesFilename="species_database.namelist"):
     speciesFilename= os.path.join(os.path.dirname(__file__), speciesFilename)
     eBar = 1.602176565e-19
     speciesFile = f90nml.read(speciesFilename)
+    print repr(speciesList)
     Z=numpy.array([speciesFile["speciesCharge"][x] for x in speciesList])/eBar
     return Z

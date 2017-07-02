@@ -82,6 +82,7 @@ class perfect_simulation(object):
         self.flow_name="flow"
         self.toroidal_flow_name="toroidalFlow"
         self.poloidal_flow_name="poloidalFlow"
+        self.FSA_flow_name="FSAFlow"
         self.FSA_toroidal_flow_name="FSAToroidalFlow"
         self.FSA_poloidal_flow_name="FSAPoloidalFlow"
 
@@ -341,6 +342,7 @@ class perfect_simulation(object):
                 j=1 
         elif rank==2:
             if len(a[1]) == self.Ntheta:
+                print "OK!!!!!!!!!!!!!!!!!!!!"
                 #psi, theta dependence
                 axis = 1
                 if jacobian==True:
@@ -778,6 +780,10 @@ class perfect_simulation(object):
         return self.outputs[self.group_name+self.particle_flux_name][()]*signOfVPrimeHat
 
     @property
+    def ion_particle_flux(self):
+        return numpy.sum(self.particle_flux[:,:-1],axis=1)
+
+    @property
     def particle_flux_fft(self):
         return self.internal_grid_fft(self.particle_flux)
 
@@ -881,6 +887,10 @@ class perfect_simulation(object):
         return self.outputs[self.group_name+self.heat_flux_name][()]*signOfVPrimeHat
 
     @property
+    def ion_heat_flux(self):
+        return numpy.sum(self.heat_flux[:,:-1],axis=1)
+    
+    @property
     def heat_flux_before_theta_integral(self):
         VPrimeHat=self.VPrimeHat[:,numpy.newaxis,numpy.newaxis]
         signOfVPrimeHat=numpy.sign(VPrimeHat)
@@ -895,6 +905,10 @@ class perfect_simulation(object):
     def conductive_heat_flux(self):        
         return self.heat_flux-(5.0/2.0)*self.THat*self.particle_flux
 
+    @property
+    def ion_conductive_heat_flux(self):
+        return numpy.sum(self.conductive_heat_flux[:,:-1],axis=1)
+    
     @property
     def conductive_heat_flux_fft(self):
         return self.internal_grid_fft(self.conductive_heat_flux)
@@ -967,78 +981,111 @@ class perfect_simulation(object):
 
     @property
     def Q_PPV(self):
-        return [PPV(self.heat_flux[:,ispecies],self.psiN2,self.pedestal_start_stop_psiN2,tol=1e-10,order=4) for ispecies in range(self.Nspecies)] 
+        return [PPV(self.heat_flux[:,ispecies],self.psiN3,self.pedestal_start_stop_psiN3,tol=1e-10,order=4) for ispecies in range(self.Nspecies)] 
 
         
     @property
     def Q_PPV_psiN(self):
-        return [PPV_x(self.heat_flux[:,ispecies],self.psiN2,self.pedestal_start_stop_psiN2,tol=1e-10,order=4) for ispecies in range(self.Nspecies)] 
+        return [PPV_x(self.heat_flux[:,ispecies],self.psiN3,self.pedestal_start_stop_psiN3,tol=1e-10,order=4) for ispecies in range(self.Nspecies)]
+
+    @property
+    def Qi_PPV(self):
+        return PPV(self.ion_heat_flux,self.psiN3,self.pedestal_start_stop_psiN3,tol=1e-10,order=4)
+
+    @property
+    def Qi_PPV_psiN(self):
+        return PPV_x(self.ion_heat_flux,self.psiN3,self.pedestal_start_stop_psiN3,tol=1e-10,order=4)
 
     @property
     def q_PPV(self):
-        return [PPV(self.conductive_heat_flux[:,ispecies],self.psiN2,self.pedestal_start_stop_psiN2,tol=1e-10,order=4) for ispecies in range(self.Nspecies)] 
+        return [PPV(self.conductive_heat_flux[:,ispecies],self.psiN3,self.pedestal_start_stop_psiN3,tol=1e-10,order=4) for ispecies in range(self.Nspecies)] 
 
 
     @property
     def q_PPV_psiN(self):
-        return [PPV_x(self.conductive_heat_flux[:,ispecies],self.psiN2,self.pedestal_start_stop_psiN2,tol=1e-10,order=4) for ispecies in range(self.Nspecies)] 
+        return [PPV_x(self.conductive_heat_flux[:,ispecies],self.psiN3,self.pedestal_start_stop_psiN3,tol=1e-10,order=4) for ispecies in range(self.Nspecies)]
 
+    @property
+    def q_mid_ped(self):
+        i=self.mid_pedestal_point_index
+        return self.conductive_heat_flux[i]
+
+    @property
+    def qi_PPV(self):
+        return PPV(self.ion_conductive_heat_flux,self.psiN3,self.pedestal_start_stop_psiN3,tol=1e-10,order=4)
+
+    @property
+    def qi_PPV_psiN(self):
+        return PPV_x(self.ion_conductive_heat_flux,self.psiN3,self.pedestal_start_stop_psiN3,tol=1e-10,order=4)
+
+    @property
+    def qi_mid_ped(self):
+        i=self.mid_pedestal_point_index
+        return self.ion_conductive_heat_flux[i]
 
     @property
     def Pi_PPV(self):
-        return [PPV(self.momentum_flux[:,ispecies],self.psiN2,self.pedestal_start_stop_psiN2,tol=1e-10,order=4) for ispecies in range(self.Nspecies)] 
+        return [PPV(self.momentum_flux[:,ispecies],self.psiN3,self.pedestal_start_stop_psiN3,tol=1e-10,order=4) for ispecies in range(self.Nspecies)] 
 
 
     @property
     def Pi_PPV_psiN(self):
-        return [PPV_x(self.momentum_flux[:,ispecies],self.psiN2,self.pedestal_start_stop_psiN2,tol=1e-10,order=4) for ispecies in range(self.Nspecies)]
+        return [PPV_x(self.momentum_flux[:,ispecies],self.psiN3,self.pedestal_start_stop_psiN3,tol=1e-10,order=4) for ispecies in range(self.Nspecies)]
 
     @property
     def Prandtl_PPV(self):
-        return [PPV(self.Prandtli_proxy_dVtdpsiN[:,ispecies],self.psiN2,self.pedestal_start_stop_psiN2,tol=1e-10,order=4) for ispecies in range(self.Nspecies)] 
+        return [PPV(self.Prandtli_proxy_dVtdpsiN[:,ispecies],self.psiN3,self.pedestal_start_stop_psiN3,tol=1e-10,order=4) for ispecies in range(self.Nspecies)] 
 
 
     @property
     def Prandtl_PPV_psiN(self):
-        return [PPV_x(self.Prandtli_proxy_dVtdpsiN[:,ispecies],self.psiN2,self.pedestal_start_stop_psiN2,tol=1e-10,order=4) for ispecies in range(self.Nspecies)]
+        return [PPV_x(self.Prandtli_proxy_dVtdpsiN[:,ispecies],self.psiN3,self.pedestal_start_stop_psiN3,tol=1e-10,order=4) for ispecies in range(self.Nspecies)]
 
     @property
     def Gamma_PPV(self):
-        return [PPV(self.particle_flux[:,ispecies],self.psiN2,self.pedestal_start_stop_psiN2,tol=1e-10,order=4) for ispecies in range(self.Nspecies)] 
+        return [PPV(self.particle_flux[:,ispecies],self.psiN3,self.pedestal_start_stop_psiN3,tol=1e-10,order=4) for ispecies in range(self.Nspecies)] 
 
         
     @property
     def Gamma_PPV_psiN(self):
-        return [PPV_x(self.particle_flux[:,ispecies],self.psiN2,self.pedestal_start_stop_psiN2,tol=1e-10,order=4) for ispecies in range(self.Nspecies)] 
+        return [PPV_x(self.particle_flux[:,ispecies],self.psiN3,self.pedestal_start_stop_psiN3,tol=1e-10,order=4) for ispecies in range(self.Nspecies)] 
 
+    @property
+    def Gammai_PPV(self):
+        return PPV(self.ion_particle_flux,self.psiN3,self.pedestal_start_stop_psiN3,tol=1e-10,order=4)
+
+    @property
+    def Gammai_PPV_psiN(self):
+        return PPV_x(self.ion_particle_flux,self.psiN3,self.pedestal_start_stop_psiN3,tol=1e-10,order=4)
+    
     @property
     def Sh_PPV(self):
         factor = 0.6
-        pedestal_width = (self.pedestal_start_stop_psiN2[1]-self.pedestal_start_stop_psiN2[0])
+        pedestal_width = (self.pedestal_start_stop_psiN3[1]-self.pedestal_start_stop_psiN3[0])
         shift = factor*pedestal_width
-        return [PPV(self.heat_source_over_m2[:,ispecies],self.psiN2,[self.pedestal_start_stop_psiN2[0]-shift,self.pedestal_start_stop_psiN2[1]],tol=1e-10,order=4,retmode="absy") for ispecies in range(self.Nspecies)]
+        return [PPV(self.heat_source_over_m2[:,ispecies],self.psiN3,[self.pedestal_start_stop_psiN3[0]-shift,self.pedestal_start_stop_psiN3[1]],tol=1e-10,order=4,retmode="absy") for ispecies in range(self.Nspecies)]
 
     @property
     def Sh_PPV_psiN(self):
         factor = 0.6
-        pedestal_width = (self.pedestal_start_stop_psiN2[1]-self.pedestal_start_stop_psiN2[0])
+        pedestal_width = (self.pedestal_start_stop_psiN3[1]-self.pedestal_start_stop_psiN3[0])
         shift = factor*pedestal_width
-        return [PPV_x(self.heat_source_over_m2[:,ispecies],self.psiN2,[self.pedestal_start_stop_psiN2[0]-shift,self.pedestal_start_stop_psiN2[1]],tol=1e-10,order=4) for ispecies in range(self.Nspecies)]
-        #return [PPV_x(self.heat_source_over_m2[:,ispecies],self.psiN2,self.pedestal_start_stop_psiN2,tol=1e-10,order=4) for ispecies in range(self.Nspecies)]
+        return [PPV_x(self.heat_source_over_m2[:,ispecies],self.psiN3,[self.pedestal_start_stop_psiN3[0]-shift,self.pedestal_start_stop_psiN3[1]],tol=1e-10,order=4) for ispecies in range(self.Nspecies)]
+        #return [PPV_x(self.heat_source_over_m2[:,ispecies],self.psiN3,self.pedestal_start_stop_psiN3,tol=1e-10,order=4) for ispecies in range(self.Nspecies)]
 
     @property
     def special_Pi_PPV(self):
         factor = 0.6
-        pedestal_width = (self.pedestal_start_stop_psiN2[1]-self.pedestal_start_stop_psiN2[0])
+        pedestal_width = (self.pedestal_start_stop_psiN3[1]-self.pedestal_start_stop_psiN3[0])
         shift = factor*pedestal_width
-        return [PPV(self.momentum_flux[:,ispecies],self.psiN2,[self.pedestal_start_stop_psiN2[0]-shift,self.pedestal_start_stop_psiN2[1]],tol=1e-10,order=4,retmode="absy") for ispecies in range(self.Nspecies)]
+        return [PPV(self.momentum_flux[:,ispecies],self.psiN3,[self.pedestal_start_stop_psiN3[0]-shift,self.pedestal_start_stop_psiN3[1]],tol=1e-10,order=4,retmode="absy") for ispecies in range(self.Nspecies)]
 
     @property
     def special_Pi_PPV_psiN(self):
         factor = 0.6
-        pedestal_width = (self.pedestal_start_stop_psiN2[1]-self.pedestal_start_stop_psiN2[0])
+        pedestal_width = (self.pedestal_start_stop_psiN3[1]-self.pedestal_start_stop_psiN3[0])
         shift = factor*pedestal_width
-        return [PPV_x(self.momentum_flux[:,ispecies],self.psiN2,[self.pedestal_start_stop_psiN2[0]-shift,self.pedestal_start_stop_psiN2[1]],tol=1e-10,order=4) for ispecies in range(self.Nspecies)]
+        return [PPV_x(self.momentum_flux[:,ispecies],self.psiN3,[self.pedestal_start_stop_psiN3[0]-shift,self.pedestal_start_stop_psiN3[1]],tol=1e-10,order=4) for ispecies in range(self.Nspecies)]
     
     @property
     def conductive_heat_flux_psi_unit_vector(self):        
@@ -1533,8 +1580,16 @@ class perfect_simulation(object):
         return self.attrib_at_theta_of_psi("toroidal_flow",numpy.pi)
 
     @property
+    def FSA_flow(self):
+        return self.FSAFlow
+    
+    @property
     def FSA_toroidal_flow(self):
         return self.outputs[self.group_name+self.FSA_toroidal_flow_name][()]
+
+    @property
+    def FSA_poloidal_flow(self):
+        return self.outputs[self.group_name+self.FSA_poloidal_flow_name][()]
 
     @property
     def ddpsiN_n_FSA_toroidal_flow(self):
@@ -2292,6 +2347,10 @@ class perfect_simulation(object):
     @property
     def JHat(self):
         return self.outputs[self.group_name+self.JHat_name][()]
+
+    @property
+    def FSA_JHat(self):
+        return self.FSA(self.JHat)
         
     @property
     def BHat(self):
@@ -2959,6 +3018,12 @@ class normalized_perfect_simulation(perfect_simulation):
     def FSA_orbit_width(self):
         return self.FSA(self.orbit_width)
 
+    @property
+    def ped_FSA_orbit_width(self):
+        psiN_point=(self.pedestal_start_stop[-1] - self.pedestal_start_stop[0])/2.0
+        psiN_index=get_index_range(self.actual_psiN,[psiN_point,psiN_point])[1]
+        return self.FSA_orbit_width[psiN_point]
+
 
     @property
     def FSA_orbit_width_over_ped_width(self):
@@ -2992,7 +3057,14 @@ class normalized_perfect_simulation(perfect_simulation):
 
     @property
     def psiN2(self):
-        return self.actual_psiN/self.actual_psiN[self.pedestal_start_stop_indices[-1]]
+        return self.actual_psiN/self.pedestal_start_stop[-1]
+
+    @property
+    def psiN3(self):
+        #shift is positive if LCFS needs to be shifted upwards
+        # i.e. pedestal stop is below 1
+        shift = 1 - self.pedestal_start_stop[-1]
+        return (self.actual_psiN + shift)
     
     @property
     def psi_o(self,i_s=0):
@@ -3039,6 +3111,10 @@ class normalized_perfect_simulation(perfect_simulation):
     @property
     def pedestal_width_psiN2(self):
         return numpy.fabs(self.pedestal_start_stop_psiN2[-1] - self.pedestal_start_stop_psiN2[0])
+
+    @property
+    def pedestal_width_psiN3(self):
+        return numpy.fabs(self.pedestal_start_stop_psiN3[-1] - self.pedestal_start_stop_psiN3[0])
     
     @property
     def r_old(self, dr_dpsiN=0.591412216405):
@@ -3052,8 +3128,12 @@ class normalized_perfect_simulation(perfect_simulation):
     
     @property
     def pedestal_start_stop_psiN2(self):
-        return [self.psiN2[point] for point in self.pedestal_start_stop_indices]
+        return [point/self.pedestal_start_stop[-1] for point in self.pedestal_start_stop]
 
+    @property
+    def pedestal_start_stop_psiN3(self):
+        shift = 1 - self.pedestal_start_stop[-1]
+        return [point + shift for point in self.pedestal_start_stop]
     
     @property
     def pedestal_start_stop_psi_o(self):

@@ -196,6 +196,7 @@ class perfect_subplot:
             self.linewidths=kwarg_default("linewidths",[1]*len(x),**kwargs)
             self.colors=kwarg_default("colors",["k"]*len(x),**kwargs)
 
+
             #title position
             self.title_y=kwarg_default("title_y",0.4,**kwargs)
             self.title_x=kwarg_default("title_x",1.04,**kwargs)
@@ -243,6 +244,8 @@ class perfect_subplot:
                 self.xy_data_exists=True
                 #default plot-type is streamplot
                 self.plot_type=kwarg_default("plot_type","streamplot",**kwargs)
+                self.arrow_density = kwarg_default("arrow_density",(2,3),**kwargs)
+
 
                 if (data_xaxis == 0) and (data_yaxis == 1):
                     self.y_data = y_data
@@ -360,6 +363,7 @@ class perfect_subplot:
             for i in range(len(y)):
                 if self.plot_type == "line":
                     try:
+                        #print str(i) + ": " + str(self.linestyles[i])
                         ax.plot(x[i],y[i],linestyle=self.linestyles[i],color=self.colors[i],linewidth=self.linewidths[i],marker=self.markers[i],markevery=self.markeverys[i],fillstyle=self.fillstyles[i],markersize=self.markersizes[i],)
                     except IndexError:
                         print "Index error in ax.plot(). Most likely, linestyles, linewidths and colors have the wrong lengths."
@@ -434,7 +438,7 @@ class perfect_subplot:
                     #linecolor=self.linecolor
                     linecolor=None
                 if self.plot_type == "streamplot":
-                    streamplot(ax,self.x,self.y,U,V,density=(2,3),cmap=self.cm,color=color,vmin=vmin,vmax=vmax,linecolor=linecolor,rasterized=True)
+                    streamplot(ax,self.x,self.y,U,V,density=self.arrow_density,cmap=self.cm,color=color,vmin=vmin,vmax=vmax,linecolor=linecolor,rasterized=True)
                     #rasterizes collection of lines and arrows in streamplot as one
                 else:
                     print "perfect_subplot: 2D: error: unrecognized plot-type for vector data"
