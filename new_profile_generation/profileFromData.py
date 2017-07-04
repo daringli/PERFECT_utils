@@ -1,6 +1,7 @@
 from profile import Profile
 from generator import Generator
 from scipy.interpolate import UnivariateSpline
+import numpy
 
 class ProfileFromData(Generator):
     """Profile generator that takes data y sampled at points x and interpolates/fits using the kind of interpolation specified by kind."""
@@ -17,6 +18,8 @@ class ProfileFromData(Generator):
         
     def generate(self,profileList=[]):
         if self.type is "smoothingSpline":
+            if numpy.any(self.x[1:] <= self.x[:-1]):
+                raise ValueError("x vector to profileFromData must be monotonic for scipy.interpolate.UnivariateSpline")
             f = UnivariateSpline(self.x, self.y, k=self.order,s=self.smoothing)
             ddx_f = f.derivative()
         else: 
