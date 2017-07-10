@@ -86,5 +86,12 @@ if __name__ == "__main__":
     profiles.append(Phi)
     profiles.append(ddx_Phi)
 
+    plt.plot(x,n(x))
+    plt.plot(x,eta(x))
+    
+    plt.show()
+
+
+
     plt.plot(x,Phi(x))
     plt.show()

@@ -14,7 +14,7 @@ import numpy
 import sys
 
 
-def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,xlims=[90,100],ylims=[0,2],zlims=None,species=True,sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","H":"i","T":"i","He":"z","N":"z","e":"e"},vlines=[],hlines=[],share_scale=[],skip_species = [],simulList=None,outputname=None,colors=None,linestyles=None,zlabels=None,zaxis_powerlimits=(0,0),pedestal_start_stop=None,pedestal_point=None,core_point=None,putboxes=[]):
+def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,xlims=[90,100],ylims=[0,2],zlims=None,species=True,sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","H":"i","T":"i","He":"z","N":"z","e":"e"},vlines=[],hlines=[],share_scale=[],skip_species = [],simulList=None,outputname=None,colors=None,linestyles=None,zlabels=None,zaxis_powerlimits=(0,0),pedestal_start_stop=None,pedestal_point=None,core_point=None,putboxes=[],x_scale=None,y_scale=None):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -143,20 +143,25 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
                     gl_grp="global"
 
                 if (yattr == "theta") or (yattr == "theta_shifted"):
-                    y_scale = 1/numpy.pi
+                    if y_scale is None:
+                        y_scale = 1/numpy.pi
                     y_period = 2.0
                 else:
-                    y_scale=1
+                    if y_scale is None:
+                        y_scale=1
                     y_period=None
                     
                 if (xattr == "theta") or (xattr == "theta_shifted"):
-                    x_scale = 1/numpy.pi
+                    if x_scale is None:
+                        x_scale = 1/numpy.pi
                     x_period = 2.0
                 elif (xattr == "psi") or (xattr == "actual_psiN"):
-                    x_scale=100
+                    if x_scale is None:
+                        x_scale=100
                     x_period = None
                 else:
-                    x_scale=1
+                    if x_scale is None:
+                        x_scale=1
                     x_period=None
 
                 if xattr=="psi_o":
@@ -225,7 +230,10 @@ def perfect_2d_plot(dirlist,attribs,xattr="psi",yattr="theta",normname="norms.na
         
                 
         if xattr is not "psi_o":
-            global_xlabel=r"$100\psi_N$"
+            if x_scale != 1:
+                global_xlabel=r"$" + str(x_scale) + "\psi_N$"
+            else:
+                global_xlabel=r"$\psi_N$"
         else:
             global_xlabel=r"$\psi^{\circ}$"
         perfect_visualizer(psp_list,gridspec,global_xlabel=global_xlabel,dimensions=2,global_ylabel=r"$\theta/\pi$",putboxes=putboxes)

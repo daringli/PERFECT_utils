@@ -6,7 +6,7 @@ import numpy
 class ProfileEtaFromNExtrapolation(Generator):
     """Profile generator that takes a density profile, interval and extrapolation method."""
     
-    def __init__(self, interval, species = '', extrapolation=1):
+    def __init__(self, interval, species = '', useSpecies=None, ratio=1.0, extrapolation=1):
         self.profile = "eta"
         self.species = species
         self.interval = interval
@@ -14,15 +14,19 @@ class ProfileEtaFromNExtrapolation(Generator):
             self.extrapolation = "polyfit"
             self.order = extrapolation
             self.smoothing = 0
-
-    
+        if useSpecies is None:
+            self.useSpecies = self.species
+        else:
+            self.useSpecies = useSpecies
+        self.ratio = ratio
         
     def generate(self,profileList=[]):
         wantedProfiles = ["n","ddx_n"]
 
-        
-                
-        [n,ddx_n] = extractProfilesFromList(profileList,wantedProfiles,self.species)
+        [_n,_ddx_n] = extractProfilesFromList(profileList,wantedProfiles,self.useSpecies)
+        n = self.ratio * _n
+        ddx_n = self.ratio * _ddx_n
+
 
         if self.extrapolation == "polyfit":
             sample_points = (self.interval[-1],self.interval[1],self.order+1)
@@ -31,9 +35,6 @@ class ProfileEtaFromNExtrapolation(Generator):
             eta = lambda x : numpy.polyval(poly,x)
             ddx_eta = lambda x : numpy.polyval(numpy.polyder(poly),x)
             
-
-        
-        
 
         p = Profile(eta)
         ddx_p = Profile(ddx_eta)

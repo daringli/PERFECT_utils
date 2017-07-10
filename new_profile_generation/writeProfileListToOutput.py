@@ -26,8 +26,9 @@ def writeProfileListToOutput(profileList,simul):
     grid = extractProfilesFromList(profileList,"grid","none","any")[0]
     ddx_grid = extractProfilesFromList(profileList,"ddx_grid","none","any")[0]
     s = simul.inputs.psi
-    create_psiAHat_of_Npsi("psiAHat.h5",Npsi,ddx_grid(s),grid(s))
     psiAHat = simul.psiAHat
+    create_psiAHat_of_Npsi("psiAHat.h5",Npsi,ddx_grid(s),grid(s),grid(s)/psiAHat)
+    
     
     # with the grid in place, we sample the profiles on it
     n = [None]*Nspecies

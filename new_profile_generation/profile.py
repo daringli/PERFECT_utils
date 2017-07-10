@@ -74,6 +74,18 @@ class Profile(object):
         else:
             return Profile(lambda x: other / self(x))
 
+    def __pow__(self, other):
+        if callable(other):
+            return Profile(lambda x: self(x)**other(x))
+        else:
+            return Profile(lambda x: self(x)**other)
+
+    def __rpow__(self, other):
+        if callable(other):
+            return Profile(lambda x: other(x)**self(x))
+        else:
+            return Profile(lambda x: other**self(x))
+
 
 if __name__ == "__main__":
     import numpy
@@ -86,6 +98,7 @@ if __name__ == "__main__":
     p4 = p1 * p2 # x^3
     p5 = p1 / p2 # 1/x
     p6= -p1
+    p7= p1 ** p2 # x**(x**2)
 
     print p1(x) # 0 1 2
     print p2(x) # 0 1 4
@@ -93,6 +106,7 @@ if __name__ == "__main__":
     print p4(x) # 0 1 8
     print p5(x) # nan 1 0.5
     print p6(x) # 0 -1 -2
+    print p7(x) # 1 1 16
 
     print "==========================="
     # operator tests between Profiles and functions
@@ -102,6 +116,7 @@ if __name__ == "__main__":
     p4 = p1 * p2 # x^3
     p5 = p1 / p2 # 1/x
     p6= -p1
+    p7 = p1 ** p2 # x**(x*2)
 
     print p1(x) # 0 1 2
     print p2(x) # 0 1 4
@@ -109,6 +124,7 @@ if __name__ == "__main__":
     print p4(x) # 0 1 8
     print p5(x) # nan 1 0.5
     print p6(x) # 0 -1 -2
+    print p7(x) # 1 1 16
 
     print "==========================="
     # operator tests between functions and Profiles
@@ -118,6 +134,7 @@ if __name__ == "__main__":
     p4 = p1 * p2 # x^3
     p5 = p1 / p2 # 1/x
     p6= lambda x : -x
+    p7= p1 ** p2 # x**(x**2)
 
     print p1(x) # 0 1 2
     print p2(x) # 0 1 4
@@ -125,6 +142,7 @@ if __name__ == "__main__":
     print p4(x) # 0 1 8
     print p5(x) # nan 1 0.5
     print p6(x) # -0 -1 -2
+    print p7(x) # 1 1 16
 
     print "==========================="
     # operator tests between numbers and Profiles
@@ -133,12 +151,15 @@ if __name__ == "__main__":
     p3 = p1 + p2 # x + x^2
     p4 = p1 * p2 # x^3
     p5 = p1 / p2 # 1/x
+    p6 = p1 ** p2 # 1.2**(x**2)
+
 
     print p1 # 1.2
     print p2(x) # 0 1 4
     print p3(x) # 1.2 2.2 5.2
     print p4(x) # 0 1.2 4.8
     print p5(x) # inf 1.2 0.3
+    print p6(x) # 1 1.2 2.0736
 
     print "==========================="
     # operator tests between Profiles and numbers
@@ -147,12 +168,15 @@ if __name__ == "__main__":
     p3 = p1 + p2 # x + x^2
     p4 = p1 * p2 # x^3
     p5 = p1 / p2 # 1/x
+    p6 = p1 ** p2 # x ** 1.2
 
     print p1(x) # 0 1 2
     print p2 # 1.2
     print p3(x) # 1.2 2.2 3.2
     print p4(x) # 0 1.2 2.4
     print p5(x) # 0 0.83333 1.666666
+    print p6(x) # 0 1 2.2973967099940698
+
 
     # print, repr and save to file
     p1 = Profile(lambda x : x)
