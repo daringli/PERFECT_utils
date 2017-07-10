@@ -107,7 +107,10 @@ class perfect_simulation(object):
         self.RHat_name="RHat"
         self.JHat_name="JHat"
         self.IHat_name="IHat"
+        self.dIHatdpsiN_name="d(IHat)d(psi)"
         self.BHat_name="BHat"
+        self.dBHatdpsiN_name="d(BHat)d(psi)"
+        self.dBHatdtheta_name="d(BHat)d(theta)"
         self.FSABHat2_name="FSABHat2"
         self.q_name="Miller_q"
         self.epsilon_name="epsil"
@@ -2330,7 +2333,15 @@ class perfect_simulation(object):
     @property
     def IHat(self):
         return nstack(self.outputs[self.group_name+self.IHat_name][()],axis=1,n=len(self.theta)) #add theta axis
-
+    
+    @property
+    def FSA_IHat(self):
+        return self.outputs[self.group_name+self.IHat_name][()]
+    
+    @property
+    def ddpsiN_IHat(self):
+        return self.outputs[self.group_name+self.dIHatdpsiN_name][()]
+    
     @property
     def RHat(self):
         RHat = self.outputs[self.group_name+self.RHat_name][()]
@@ -2340,6 +2351,10 @@ class perfect_simulation(object):
             #for compatibility with old 1D RHat output
             return nstack(RHat,axis=0,n=len(self.psi)) #add psi axis
 
+    @property
+    def RHat_mid_ped(self):
+        self.RHat[self.mid_pedestal_point_index]
+        
     @property
     def FSARHat(self):
         return self.FSA(self.RHat)
@@ -2351,11 +2366,37 @@ class perfect_simulation(object):
     @property
     def FSA_JHat(self):
         return self.FSA(self.JHat)
-        
+
+    @property
+    def JHat_mid_ped(self):
+        return self.JHat[self.mid_pedestal_point_index]
+    
     @property
     def BHat(self):
         return self.outputs[self.group_name+self.BHat_name][()]
 
+    @property
+    def ddpsiN_BHat(self):
+        return self.outputs[self.group_name+self.dBHatdpsiN_name][()]
+
+    @property
+    def ddtheta_BHat(self):
+        return self.outputs[self.group_name+self.dBHatdtheta_name][()]
+    
+    
+    @property
+    def BHat_mid_ped(self):
+        return self.BHat[self.mid_pedestal_point_index]
+
+    @property
+    def ddpsiN_BHat_mid_ped(self):
+        return self.ddpsiN_BHat[self.mid_pedestal_point_index]
+    
+    @property
+    def ddtheta_BHat_mid_ped(self):
+        return self.ddtheta_BHat[self.mid_pedestal_point_index]
+    
+    
     @property
     def FSABHat2(self):
         return self.outputs[self.group_name+self.FSABHat2_name][()]
@@ -2378,6 +2419,11 @@ class perfect_simulation(object):
         #will typically be negative for PERFECT Miller (opposite to poloidal direction)
         return numpy.sign(self.JHat)*numpy.sqrt(self.BHat**2-self.Bt**2)
 
+    @property
+    def Bp_mid_ped(self):
+        self.Bp[self.mid_pedestal_point_index]
+
+    
     @property
     def FSABp(self):
         return self.FSA(self.Bp)
