@@ -1588,11 +1588,14 @@ class perfect_simulation(object):
     
     @property
     def FSA_toroidal_flow(self):
-        return self.outputs[self.group_name+self.FSA_toroidal_flow_name][()]
+        #return self.outputs[self.group_name+self.FSA_toroidal_flow_name][()]
+        return self.FSA(self.toroidal_flow)
 
     @property
     def FSA_poloidal_flow(self):
-        return self.outputs[self.group_name+self.FSA_poloidal_flow_name][()]
+        #return self.outputs[self.group_name+self.FSA_poloidal_flow_name][()]
+        return self.FSA(self.poloidal_flow)
+
 
     @property
     def ddpsiN_n_FSA_toroidal_flow(self):
@@ -2353,7 +2356,7 @@ class perfect_simulation(object):
 
     @property
     def RHat_mid_ped(self):
-        self.RHat[self.mid_pedestal_point_index]
+        return self.RHat[self.mid_pedestal_point_index]
         
     @property
     def FSARHat(self):
@@ -2421,7 +2424,7 @@ class perfect_simulation(object):
 
     @property
     def Bp_mid_ped(self):
-        self.Bp[self.mid_pedestal_point_index]
+        return self.Bp[self.mid_pedestal_point_index]
 
     
     @property

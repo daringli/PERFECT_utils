@@ -175,6 +175,8 @@ class perfect_subplot:
                 print "perfect_subplot: 1D: error: data and x list have different lengths"
                 raise ValueError
             elif not all(len(self.x[i]) == len(self.data[i]) for i in range(len(self.data))):
+                print [self.x[i].shape for i in range(len(self.x))]
+                print [self.data[i].shape for i in range(len(self.data))]
                 print "perfect_subplot: 1D: error: some data and x have different lengths"
                 raise ValueError
                 

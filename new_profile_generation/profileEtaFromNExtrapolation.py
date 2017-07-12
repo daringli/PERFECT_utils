@@ -29,7 +29,7 @@ class ProfileEtaFromNExtrapolation(Generator):
 
 
         if self.extrapolation == "polyfit":
-            sample_points = (self.interval[-1],self.interval[1],self.order+1)
+            sample_points = numpy.linspace(self.interval[-1],self.interval[1],self.order+1)
             sample_n = [n(s_p) for s_p in sample_points]
             poly = numpy.polyfit(sample_points,sample_n,self.order)
             eta = lambda x : numpy.polyval(poly,x)
