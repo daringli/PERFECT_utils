@@ -1,6 +1,7 @@
 from profile import Profile
 from generator import Generator
 from findInProfileList import extractProfilesFromList
+from profileEtaFromPhiN import ProfileEtaFromPhiN
 import numpy
 
 class ProfileEtaFromNExtrapolation(Generator):
@@ -29,7 +30,7 @@ class ProfileEtaFromNExtrapolation(Generator):
 
 
         if self.extrapolation == "polyfit":
-            sample_points = numpy.linspace(self.interval[-1],self.interval[1],self.order+1)
+            sample_points = numpy.linspace(self.interval[0],self.interval[1],self.order+1)
             sample_n = [n(s_p) for s_p in sample_points]
             poly = numpy.polyfit(sample_points,sample_n,self.order)
             eta = lambda x : numpy.polyval(poly,x)
@@ -79,24 +80,29 @@ if __name__ == "__main__":
     
     # bezier curves
     genn = Profile3Linear(XStart=XStart,XStop=XStop,ddx_YCore=ddx_nCore,ddx_YSOL=ddx_nSOL,width=width,XPedStart=XPedStart,XPedStop=XPedStop,YPed=nPed,ddx_YPed=ddx_nPed,transWidthToPedWidth=0.2,profile="n")
-    genPhi = Profile3Linear(XStart=XStart,XStop=XStop,ddx_YCore=ddx_PhiCore,ddx_YSOL=ddx_PhiSOL,width=width,XPedStart=XPedStart,XPedStop=XPedStop,YPed=PhiPed,ddx_YPed=ddx_PhiPed,transWidthToPedWidth=0.2,profile="Phi")
-    genT = Profile3Linear(XStart=XStart,XStop=XStop,ddx_YCore=ddx_TCore,ddx_YSOL=ddx_TSOL,width=width,XPedStart=XPedStart,XPedStop=XPedStop,YPed=TPed,ddx_YPed=ddx_TPed,transWidthToPedWidth=0.2,profile="T")
+    #genPhi = Profile3Linear(XStart=XStart,XStop=XStop,ddx_YCore=ddx_PhiCore,ddx_YSOL=ddx_PhiSOL,width=width,XPedStart=XPedStart,XPedStop=XPedStop,YPed=PhiPed,ddx_YPed=ddx_PhiPed,transWidthToPedWidth=0.2,profile="Phi")
+    #genT = Profile3Linear(XStart=XStart,XStop=XStop,ddx_YCore=ddx_TCore,ddx_YSOL=ddx_TSOL,width=width,XPedStart=XPedStart,XPedStop=XPedStop,YPed=TPed,ddx_YPed=ddx_TPed,transWidthToPedWidth=0.2,profile="T")
    
     
     (n, ddx_n) = genn.generate()
-    (Phi, ddx_Phi) = genPhi.generate()
-    (T, ddx_T) = genT.generate()
-    profiles = [n,ddx_n,Phi,ddx_Phi,T,ddx_T]
+    #(Phi, ddx_Phi) = genPhi.generate()
+    #(T, ddx_T) = genT.generate()
+    profiles = [n,ddx_n]
     
     # potential
     Z = 1
     Delta = 0.0006  #based on He papar
     omega = Delta/2
     DeltaOver2omega = Delta/(2*omega)
-    genEta = ProfileEtaFromPhiN(Z,'',DeltaOver2omega)
+    genEta = ProfileEtaFromNExtrapolation([0.9,0.93],'')
     (Eta,ddx_Eta) = genEta.generate(profiles)
     profiles.append(Eta)
     profiles.append(ddx_Eta)
 
     plt.plot(x,Eta(x))
+    plt.plot(x,n(x))
+    plt.show()
+
+    plt.plot(x,ddx_Eta(x))
+    plt.plot(x,ddx_n(x))
     plt.show()
