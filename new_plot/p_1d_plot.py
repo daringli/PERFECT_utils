@@ -18,7 +18,7 @@ import scipy.integrate
 from mpldatacursor import datacursor
 
 
-def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,markers=None,markeverys=None,fillstyles=None,linestyles=None,linewidths=None,xlims=None,same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","H":"i","T":"i","He":"z","N":"z","e":"e"},vlines=[],hlines=[],share_scale=[],interactive=False,colors=None,skip_species = [],yaxis_powerlimits=(0,0),hidden_xticklabels=[],yaxis_label_x=-0.15,ylims=None,simulList=None,pedestal_start_stop=None,pedestal_point=None,core_point=None,putboxes=[],return_psps=False,set_species_title=True,group_mode="species"):
+def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,markers=None,markeverys=None,markersizes=None,fillstyles=None,linestyles=None,linewidths=None,xlims=None,same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","H":"i","T":"i","He":"z","N":"z","e":"e"},vlines=[],hlines=[],share_scale=[],interactive=False,colors=None,skip_species = [],yaxis_powerlimits=(0,0),hidden_xticklabels=[],yaxis_label_x=-0.15,ylims=None,simulList=None,pedestal_start_stop=None,pedestal_point=None,core_point=None,putboxes=[],return_psps=False,set_species_title=True,group_mode="species"):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -73,6 +73,10 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
     if markers != None:
         if markeverys == None:
             markeverys = [None]*len(simulList)
+        if markersizes == None:
+            markersizes = [1]*len(simulList)
+
+
 
         if fillstyles == None:
             if lg:
@@ -91,6 +95,8 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
         markers = [None]*len(simulList)
         fillstyles = ["none"]*len(simulList)
         markeverys = [None]*len(simulList)
+        markersizes = [None]*len(simulList)
+
 
     #some logic to differentiate between species independent
     #and species quantities further down will fail if there are simulations
@@ -264,7 +270,7 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                     ylim = None
                 else:
                     ylim = ylims[i]
-                psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,dimensions=1,groups=[s,attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,linewidths=linewidths,colors=linecolors,markers=markers,fillstyles=fillstyles,markeverys=markeverys,yaxis_powerlimits=yaxis_powerlimits,hidden_xticklabels=hidden_xticklabels,yaxis_label_x=yaxis_label_x,ylims=ylim,x_period=x_period)) #yaxis_label=ylabels[i_a]
+                psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,dimensions=1,groups=[s,attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,linewidths=linewidths,colors=linecolors,markers=markers,fillstyles=fillstyles,markeverys=markeverys,markersizes=markersizes,yaxis_powerlimits=yaxis_powerlimits,hidden_xticklabels=hidden_xticklabels,yaxis_label_x=yaxis_label_x,ylims=ylim,x_period=x_period)) #yaxis_label=ylabels[i_a]
                 
 
         else:
