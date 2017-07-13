@@ -16,7 +16,7 @@ class ProfileEtaFromNExtrapolationAdvanced(Generator):
         self.interval2 = interval2
         self.point = point
         if l is None:
-            self.l = (self.interval1[-1] - self.interval2[0])/4.0
+            self.l = (self.interval2[0] - self.interval1[-1])/4.0
         else:
             self.l = l
         if type(extrapolation) is int:
@@ -52,8 +52,8 @@ class ProfileEtaFromNExtrapolationAdvanced(Generator):
             ddx_eta1 = lambda x : numpy.polyval(numpy.polyder(poly1),x)
             eta2 = lambda x : diff + numpy.polyval(poly2,x)
             ddx_eta2 = lambda x : numpy.polyval(numpy.polyder(poly2),x)
-            eta = mtanh_transition(eta1,eta2,self.l,self.point)
-            ddx_eta = ddx_mtanh_transition(eta1,eta2,ddx_eta1,ddx_eta2,self.l,self.point)
+            eta = mtanh_transition(eta2,eta1,self.l,self.point)
+            ddx_eta = ddx_mtanh_transition(eta2,eta1,ddx_eta2,ddx_eta1,self.l,self.point)
 
 
         p = Profile(eta)
