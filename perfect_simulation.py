@@ -2386,7 +2386,14 @@ class perfect_simulation(object):
     def ddtheta_BHat(self):
         return self.outputs[self.group_name+self.dBHatdtheta_name][()]
     
+    @property
+    def ddpsiN_BHat_inboard(self):
+        return self.attrib_at_theta_of_psi("ddpsiN_BHat",numpy.pi)
     
+    @property
+    def ddpsiN_BHat_outboard(self):
+        return self.attrib_at_theta_of_psi("ddpsiN_BHat",0.0)
+
     @property
     def BHat_mid_ped(self):
         return self.BHat[self.mid_pedestal_point_index]
