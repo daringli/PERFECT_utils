@@ -9,7 +9,7 @@ class ProfileExtendFromData(Generator):
 After interpolation, it extrends the profile outside a range (typically outside the last-closed flux-surface to create a numerical buffer zone).
 Extension is designed to be smooth and to let local theory be valid at boundary"""
     
-    def __init__(self,x,y,interval,kind=3,profile='',species='',extrapolation=2.0,offset=1.0):
+    def __init__(self,x,y,interval,kind=3,profile='',species='',extrapolation=2.0,offset=1.0,a=0.05,b=-0.15,C=7.0):
         self.x = x
         self.y = y
         self.profile=profile
@@ -25,6 +25,13 @@ Extension is designed to be smooth and to let local theory be valid at boundary"
             self.fraction = extrapolation
             self.extrapolation = "derivativeFraction"
             self.offset=offset
+
+        elif extrapolation == "istvan":
+            self.extrapolation = extrapolation
+            self.a=a
+            self.b=b
+            self.C=C
+            
         
     def generate(self,profileList=[]):
         if self.type is "smoothingSpline":
@@ -41,26 +48,33 @@ Extension is designed to be smooth and to let local theory be valid at boundary"
             ddx_g = lambda x :  ddx_f(x)/(self.fraction*(x - self.x0) + self.offset)
             temp = numpy.vectorize(lambda x: quad(ddx_g,self.x0,x)[0])
             g = lambda x : f(self.x0) + temp(x)
+            def h(x):
+                if x > self.x0:
+                    return g(x)
+                else:
+                    return f(x)
+
+            def ddx_h(x):
+                if x > self.x0:
+                    return ddx_g(x)
+                else:
+                    return ddx_f(x)
+            p = Profile(numpy.vectorize(h))
+            ddx_p = Profile(numpy.vectorize(ddx_h))
+        
+            
+        elif self.extrapolation == "istvan":
+            #h=Log{ Exp[C f(psi)]+Exp[C (a - b psi) ] } /C
+            h = lambda x: numpy.log(numpy.exp(self.C * f(x)) + numpy.exp(self.C * (self.a + self.b*x)))/self.C
+            ddx_h =  lambda x: (ddx_f(x) * numpy.exp(self.C*f(x)) + self.b * numpy.exp(self.C*(self.a + self.b*x)) )/(numpy.exp(self.C * f(x)) + numpy.exp(self.C * (self.a + self.b*x)))
+            p = Profile(h)
+            ddx_p = Profile(ddx_h)
         else: 
             print "ProfileFromData : error: unsupported extension scheme!"
             raise ValueError('Unsupported extension scheme!')
 
-        def h(x):
-            if x > self.x0:
-                return g(x)
-            else:
-                return f(x)
-
-        def ddx_h(x):
-            if x > self.x0:
-                return ddx_g(x)
-            else:
-                return ddx_f(x)
         
     
-
-        p = Profile(numpy.vectorize(h))
-        ddx_p = Profile(numpy.vectorize(ddx_h))
         p.profile = self.profile
         p.species = self.species
         p.generator = 'extendedFromData'
@@ -89,4 +103,16 @@ if __name__ == "__main__":
     x = numpy.linspace(0,5,100)
     plt.plot(x,f1(x))
     plt.plot(x,ddx_f1(x))
+    plt.show()
+
+    gen2 = ProfileExtendFromData(xp,yp,[0,1],kind=3,extrapolation = "istvan")
+    (f2, ddx_f2) = gen2.generate()
+    x = numpy.linspace(0,5,300)
+    plt.plot(x,f2(x))
+    plt.plot(x,ddx_f2(x))
+
+    # crude comparison with numerical derivative
+    dx = x[1]-x[0]
+    ddx_f2_num = (f2(x[1:]) - f2(x[:-1]))/dx
+    plt.plot(x[:-1],ddx_f2_num)
     plt.show()

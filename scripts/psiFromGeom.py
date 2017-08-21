@@ -29,5 +29,5 @@ if __name__=="__main__":
     print "filename: " + filename
     print "psiMid: " + "{0:0.16f}".format(psiMid)
     print "psiDiameter: " + "{0:0.16f}".format(psiDiameter)
-    print "psiA: " + "{0:0.16f}".format(psiA)
+#    print "psiA: " + "{0:0.16f}".format(psiA)
     

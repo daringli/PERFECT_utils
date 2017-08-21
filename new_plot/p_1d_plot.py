@@ -115,15 +115,12 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
     species_set=set([])
     for simul in simulList:
         nonexcluded = [s for s in simul.species if s not in skip_species]
-        simul.species_list = nonexcluded
+        #simul.species_list = nonexcluded
         # add nonexcluded species to total species set
-        species_set = species_set | set(simul.species)
+        species_set = species_set | set(nonexcluded)
     if sort_species:
         species_set=sort_species_list(list(species_set),first,last)
     
-    #print gridspec
-    
-
     i=-1
     psp_lists=[] #list of lists of perfect subplot object
     gridspec_list=[]
@@ -209,7 +206,8 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
             elif group_mode == "simulations":
                 this_iterable = range(len(simulList))
                 set_species_title = False
-            
+
+       
             for i_sp,s in enumerate(this_iterable):
                 i=i+1
                 data = None
@@ -388,10 +386,6 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                 if ylims is None:
                     this_share_scale_group.setattrs("ylims",[this_share_scale_group.get_min("data",margin=0.1),this_share_scale_group.get_max("data",margin=0.1)])
             
-            
-        
-            
-        #print gridspec_list[i_li]
         if xattr=="psi":
             global_xlabel=r"$\psi_N$"
         elif xattr=="psiN2":
