@@ -2395,6 +2395,10 @@ class perfect_simulation(object):
         return self.attrib_at_theta_of_psi("ddpsiN_BHat",0.0)
 
     @property
+    def ddpsiN_BHat_point(self):
+        return self.attrib_at_theta_of_psi("ddpsiN_BHat",0.4*2*numpy.pi)
+
+    @property
     def BHat_mid_ped(self):
         return self.BHat[self.mid_pedestal_point_index]
 
@@ -2406,7 +2410,18 @@ class perfect_simulation(object):
     def ddtheta_BHat_mid_ped(self):
         return self.ddtheta_BHat[self.mid_pedestal_point_index]
     
-    
+    @property
+    def BHat_psipoint(self):
+        return self.attrib_at_psi_of_theta(self.BHat,1.09)
+        
+    @property
+    def ddpsiN_BHat_psipoint(self):
+        return self.attrib_at_psi_of_theta(self.ddpsiN_BHat,1.09)
+        
+    @property
+    def ddtheta_BHat_psipoint(self):
+        return self.attrib_at_psi_of_theta(self.ddtheta_BHat,1.09)
+        
     @property
     def FSABHat2(self):
         return self.outputs[self.group_name+self.FSABHat2_name][()]
@@ -2433,6 +2448,10 @@ class perfect_simulation(object):
     def Bp_mid_ped(self):
         return self.Bp[self.mid_pedestal_point_index]
 
+    @property
+    def Bp_point(self):
+        return self.attrib_at_theta_of_psi(self.Bp,numpy.pi*0.65)
+        
     
     @property
     def FSABp(self):
