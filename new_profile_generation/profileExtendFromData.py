@@ -36,7 +36,7 @@ Extension is designed to be smooth and to let local theory be valid at boundary"
     def generate(self,profileList=[]):
         if self.type is "smoothingSpline":
             if numpy.any(self.x[1:] <= self.x[:-1]):
-                raise ValueError("x vector to profileFromData must be monotonic for scipy.interpolate.UnivariateSpline")
+                raise ValueError("x vector to profileFromData must be monotonic for scipy.interpolate.UnivariateSpline. In profile: " + self.profile + "_" + self.species + ", offending index: " + str(numpy.where(numpy.diff(self.x)<=0)))
             f = UnivariateSpline(self.x, self.y, k=self.order,s=self.smoothing)
             ddx_f = f.derivative()
         else: 

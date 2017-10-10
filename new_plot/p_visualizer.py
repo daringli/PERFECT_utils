@@ -85,10 +85,11 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
     global_ylabel=kwarg_default("global_ylabel",None,**kwargs)
     if global_ylabel is not None:
         global_ylabel_x=kwarg_default("global_ylabel_x",0.01,**kwargs)
+        global_ylabel_y=kwarg_default("global_ylabel_y",0.5,**kwargs)
         if dimensions == 1:
-            fig.text(global_ylabel_x, 0.5+adjust_bottom/4, global_ylabel, va='center', rotation='vertical')
+            fig.text(global_ylabel_x, global_ylabel_y+adjust_bottom/4, global_ylabel, va='center', rotation='vertical')
         elif dimensions == 2:
-            fig.text(global_ylabel_x, 0.5+adjust_bottom/4.0, global_ylabel, va='center', rotation='vertical')
+            fig.text(global_ylabel_x, global_ylabel_y+adjust_bottom/4.0, global_ylabel, va='center', rotation='vertical')
 
     for putbox in putboxes:
         fig.text(putbox[0],putbox[1],putbox[2], ha='center')
@@ -170,11 +171,11 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
         #we need to sort out ticks after plotting, since they are generated
         #during the plot operation
         if p_subplot.xaxis_label is not None and p_subplot.show_xaxis_label == True:
-            ax.set_xlabel(p_subplot.xaxis_label)
+            ax.set_xlabel(p_subplot.xaxis_label,color=p_subplot.xaxis_label_color)
             ax.xaxis.set_label_coords(p_subplot.xaxis_label_x,p_subplot.xaxis_label_y) 
         if p_subplot.yaxis_label is not None and p_subplot.show_yaxis_label == True:
             #print str(p_subplot.yaxis_label)+": " +"("+str(p_subplot.yaxis_label_x)+","+str(p_subplot.yaxis_label_y)+")"
-            ax.set_ylabel(p_subplot.yaxis_label)
+            ax.set_ylabel(p_subplot.yaxis_label,color=p_subplot.yaxis_label_color)
             ax.yaxis.set_label_coords(p_subplot.yaxis_label_x,p_subplot.yaxis_label_y) 
         
         if p_subplot.xlims is not None:

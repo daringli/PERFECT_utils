@@ -23,6 +23,9 @@ from array_rank import arraylist_rank
 from peakfinder import PPV,PPV_x
 
 
+test_theta_point = 1.5*numpy.pi
+test_psi_point = 1.025 #given in psiN3
+
 class perfect_simulation(object):
 
     def __init__(self,input_filename,output_filename=None,species_filename=None,psiN_to_psi_filename=None,global_term_multiplier_filename=None,group_name=None,pedestal_start_stop=(None,None),pedestal_point = None,core_point=None):
@@ -456,6 +459,46 @@ class perfect_simulation(object):
             else:
                 print "ERROR: perfect_simulation.ddpsiN: rank 1 array badly shaped."
                 sys.exit(1)
+
+    def integrate(self,attrib,interval,x="psiN3"):
+        if type(attrib) == str:
+            a = getattr(self,attrib)
+        else:
+            a = attrib
+
+        if type(x) == str:
+            x = getattr(self,x)
+        else:
+            x = x
+
+        indices = get_index_range(x,interval)
+        
+        #determine shape of a and see that it is psi dependent
+        rank=arraylist_rank(a)
+        if rank == 3:
+            #sanity check. Should have shape Npsi,Ntheta,Nspecies
+            if a.shape != (self.Npsi,self.Ntheta,self.Nspecies):
+                print "ERROR: perfect_simulation.integrate: rank 3 array badly shaped."
+                sys.exit(1)
+        elif rank == 2:
+            #sanity check. Either (Npsi,Nspecies) or (Npsi,Ntheta) shaped
+            if not ((a.shape == (self.Npsi,self.Ntheta)) or (a.shape == (self.Npsi,self.Nspecies))):
+                print "ERROR: perfect_simulation.integrate: rank 2 array badly shaped."
+                sys.exit(1)
+        elif rank == 1:
+            #sanity check. (Npsi,) shaped
+            if a.shape != (self.Npsi,):
+                print "ERROR: perfect_simulation.integrate: rank 1 array badly shaped."
+                sys.exit(1)
+        else:
+            print "ERROR: perfect_simulation.integrate: invalid rank = " + str(rank)
+            sys.exit(1)
+
+        print indices
+        print x[indices[0]:indices[1]]
+        print a[indices[0]:indices[1]]
+        return scipy.integrate.simps(a[indices[0]:indices[1]],x[indices[0]:indices[1]],axis=0)
+
         
 
     def internal_grid_fft(self,attrib,interval=None,use_internal_grid_4_interval=False):
@@ -613,12 +656,18 @@ class perfect_simulation(object):
             print "perfect_simulation: boundary_indices: ERROR, invalid boundaryScheme!"
             return None
                 
-    def attrib_at_psi_of_theta(self,attrib,psiN):
-        index=get_index_range(self.actual_psiN,[psiN,psiN],ret_range=False)[0]
+    def attrib_at_psi_of_theta(self,attrib,psiN,x="psiN3"):
         if type(attrib) == str:
             a=getattr(self,attrib)
         else:
             a=attrib
+
+        if type(attrib) == str:
+            x=getattr(self,x)
+        else:
+            x=attrib
+        index=get_index_range(x,[psiN,psiN],ret_range=False)[0]
+            
         rank=arraylist_rank(a)
         if rank==3:
             return a[index,:,:]
@@ -866,6 +915,10 @@ class perfect_simulation(object):
     def sum_m_momentum_flux_psi_unit_vector(self):
         return numpy.sum(self.m_momentum_flux_psi_unit_vector,axis=1)
 
+    @property
+    def ion_momentum_flux(self):
+        return numpy.sum(self.momentum_flux[:,:-1],axis=1)
+
     def Prandtl_proxy_test(self,ion_index = 0):
         #should be identical to Prandtl_proxy
         psiN_point = self.pedestal_point
@@ -907,6 +960,10 @@ class perfect_simulation(object):
     @property
     def conductive_heat_flux(self):        
         return self.heat_flux-(5.0/2.0)*self.THat*self.particle_flux
+
+    @property
+    def convective_heat_flux(self):        
+        return (5.0/2.0)*self.THat*self.particle_flux
 
     @property
     def ion_conductive_heat_flux(self):
@@ -1028,8 +1085,11 @@ class perfect_simulation(object):
 
     @property
     def Pi_PPV(self):
-        return [PPV(self.momentum_flux[:,ispecies],self.psiN3,self.pedestal_start_stop_psiN3,tol=1e-10,order=4) for ispecies in range(self.Nspecies)] 
+        return [PPV(self.momentum_flux[:,ispecies],self.psiN3,self.pedestal_start_stop_psiN3,tol=1e-10,order=4) for ispecies in range(self.Nspecies)]
 
+    @property
+    def Pii_PPV(self):
+        return PPV(self.ion_momentum_flux,self.psiN3,self.pedestal_start_stop_psiN3,tol=1e-10,order=4)
 
     @property
     def Pi_PPV_psiN(self):
@@ -1908,6 +1968,10 @@ class perfect_simulation(object):
     @property
     def deltaN_ped(self):
         return self.deltaN[self.mid_pedestal_point_index]
+
+    @property
+    def deltaN_ped_over_m(self):
+        return self.deltaN[self.mid_pedestal_point_index]/numpy.sqrt(self.masses)
         
     @property
     def deltaEta(self):
@@ -1956,6 +2020,10 @@ class perfect_simulation(object):
             print "PhiHat could not be obtained since no external profiles have been speciied and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate the inputs."
 
     @property
+    def ddpsiN_THat(self):
+        return self.dTHatdpsiN
+
+    @property
     def numerical_dTHatdpsiN(self):
         return self.ddpsiN(self.THat)
 
@@ -1991,6 +2059,10 @@ class perfect_simulation(object):
             print "nHat could not be obtained since no external profiles have been specified and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate the inputs."
 
     @property
+    def ddpsiN_nHat(self):
+        return self.dnHatdpsiN
+
+    @property
     def etaHat(self):
         try:
             return self.input_profiles[self.input_profiles_groupname+"etaHats"][()]
@@ -2011,6 +2083,10 @@ class perfect_simulation(object):
             return self.outputs[self.group_name+self.detaHatdpsiN_name][()]
         except KeyError:
             print "etaHat could not be obtained since no external profiles have been specified and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate the inputs."
+
+    @property
+    def ddpsiN_etaHat(self):
+        return self.detaHatdpsiN
 
     @property
     def numerical_detaHatdpsiN(self):
@@ -2046,6 +2122,10 @@ class perfect_simulation(object):
             return self.outputs[self.group_name+self.dPhiHatdpsiN_name][()]
         except KeyError:
             print "PhiHat could not be obtained since no external profiles have been speciied and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate the inputs."
+
+    @property
+    def ddpsiN_PhiHat(self):
+        return self.dPhiHatdpsiN
 
     @property
     def dPhiHat_dpsiN(self):
@@ -2379,6 +2459,22 @@ class perfect_simulation(object):
         return self.outputs[self.group_name+self.BHat_name][()]
 
     @property
+    def BHat_inboard(self):
+        return self.attrib_at_theta_of_psi("BHat",numpy.pi)
+    
+    @property
+    def BHat_outboard(self):
+        return self.attrib_at_theta_of_psi("BHat",0.0)
+
+    @property
+    def BHat_point(self):
+        return self.attrib_at_theta_of_psi("BHat",test_theta_point)
+
+    @property
+    def BHat_psi_point(self):
+        return self.attrib_at_psi_of_theta("BHat",test_psi_point)
+
+    @property
     def ddpsiN_BHat(self):
         return self.outputs[self.group_name+self.dBHatdpsiN_name][()]
 
@@ -2396,7 +2492,75 @@ class perfect_simulation(object):
 
     @property
     def ddpsiN_BHat_point(self):
-        return self.attrib_at_theta_of_psi("ddpsiN_BHat",0.4*2*numpy.pi)
+        return self.attrib_at_theta_of_psi("ddpsiN_BHat",test_theta_point)
+
+    @property
+    def ddpsiN_BHat_psi_point(self):
+        return self.attrib_at_psi_of_theta("ddpsiN_BHat",test_psi_point)
+
+    @property
+    def BpHat_inboard(self):
+        return self.attrib_at_theta_of_psi("Bp",numpy.pi)
+    
+    @property
+    def BpHat_outboard(self):
+        return self.attrib_at_theta_of_psi("Bp",0.0)
+
+    @property
+    def BpHat_point(self):
+        return self.attrib_at_theta_of_psi("Bp",test_theta_point)
+
+    @property
+    def BpHat_psi_point(self):
+        return self.attrib_at_psi_of_theta("Bp",test_psi_point)
+
+    @property
+    def ddpsiN_BpHat_inboard(self):
+        return self.attrib_at_theta_of_psi("ddpsiN_BpHat",numpy.pi)
+    
+    @property
+    def ddpsiN_BpHat_outboard(self):
+        return self.attrib_at_theta_of_psi("ddpsiN_BpHat",0.0)
+
+    @property
+    def ddpsiN_BpHat_point(self):
+        return self.attrib_at_theta_of_psi("ddpsiN_BpHat",test_theta_point)
+
+    @property
+    def ddpsiN_BpHat_psi_point(self):
+        return self.attrib_at_psi_of_theta("ddpsiN_BpHat",test_psi_point)
+
+    @property
+    def RHat_inboard(self):
+        return self.attrib_at_theta_of_psi("RHat",numpy.pi)
+    
+    @property
+    def RHat_outboard(self):
+        return self.attrib_at_theta_of_psi("RHat",0.0)
+
+    @property
+    def RHat_point(self):
+        return self.attrib_at_theta_of_psi("RHat",test_theta_point)
+
+    @property
+    def RHat_psi_point(self):
+        return self.attrib_at_psi_of_theta("RHat",test_psi_point)
+
+    @property
+    def ddpsiN_RHat_inboard(self):
+        return self.attrib_at_theta_of_psi("ddpsiN_RHat",numpy.pi)
+    
+    @property
+    def ddpsiN_RHat_outboard(self):
+        return self.attrib_at_theta_of_psi("ddpsiN_RHat",0.0)
+
+    @property
+    def ddpsiN_RHat_point(self):
+        return self.attrib_at_theta_of_psi("ddpsiN_RHat",test_theta_point)
+
+    @property
+    def ddpsiN_RHat_psi_point(self):
+        return self.attrib_at_psi_of_theta("ddpsiN_RHat",test_psi_point)
 
     @property
     def BHat_mid_ped(self):
@@ -2409,6 +2573,22 @@ class perfect_simulation(object):
     @property
     def ddtheta_BHat_mid_ped(self):
         return self.ddtheta_BHat[self.mid_pedestal_point_index]
+
+    @property
+    def ddpsiN_BpHat_mid_ped(self):
+        return self.ddpsiN_BpHat[self.mid_pedestal_point_index]
+        
+    @property
+    def ddtheta_BpHat_mid_ped(self):
+        return self.ddtheta_BpHat[self.mid_pedestal_point_index]
+
+    @property
+    def ddpsiN_RHat_mid_ped(self):
+        return self.ddpsiN_RHat[self.mid_pedestal_point_index]
+        
+    @property
+    def ddtheta_RHat_mid_ped(self):
+        return self.ddtheta_RHat[self.mid_pedestal_point_index]
     
     @property
     def BHat_psipoint(self):
@@ -2421,6 +2601,22 @@ class perfect_simulation(object):
     @property
     def ddtheta_BHat_psipoint(self):
         return self.attrib_at_psi_of_theta(self.ddtheta_BHat,1.09)
+
+    @property
+    def ddpsiN_BpHat_psipoint(self):
+        return self.attrib_at_psi_of_theta(self.ddpsiN_BpHat,1.09)
+        
+    @property
+    def ddtheta_BpHat_psipoint(self):
+        return self.attrib_at_psi_of_theta(self.ddtheta_BpHat,1.09)
+
+    @property
+    def ddpsiN_RHat_psipoint(self):
+        return self.attrib_at_psi_of_theta(self.ddpsiN_RHat,1.09)
+        
+    @property
+    def ddtheta_RHat_psipoint(self):
+        return self.attrib_at_psi_of_theta(self.ddtheta_RHat,1.09)
         
     @property
     def FSABHat2(self):
@@ -2451,6 +2647,22 @@ class perfect_simulation(object):
     @property
     def Bp_point(self):
         return self.attrib_at_theta_of_psi(self.Bp,numpy.pi*0.65)
+
+    @property
+    def ddpsiN_BpHat(self):
+        return self.ddpsiN(self.Bp)
+
+    @property
+    def ddtheta_BpHat(self):
+        return self.ddtheta(self.Bp)
+
+    @property
+    def ddpsiN_RHat(self):
+        return self.ddpsiN(self.RHat)
+
+    @property
+    def ddtheta_RHat(self):
+        return self.ddtheta(self.RHat)
         
     
     @property

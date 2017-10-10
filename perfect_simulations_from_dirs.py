@@ -59,7 +59,6 @@ def perfect_simulations_from_dirs(dirlist,normlist,species,psiN_to_psi=None,glob
         #print species_filename
         #print psiN_to_psi_filename
         #print global_term_multiplier_filename
-        
         simuls.append(normalized_perfect_simulation(input_filename,norm_filename,species_filename,output_filename,psiN_to_psi_filename,global_term_multiplier_filename,pedestal_start_stop = pedestal_start_stop,pedestal_point = pedestal_point,core_point = core_point))
         simuls[i].description=dir
         if simuls[i].did_it_converge is False:

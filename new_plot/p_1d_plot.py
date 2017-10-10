@@ -206,7 +206,6 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
             elif group_mode == "simulations":
                 this_iterable = range(len(simulList))
                 set_species_title = False
-
        
             for i_sp,s in enumerate(this_iterable):
                 i=i+1
@@ -223,8 +222,8 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                         data=[numpy.sum(getattr(simul,attrib)[:,index[i_si]],axis=1) for i_si,simul in enumerate(simulList) if s in simul.species]
                         
                 elif group_mode == "simulations":
+                    # i_sp indices simulation and i_si species
                     data=[getattr(simulList[i_sp],attrib)[:,i_si] for i_si in range(len(simul.species))]
-                    
 
                 if xattr=="theta":
                     x_scale=1/numpy.pi

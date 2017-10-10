@@ -5,14 +5,17 @@ from diff_matrix import diff_matrix
 import matplotlib.pyplot as plt
 
 def PPV(data,x,rangex,tol=1e-10,order=4,mode="default",retmode="y"):
-    (peak_y,peak_x) = peakfinder(data, x, rangex, tol, order,mode="peaks")
-    (dip_y,dip_x) = peakfinder(data, x, rangex, tol, order,mode="dips")
+    (peak_y,peak_x,peak_i) = peakfinder(data, x, rangex, tol, order,mode="peaks")
+    (dip_y,dip_x,dip_i) = peakfinder(data, x, rangex, tol, order,mode="dips")
     y = numpy.concatenate((peak_y,dip_y))
+    oldx=x
     x = numpy.concatenate((peak_x,dip_x))
+    indices = numpy.concatenate((peak_i,dip_i))
     # if no peaks or dips are found
     
     this_y=None
     if len(y) == 0:
+        print "WARNING: NO PEAK OR DIP WAS FOUND IN xrange: " + str(rangex)
         return float("nan")
 
     if mode == "default":
@@ -44,6 +47,8 @@ def PPV(data,x,rangex,tol=1e-10,order=4,mode="default",retmode="y"):
         return numpy.fabs(y[i])
     elif retmode == "x":
         return x[i]
+    elif retmode == "i":
+        return indices[i]
     else:
         raise ValueError("Invalid retmode: " + retmode)
 
@@ -59,11 +64,11 @@ def peakfinder(data, x, rangex, tol=1e-10,order=4,mode="both"):
     [start,stop] = get_index_range(x,rangex)
     (maxes,mines) = change_sign(ddx_data[start:stop],tol)
     if mode == "both":
-        ret = (numpy.concatenate((data[start:stop][maxes],data[start:stop][mines])),numpy.concatenate((x[start:stop][maxes],x[start:stop][mines])))        
+        ret = (numpy.concatenate((data[start:stop][maxes],data[start:stop][mines])),numpy.concatenate((x[start:stop][maxes],x[start:stop][mines])),numpy.concatenate((maxes,mines)))        
     elif mode == "peaks":
-        ret = (data[start:stop][maxes],x[start:stop][maxes])
+        ret = (data[start:stop][maxes],x[start:stop][maxes],maxes)
     elif mode == "dips":
-        ret = (data[start:stop][mines],x[start:stop][mines])
+        ret = (data[start:stop][mines],x[start:stop][mines],mines)
     else:
         raise ValueError("Invalid mode: " + mode)
     return ret
@@ -92,7 +97,7 @@ def change_sign(data,tol=1e-10):
 def sweet_visualz(x,y):
     # testz peakfinder and produces sweet visuals using matplotlib(tm)
     rangex = [x[0],x[-1]]
-    (y_peak,x_peak) = peakfinder(y, x, rangex)
+    (y_peak,x_peak,i_peak) = peakfinder(y, x, rangex)
     print "peak/dip locations: " + repr(x_peak)
     print "peak/dip values: " + repr(y_peak)
     ax=plt.gca()

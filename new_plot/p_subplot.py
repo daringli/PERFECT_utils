@@ -95,6 +95,9 @@ class perfect_subplot:
         self.xaxis_label=kwarg_default("xaxis_label",None,**kwargs)
         self.yaxis_label=kwarg_default("yaxis_label",None,**kwargs)
 
+        self.xaxis_label_color=kwarg_default("xaxis_label_color",'Black',**kwargs)
+        self.yaxis_label_color=kwarg_default("yaxis_label_color",'Black',**kwargs)
+
         self.show_xaxis_label=kwarg_default("show_xaxis_label",True,**kwargs)
         self.show_yaxis_label=kwarg_default("show_yaxis_label",True,**kwargs)
         
@@ -149,7 +152,7 @@ class perfect_subplot:
             #kwarg needed to intepret x, which can be a list of arrays here
             x_xaxis=kwarg_default("x_xaxis",0,**kwargs)
             x_lineaxis=(x_xaxis+1)%2
-            
+
             if type(arraylist_rank(x)) is not list:
                 if arraylist_rank(x) == 1:
                     if all(len(x) != len(self.data[i]) for i in range(len(self.data))):
@@ -354,8 +357,6 @@ class perfect_subplot:
                 f.write("\n".join(l))
                 f.close()
                 return None
-
-
             
             ax.yaxis.offset_text_position="there"
             
@@ -409,8 +410,9 @@ class perfect_subplot:
             else:
                 zmin=numpy.min(self.data)
                 zmax=numpy.max(self.data)
+
             if self.symmetrize_cm:
-                if zmax*zmin<0:
+                if zmax*zmin<=0:
                     if abs(zmax)>abs(zmin):
                         vmin = -zmax
                         vmax = zmax
@@ -426,7 +428,7 @@ class perfect_subplot:
             else:
                 vmin=zmin
                 vmax=zmax
-                
+
             if self.xy_data_exists:                
                 #streamplot
                 z=numpy.transpose(self.data)

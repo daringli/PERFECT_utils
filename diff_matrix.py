@@ -16,7 +16,6 @@ def diff_matrix(xMin,xMax,N,order=4,periodic=False,endpoint=False):
         #includes both end-points
         x = [float((xMax-xMin)*i)/(N-1)+xMin for i in range(0,N)]
     dx=x[1]-x[0]
-    
 
     if order==4:
         for i in range(2,N-2):
