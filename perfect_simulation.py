@@ -1084,6 +1084,11 @@ class perfect_simulation(object):
         return self.ion_conductive_heat_flux[i]
 
     @property
+    def qi_start_ped(self):
+        i=self.pedestal_start_stop_indices[0]
+        return self.ion_conductive_heat_flux[i]
+
+    @property
     def Pi_PPV(self):
         return [PPV(self.momentum_flux[:,ispecies],self.psiN3,self.pedestal_start_stop_psiN3,tol=1e-10,order=4) for ispecies in range(self.Nspecies)]
 
