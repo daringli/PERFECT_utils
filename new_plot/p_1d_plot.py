@@ -12,13 +12,13 @@ from matplotlib.pyplot import cm
 import matplotlib.pyplot as plt
 import numpy
 import sys
+import collections
 
 import scipy.integrate
 
 from mpldatacursor import datacursor
 
-
-def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,markers=None,markeverys=None,markersizes=None,fillstyles=None,linestyles=None,linewidths=None,xlims=None,same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","H":"i","T":"i","He":"z","N":"z","e":"e"},vlines=[],hlines=[],share_scale=[],interactive=False,colors=None,skip_species = [],yaxis_powerlimits=(0,0),hidden_xticklabels=[],yaxis_label_x=-0.15,ylims=None,simulList=None,pedestal_start_stop=None,pedestal_point=None,core_point=None,putboxes=[],return_psps=False,set_species_title=True,group_mode="species"):
+def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,markers=None,markeverys=None,markersizes=None,fillstyles=None,linestyles=None,linewidths=None,xlims=None,same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","H":"i","T":"i","He":"z","N":"z","e":"e"},vlines=[],hlines=[],share_scale=[],interactive=False,colors=None,skip_species = [],yaxis_powerlimits=(0,0),hidden_xticklabels=[],yaxis_label_x=-0.15,ylims=None,simulList=None,pedestal_start_stop=None,pedestal_point=None,core_point=None,putboxes=[],return_psps=False,set_species_title=True,group_mode="species",visualizer_rows=None,label_size=None):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -37,6 +37,13 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
     else:
         ylabels=['']*len(attribs)
 
+    if label_size is not None:
+        yaxis_label_size = label_size
+        xaxis_label_size = label_size
+    else:
+        yaxis_label_size = 12
+        xaxis_label_size = 12
+        
     all_linestyles = linestyles
                 
     if simulList == None:
@@ -53,19 +60,26 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                 pedestal_start_stop=[]
             else:
                 pedestal_start_stop=(vlines[0],vlines[-1])
-
+            
+                
         # if no pedestal point is given, we get this from
         # the middle of the pedestal
         if pedestal_point is None:
             if pedestal_start_stop is not None:
-                pedestal_point = (pedestal_start_stop[0] + pedestal_start_stop[1])/2.0
-
+                if isinstance(pedestal_start_stop[0], collections.Iterable):
+                    pedestal_point = [(pss[0] + pss[1])/2.0 for pss in pedestal_start_stop]
+                else:
+                    pedestal_point = (pedestal_start_stop[0] + pedestal_start_stop[1])/2.0
         # if no core point is given, we get this from
         # three pedestal widths into the core
         if core_point is None:
             if pedestal_start_stop is not None:
-                w = pedestal_start_stop[1] - pedestal_start_stop[0] 
-                core_point = pedestal_start_stop[0] - 3*w    
+                if isinstance(pedestal_start_stop[0], collections.Iterable):
+                    w = [pss[1] - pss[0] for pss in pedestal_start_stop]
+                    core_point = [pss[0] - 3*(pss[1] - pss[0]) for pss in pedestal_start_stop] 
+                else:
+                    w = pedestal_start_stop[1] - pedestal_start_stop[0] 
+                    core_point = pedestal_start_stop[0] - 3*w    
 
         simulList=perfect_simulations_from_dirs(dirlist, normlist, specieslist, psiN_to_psiList, global_term_multiplierList, pedestal_start_stop_list=pedestal_start_stop, pedestal_point_list=pedestal_point, core_point_list=core_point)      
     else:
@@ -266,8 +280,12 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                 if ylims is None:
                     ylim = None
                 else:
-                    ylim = ylims[i]
-                psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,dimensions=1,groups=[s,attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,linewidths=linewidths,colors=linecolors,markers=markers,fillstyles=fillstyles,markeverys=markeverys,markersizes=markersizes,yaxis_powerlimits=yaxis_powerlimits,hidden_xticklabels=hidden_xticklabels,yaxis_label_x=yaxis_label_x,ylims=ylim,x_period=x_period)) #yaxis_label=ylabels[i_a]
+                    if isinstance(ylims[0], collections.Iterable):
+                        ylim = ylims[i]
+                    else:
+                        ylim=ylims
+
+                psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,dimensions=1,groups=[s,attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,linewidths=linewidths,colors=linecolors,markers=markers,fillstyles=fillstyles,markeverys=markeverys,markersizes=markersizes,yaxis_powerlimits=yaxis_powerlimits,hidden_xticklabels=hidden_xticklabels,yaxis_label_x=yaxis_label_x,ylims=ylim,x_period=x_period,yaxis_label_size=yaxis_label_size,xaxis_label_size=xaxis_label_size)) #yaxis_label=ylabels[i_a]
                 
 
         else:
@@ -314,8 +332,13 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
             if ylims is None:
                 ylim = None
             else:
-                ylim = ylims[i]
-            psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,dimensions=1,groups=[attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,colors=linecolors,markers=markers,fillstyles=fillstyles,markeverys=markeverys,yaxis_powerlimits=yaxis_powerlimits,hidden_xticklabels=hidden_xticklabels,yaxis_label_x=yaxis_label_x,ylims=ylim,x_period=x_period)) #yaxis_label=ylabels[i_a]
+                if isinstance(ylims[0], collections.Iterable):
+                    ylim = ylims[i]
+                else:
+                    ylim=ylims
+            
+            print ylim
+            psp_list.append(perfect_subplot(data,x,subplot_coordinates=coordinates,dimensions=1,groups=[attrib_groupname,species_attrib_groupname,last_groupname],linestyles=linestyles,colors=linecolors,markers=markers,fillstyles=fillstyles,markeverys=markeverys,yaxis_powerlimits=yaxis_powerlimits,hidden_xticklabels=hidden_xticklabels,yaxis_label_x=yaxis_label_x,ylims=ylim,x_period=x_period,yaxis_label_size=yaxis_label_size,xaxis_label_size=xaxis_label_size)) #yaxis_label=ylabels[i_a]
             
         
         psp_lists.append(psp_list)
@@ -423,7 +446,10 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
             return psp_list
 
         print gridspec_list[i_li]
-        perfect_visualizer(psp_list,gridspec_list[i_li],global_xlabel=global_xlabel,dimensions=1,global_ylabel=global_ylabel,interactive=interactive,putboxes=putboxes)
+        if visualizer_rows is None:
+            visualizer_rows = gridspec_list[i_li][0]
+        
+        perfect_visualizer(psp_list,gridspec_list[i_li],global_xlabel=global_xlabel,dimensions=1,global_ylabel=global_ylabel,interactive=interactive,putboxes=putboxes,rows=visualizer_rows,global_xlabel_size=xaxis_label_size)
         if same_plot:
             plt.savefig(outputname+".pdf")
         else:

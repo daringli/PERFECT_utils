@@ -1057,6 +1057,18 @@ class perfect_simulation(object):
         return PPV_x(self.ion_heat_flux,self.psiN3,self.pedestal_start_stop_psiN3,tol=1e-10,order=4)
 
     @property
+    def Qi_mid_ped(self):
+        i=self.mid_pedestal_point_index
+        return self.ion_heat_flux[i]
+
+
+    @property
+    def Qi_start_ped(self):
+        i=self.pedestal_start_stop_indices[0]
+        return self.ion_heat_flux[i]
+
+    
+    @property
     def q_PPV(self):
         return [PPV(self.conductive_heat_flux[:,ispecies],self.psiN3,self.pedestal_start_stop_psiN3,tol=1e-10,order=4) for ispecies in range(self.Nspecies)] 
 
@@ -1974,6 +1986,13 @@ class perfect_simulation(object):
     def deltaN_ped(self):
         return self.deltaN[self.mid_pedestal_point_index]
 
+    @property
+    def deltaNStar(self):
+        nMid = (self.n_ped + self.n_LCFS)/2
+        d = self.n_ped - self.n_LCFS
+        return (self.ped_FSA_orbit_width/nMid) * (d/self.pedestal_width_psiN3)
+    
+    
     @property
     def deltaN_ped_over_m(self):
         return self.deltaN[self.mid_pedestal_point_index]/numpy.sqrt(self.masses)

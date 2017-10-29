@@ -76,11 +76,13 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
 
 
     global_xlabel=kwarg_default("global_xlabel",None,**kwargs)
+    
+    global_xlabel_size=kwarg_default("global_xlabel_size",12,**kwargs)
     if global_xlabel is not None:
         if dimensions == 1:
-            fig.text(0.5+adjust_left/4, 0.01, global_xlabel, ha='center')
+            fig.text(0.5+adjust_left/4, 0.01, global_xlabel, ha='center',size=global_xlabel_size)
         elif dimensions == 2:
-            fig.text(0.5+adjust_left/4, 0.01*base_height/height, global_xlabel, ha='center')
+            fig.text(0.5+adjust_left/4, 0.01*base_height/height, global_xlabel, ha='center',size=global_xlabel_size)
     
     global_ylabel=kwarg_default("global_ylabel",None,**kwargs)
     if global_ylabel is not None:
@@ -171,11 +173,11 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
         #we need to sort out ticks after plotting, since they are generated
         #during the plot operation
         if p_subplot.xaxis_label is not None and p_subplot.show_xaxis_label == True:
-            ax.set_xlabel(p_subplot.xaxis_label,color=p_subplot.xaxis_label_color)
+            ax.set_xlabel(p_subplot.xaxis_label,color=p_subplot.xaxis_label_color,size=p_subplot.xaxis_label_size)
             ax.xaxis.set_label_coords(p_subplot.xaxis_label_x,p_subplot.xaxis_label_y) 
         if p_subplot.yaxis_label is not None and p_subplot.show_yaxis_label == True:
             #print str(p_subplot.yaxis_label)+": " +"("+str(p_subplot.yaxis_label_x)+","+str(p_subplot.yaxis_label_y)+")"
-            ax.set_ylabel(p_subplot.yaxis_label,color=p_subplot.yaxis_label_color)
+            ax.set_ylabel(p_subplot.yaxis_label,color=p_subplot.yaxis_label_color,size=p_subplot.yaxis_label_size)
             ax.yaxis.set_label_coords(p_subplot.yaxis_label_x,p_subplot.yaxis_label_y) 
         
         if p_subplot.xlims is not None:
