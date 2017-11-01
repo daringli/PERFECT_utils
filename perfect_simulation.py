@@ -832,6 +832,10 @@ class perfect_simulation(object):
         return self.outputs[self.group_name+self.particle_flux_name][()]*signOfVPrimeHat
 
     @property
+    def Z_particle_flux(self):
+        return self.Z * self.particle_flux
+
+    @property
     def ion_particle_flux(self):
         return numpy.sum(self.particle_flux[:,:-1],axis=1)
 
