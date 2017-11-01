@@ -68,7 +68,7 @@ if __name__ == "__main__":
     
     # bezier curves
     geneta = Profile3Linear(XStart=XStart,XStop=XStop,ddx_YCore=ddx_nCore,ddx_YSOL=ddx_nSOL,width=width,XPedStart=XPedStart,XPedStop=XPedStop,YPed=nPed,ddx_YPed=ddx_nPed,transWidthToPedWidth=0.2,profile="eta")
-    genPhi = Profile3Linear(XStart=XStart,XStop=XStop,ddx_YCore=ddx_PhiCore,ddx_YSOL=ddx_PhiSOL,width=width,XPedStart=XPedStart,XPedStop=XPedStop,YPed=PhiPed,ddx_YPed=ddx_PhiPed,transWidthToPedWidth=0.2,profile="Phi")
+    genPhi = Profile3Linear(XStart=XStart,XStop=XStop,ddx_YCore=ddx_PhiCore,ddx_YSOL=ddx_PhiSOL,width=width,XPedStart=XPedStart,XPedStop=XPedStop,YPed=PhiPed,ddx_YPed=ddx_PhiPed,transWidthToPedWidth=0.2,profile="Phi",species="none")
     genT = Profile3Linear(XStart=XStart,XStop=XStop,ddx_YCore=ddx_TCore,ddx_YSOL=ddx_TSOL,width=width,XPedStart=XPedStart,XPedStop=XPedStop,YPed=TPed,ddx_YPed=ddx_TPed,transWidthToPedWidth=0.2,profile="T")
    
     
@@ -78,7 +78,7 @@ if __name__ == "__main__":
     profiles = [eta,ddx_eta,Phi,ddx_Phi,T,ddx_T]
     
     # potential
-    Z = 1
+    Z = 7
     Delta = 0.0006  #based on He papar
     omega = Delta/2
     DeltaOver2omega = Delta/(2*omega)
@@ -92,3 +92,12 @@ if __name__ == "__main__":
     plt.plot(x,eta(x)*numpy.exp(-Z*Phi(x)/T(x)))
 
     plt.show()
+
+    
+    plt.plot(x,ddx_n(x))
+    
+    plt.plot(x,(ddx_eta(x) -Z *ddx_Phi(x)* eta(x)/T(x) + eta(x) * Z *Phi(x)/T(x) * ddx_T(x)/T(x)) *numpy.exp(-Z*Phi(x)/T(x)) )
+
+    plt.show()
+
+    

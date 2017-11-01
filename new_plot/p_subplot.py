@@ -98,6 +98,10 @@ class perfect_subplot:
         self.xaxis_label_color=kwarg_default("xaxis_label_color",'Black',**kwargs)
         self.yaxis_label_color=kwarg_default("yaxis_label_color",'Black',**kwargs)
 
+        self.xaxis_label_size=kwarg_default("xaxis_label_size",12,**kwargs)
+        self.yaxis_label_size=kwarg_default("yaxis_label_size",12,**kwargs)
+        print self.xaxis_label_size
+        
         self.show_xaxis_label=kwarg_default("show_xaxis_label",True,**kwargs)
         self.show_yaxis_label=kwarg_default("show_yaxis_label",True,**kwargs)
         
