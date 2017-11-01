@@ -6,9 +6,10 @@ import numpy
 class ProfileFromData(Generator):
     """Profile generator that takes data y sampled at points x and interpolates/fits using the kind of interpolation specified by kind."""
     
-    def __init__(self,x,y,kind=3,profile='',species=''):
+    def __init__(self,x,y,kind=3,profile='',species='',ddx_y=None):
         self.x = x
         self.y = y
+        self.ddx_y = ddx_y
         self.profile=profile
         self.species=species
         if type(kind) is int:
@@ -21,7 +22,10 @@ class ProfileFromData(Generator):
             if numpy.any(self.x[1:] <= self.x[:-1]):
                 raise ValueError("x vector to profileFromData must be monotonic for scipy.interpolate.UnivariateSpline In profile: " + self.profile + "_" + self.species + ", offending index: " + str(numpy.where(numpy.diff(self.x)<=0)))
             f = UnivariateSpline(self.x, self.y, k=self.order,s=self.smoothing)
-            ddx_f = f.derivative()
+            if self.ddx_y is None:
+                ddx_f = f.derivative()
+            else:
+                ddx_f = UnivariateSpline(self.x, self.ddx_y, k=self.order,s=self.smoothing)
         else: 
             print "ProfileFromData : error: unsupported interpolation scheme!"
             raise ValueError('Unsupported interpolation scheme!')
@@ -66,4 +70,11 @@ if __name__ == "__main__":
     plt.plot(x,ddx_f3(x))
     print f3.profile
     print f3.species
+
+    # externally set derivative to something (here, xp)
+    gen1 = ProfileFromData(xp,yp,ddx_y=xp)
+    (f4, ddx_f4) = gen1.generate()
+    plt.plot(x,f4(x))
+    plt.plot(x,ddx_f4(x))
+    
     plt.show()

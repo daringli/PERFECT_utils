@@ -2440,6 +2440,7 @@ class perfect_simulation(object):
     @property
     def IHat(self):
         return nstack(self.outputs[self.group_name+self.IHat_name][()],axis=1,n=len(self.theta)) #add theta axis
+
     
     @property
     def FSA_IHat(self):

@@ -26,7 +26,7 @@ Extension is designed to be smooth and to let local theory be valid at boundary"
             self.extrapolation = "derivativeFraction"
             self.offset=offset
 
-        elif extrapolation == "istvan":
+        elif extrapolation == "istvan" or extrapolation == "istvan2": 
             self.extrapolation = extrapolation
             self.a=a
             self.b=b
@@ -68,7 +68,18 @@ Extension is designed to be smooth and to let local theory be valid at boundary"
             h = lambda x: numpy.log(numpy.exp(self.C * f(x)) + numpy.exp(self.C * (self.a + self.b*x)))/self.C
             ddx_h =  lambda x: (ddx_f(x) * numpy.exp(self.C*f(x)) + self.b * numpy.exp(self.C*(self.a + self.b*x)) )/(numpy.exp(self.C * f(x)) + numpy.exp(self.C * (self.a + self.b*x)))
             p = Profile(h)
-            ddx_p = Profile(ddx_h)
+            ddx_p = Profile(ddx_h) # for some reason, the derivative appears to oscillate
+            
+        elif self.extrapolation == "istvan2":
+            # same as previous option, but interpolated and with derivate calculated from this interpolation
+            #h=Log{ Exp[C f(psi)]+Exp[C (a - b psi) ] } /C
+            h = lambda x: numpy.log(numpy.exp(self.C * f(x)) + numpy.exp(self.C * (self.a + self.b*x)))/self.C
+            h_sampled = h(self.x)
+            h_interpolated = UnivariateSpline(self.x, h_sampled, k=self.order,s=self.smoothing)
+            ddx_h_interpolated = h_interpolated.derivative()
+            p = Profile(h_interpolated)
+            ddx_p = Profile(ddx_h_interpolated)
+        
         else: 
             print "ProfileFromData : error: unsupported extension scheme!"
             raise ValueError('Unsupported extension scheme!')
