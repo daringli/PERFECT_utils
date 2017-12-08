@@ -9,7 +9,7 @@ from buffer_extend_uniform_grid import buffer_extend_uniform_grid
 # the workhorse of this script is:
 from scipy.optimize import curve_fit
 
-verbose = False
+verbose = True
 
 def linear_extrapolation(x1,y1,interval=None,endpoint=1.3):
     assert(x1.shape == y1.shape)
@@ -39,7 +39,7 @@ def mtanh_extrapolation(x1,y1,interval=None,Vp=None,endpoint=1.3):
     if interval is None:
         i1 = 0
         i2 = len(x1)
-        interval = [x1[i1],x1[i2]]
+        interval = [x1[i1],x1[i2-1]]
     else:
         [i1,i2] = get_index_range(x1,interval)
         i2 = i2 + 1 #want i2 = len(x) to get last index in x[i1:i2]
@@ -91,8 +91,9 @@ if __name__=="__main__":
 
     
     
-    x1 = read_IDL_output_psiN("ne.dat")
-    y1 = read_IDL_output("ne.dat")
+    x1 = read_IDL_output_psiN("Ti.dat")
+    y1 = read_IDL_output("Ti.dat")
+    print x1[-1]
     
     # interval must include pedestal midpoint
     # or the constrained optimization will not find right values
