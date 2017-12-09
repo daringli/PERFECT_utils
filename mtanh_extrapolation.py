@@ -27,7 +27,7 @@ def linear_extrapolation(x1,y1,interval=None,endpoint=1.3):
 
     #extend the uniform x-grid to buffer zone
     dx = x1[-1] - x1[-2]
-    x2 = buffer_extend_uniform_grid(x1[-1],endpoint,dx,first=False)
+    x2 = buffer_extend_uniform_grid(x1[i2],endpoint,dx,first=False)
 
     y2 = numpy.polyval(p,x2)
     y = numpy.concatenate((y1[:i2],y2))
@@ -77,7 +77,7 @@ def mtanh_extrapolation(x1,y1,interval=None,Vp=None,endpoint=1.3):
 
     #extend the uniform x-grid to buffer zone
     dx = x1[-1] - x1[-2]
-    x2 = buffer_extend_uniform_grid(x1[-1],endpoint,dx,first=False)
+    x2 = buffer_extend_uniform_grid(x1[i2],endpoint,dx,first=False)
 
     x = numpy.concatenate((x1[:i2],x2))
     y = Vp*mtanh(x) #denormalize y
@@ -91,8 +91,8 @@ if __name__=="__main__":
 
     
     
-    x1 = read_IDL_output_psiN("Ti.dat")
-    y1 = read_IDL_output("Ti.dat")
+    x1 = read_IDL_output_psiN("Te.dat")
+    y1 = read_IDL_output("Te.dat")
     print x1[-1]
     
     # interval must include pedestal midpoint
