@@ -196,6 +196,12 @@ class perfect_simulation(object):
             #we only assign self.input_profiles if they exist
             if os.path.isfile(self.input_profiles_filename):
                 self.input_profiles=h5py.File(self.input_profiles_filename,'r')
+        if self.inputs.geometryToUse==4:
+            self.input_geometry_filename=self.input_dir+"/"+self.inputs.geometryFilename
+            self.input_geometry_groupname="/Npsi"+str(self.inputs.Npsi)+"Ntheta"+str(self.inputs.Ntheta) + "/"
+            #we only assign self.input_profiles if they exist
+            if os.path.isfile(self.input_geometry_filename):
+                self.input_geometry=h5py.File(self.input_geometry_filename,'r')
 
     @property
     def output(self):
@@ -1271,7 +1277,7 @@ class perfect_simulation(object):
     #for backwards compatibility, for now.
     @property
     def ambipolarity(self):
-        return self.jHat
+        return self.jHat/PPV(self.particle_flux[:,-1],self.psiN3,self.pedestal_start_stop_psiN3,tol=1e-10,order=4)
 
     @property
     def conductive_heat_flux_sum(self):
@@ -1586,6 +1592,16 @@ class perfect_simulation(object):
     @property
     def parallel_current(self):
         return numpy.sum(self.Z*self.FSAFlow,axis=1)
+
+    @property
+    def Z_parallel_flux(self):
+        return self.Z*self.nHat*self.FSAFlow
+
+    @property
+    def parallel_current_density(self):
+        return numpy.sum(self.Z_parallel_flux,axis=1)
+
+    
     
     @property
     def flow_inboard(self):
@@ -2002,6 +2018,11 @@ class perfect_simulation(object):
         return self.deltaN[self.mid_pedestal_point_index]/numpy.sqrt(self.masses)
         
     @property
+    def max_deltaN(self):
+        return numpy.array([numpy.max(self.deltaN[:,ispecies]) for ispecies in range(self.Nspecies)])
+        
+
+    @property
     def deltaEta(self):
         return numpy.abs(self.ddpsilog_to_delta_factor * self.detaHatdpsiN/self.etaHat)
         try:
@@ -2010,12 +2031,19 @@ class perfect_simulation(object):
             return numpy.abs(self.ddpsilog_to_delta_factor * self.detaHatdpsiN/self.etaHat)
 
     @property
+    def max_deltaEta(self):
+        return numpy.array([numpy.max(self.deltaEta[:,ispecies]) for ispecies in range(self.Nspecies)])
+
+    @property
     def deltaT(self):
         try:
             return self.outputs[self.group_name+self.deltaT_name][()]
         except KeyError:
             return  numpy.abs(self.ddpsilog_to_delta_factor *self.dlogTHatdpsiN)
-            
+         
+    @property
+    def max_deltaT(self):
+        return numpy.array([numpy.max(self.deltaT[:,ispecies]) for ispecies in range(self.Nspecies)])
 
     @property
     def masses(self):
@@ -2334,8 +2362,13 @@ class perfect_simulation(object):
             
     @property
     def theta(self):
-        return self.outputs[self.group_name+self.theta_name][()]
+        try:
+            return self.outputs[self.group_name+self.theta_name][()]
+        except (KeyError,TypeError):
+            #print "cannot get internal psi from output, will generate uniform from input."
+            return self.inputs.theta
 
+        
     @property
     def theta_shifted(self,shift=numpy.pi):
         return self.shift_theta(shift)
@@ -2443,20 +2476,51 @@ class perfect_simulation(object):
 
     @property
     def IHat(self):
-        return nstack(self.outputs[self.group_name+self.IHat_name][()],axis=1,n=len(self.theta)) #add theta axis
+        try:
+            IHat = self.input_geometry[self.input_geometry_groupname+"IHat"][()]
+        except AttributeError:
+            pass
+        try:
+            IHat = self.outputs[self.group_name+self.IHat_name][()]
+        except KeyError:
+            print "IHat could not be obtained since no external geometry has been specified and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate geometry."
+
+        return nstack(IHat,axis=1,n=len(self.theta)) #add theta axis
 
     
     @property
     def FSA_IHat(self):
-        return self.outputs[self.group_name+self.IHat_name][()]
+        try:
+            return self.input_geometry[self.input_geometry_groupname+"IHat"][()]
+        except AttributeError:
+            pass
+        try:
+            return self.outputs[self.group_name+self.IHat_name][()]
+        except KeyError:
+            print "IHat could not be obtained since no external geometry has been specified and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate geometry."
     
     @property
     def ddpsiN_IHat(self):
-        return self.outputs[self.group_name+self.dIHatdpsiN_name][()]
+        try:
+            return self.input_geometry[self.input_geometry_groupname+"dIHatdpsi"][()]
+        except AttributeError:
+            pass
+        try:
+            return self.outputs[self.group_name+self.dIHatdpsiN_name][()]
+        except KeyError:
+            print "dIHatdpsi could not be obtained since no external geometry has been specified and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate geometry."
     
     @property
     def RHat(self):
-        RHat = self.outputs[self.group_name+self.RHat_name][()]
+        try:
+            RHat= self.input_geometry[self.input_geometry_groupname+"RHat"][()]
+        except AttributeError:
+            pass
+        try:
+            RHat = self.outputs[self.group_name+self.RHat_name][()]
+        except KeyError:
+            print "RHat could not be obtained since no external geometry has been specified and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate geometry."
+        
         if arraylist_rank(RHat) == 2:
             return RHat
         elif arraylist_rank(RHat) == 1:
@@ -2473,7 +2537,14 @@ class perfect_simulation(object):
 
     @property
     def JHat(self):
-        return self.outputs[self.group_name+self.JHat_name][()]
+        try:
+            return self.input_geometry[self.input_geometry_groupname+"JHat"][()]
+        except AttributeError:
+            pass
+        try:
+            return self.outputs[self.group_name+self.JHat_name][()]
+        except KeyError:
+            print "JHat could not be obtained since no external geometry has been specified and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate geometry."
 
     @property
     def FSA_JHat(self):
@@ -2485,7 +2556,15 @@ class perfect_simulation(object):
     
     @property
     def BHat(self):
-        return self.outputs[self.group_name+self.BHat_name][()]
+        try:
+            return self.input_geometry[self.input_geometry_groupname+"BHat"][()]
+        except AttributeError:
+            pass
+        try:
+            return self.outputs[self.group_name+self.BHat_name][()]
+        except KeyError:
+            print "BHat could not be obtained since no external geometry has been specified and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate geometry."
+
 
     @property
     def BHat_inboard(self):
@@ -2505,12 +2584,27 @@ class perfect_simulation(object):
 
     @property
     def ddpsiN_BHat(self):
-        return self.outputs[self.group_name+self.dBHatdpsiN_name][()]
-
+        try:
+            return self.input_geometry[self.input_geometry_groupname+"dBHatdpsi"][()]
+        except AttributeError:
+            pass
+        try:
+            return self.outputs[self.group_name+self.dBHatdpsiN_name][()]
+        except KeyError:
+            print "dBHatdpsiN could not be obtained since no external geometry has been specified and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate geometry."
+        
     @property
     def ddtheta_BHat(self):
-        return self.outputs[self.group_name+self.dBHatdtheta_name][()]
-    
+        try:
+            return self.input_geometry[self.input_geometry_groupname+"dBHatdtheta"][()]
+        except AttributeError:
+            pass
+        try:
+            return self.outputs[self.group_name+self.dBHatdtheta_name][()]
+        except KeyError:
+            print "dBHatdtheta could not be obtained since no external geometry has been specified and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate geometry."
+        
+        
     @property
     def ddpsiN_BHat_inboard(self):
         return self.attrib_at_theta_of_psi("ddpsiN_BHat",numpy.pi)
@@ -3081,10 +3175,21 @@ class normalized_perfect_simulation(perfect_simulation):
 
     @property
     def normed_particle_flux_psi_unit_vector(self):
+        # 1/(m^2 s)
         VPrimeHat=[self.VPrimeHat]
         VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
         signOfVPrimeHat=numpy.sign(VPrimeHat)
         return (self.particle_flux_psi_unit_vector/VPrimeHat)*signOfVPrimeHat*(numpy.pi*self.Delta**2)*self.nBar*self.vBar
+
+    @property
+    def e20_particle_flux_psi_unit_vector(self):
+        # 1/(m^2 s 1e20)
+        return self.normed_particle_flux_psi_unit_vector/(1e20)
+
+    @property
+    def e20_particle_flux(self):
+        # m^2 m^{-3} m/s = 1/s
+        return self.particle_flux*(numpy.pi*self.Delta**2)*self.RBar**2*self.nBar*self.vBar/1e20
 
     @property
     def normed_particle_flux_psi_unit_vector_no_fsa(self):
@@ -3143,10 +3248,27 @@ class normalized_perfect_simulation(perfect_simulation):
 
     @property
     def normed_m_momentum_flux_psi_unit_vector(self):
+        # kg m m^{-3} m^2/s^2 = Nm/m^2
         VPrimeHat=[self.VPrimeHat]
         VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
         signOfVPrimeHat=numpy.sign(VPrimeHat)
         return (self.mBar*self.m_momentum_flux_psi_unit_vector/VPrimeHat)*signOfVPrimeHat*(numpy.pi*self.Delta**2)*self.RBar*self.nBar*self.vBar**2
+
+    @property
+    def Nm_m_momentum_flux_psi_unit_vector(self):
+        # kg m m^{-3} m^2/s^2 = Nm/m^2
+        return self.normed_m_momentum_flux_psi_unit_vector
+
+    @property
+    def Nm_m_momentum_flux(self):
+        # kg m^3 m^{-3} m^2/s^2 = Nm
+        return self.mBar*self.m_momentum_flux*(numpy.pi*self.Delta**2)*(self.RBar**3)*self.nBar*self.vBar**2
+
+    @property
+    def Nm_ion_m_momentum_flux(self):
+        # kg m^3 m^{-3} m^2/s^2 = Nm
+        return numpy.sum(self.Nm_m_momentum_flux[:,:-1],axis=1)
+
 
     @property
     def normed_heat_flux(self):
@@ -3156,13 +3278,40 @@ class normalized_perfect_simulation(perfect_simulation):
         signOfVPrimeHat=numpy.sign(VPrimeHat)
         return (self.heat_flux/VPrimeHat)*signOfVPrimeHat*self.TBar*(numpy.pi*self.Delta**2)*self.RBar*self.BBar*self.nBar*self.vBar
 
+
+        
+    @property
+    def W_heat_flux(self):
+        # V' <\int d^3 v g_a mv^2/2 v_m \cdot \nabla \psi>
+        # J m^2 m^{-3} m/s = J/s = W
+        return self.heat_flux*self.TBar*(numpy.pi*self.Delta**2)*self.RBar**2*self.nBar*self.vBar
+
+    @property
+    def MW_heat_flux(self):
+        # V' <\int d^3 v g_a mv^2/2 v_m \cdot \nabla \psi>
+        # MJ m^2 m^{-3} m/s = MJ/s = MW
+        return self.W_heat_flux/1e6
+
+    @property
+    def MW_ion_heat_flux(self):
+        # V' <\int d^3 v g_a mv^2/2 v_m \cdot \nabla \psi>
+        # MJ m^2 m^{-3} m/s = MJ/s = MW
+        return numpy.sum(self.MW_heat_flux[:,:-1],axis=1)
+
     @property
     def normed_heat_flux_psi_unit_vector(self):
         #to make appropriate size to divide the particle flux with
+        # J m^{-3} m/s =  W/m^2
         VPrimeHat=[self.VPrimeHat]
         VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
         signOfVPrimeHat=numpy.sign(VPrimeHat)
         return (self.heat_flux_psi_unit_vector/VPrimeHat)*signOfVPrimeHat*self.TBar*(numpy.pi*self.Delta**2)*self.nBar*self.vBar
+        # Q = <\int d^3v f_1 mv^2/2 v_m \cdot RB_p e> /(RBar^2 BBar psiAHat)
+        # Q_unit_vector = <\int d^3v f_1 mv^2/2 v_m \cdot e> 
+
+    @property
+    def MW_heat_flux_psi_unit_vector(self):
+        return self.normed_heat_flux_psi_unit_vector/1e6
 
     @property
     def normed_conductive_heat_flux(self):
@@ -3174,10 +3323,31 @@ class normalized_perfect_simulation(perfect_simulation):
 
     @property
     def normed_conductive_heat_flux_psi_unit_vector(self):
+        # J m^{-3} m/s = W/m^2
         VPrimeHat=[self.VPrimeHat]
         VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
         signOfVPrimeHat=numpy.sign(VPrimeHat)
         return (self.conductive_heat_flux_psi_unit_vector/VPrimeHat)*signOfVPrimeHat*self.TBar*(numpy.pi*self.Delta**2)*self.nBar*self.vBar
+
+    @property
+    def MW_conductive_heat_flux_psi_unit_vector(self):
+        return self.normed_conductive_heat_flux_psi_unit_vector/1e6
+
+    @property
+    def W_conductive_heat_flux(self):
+        return self.conductive_heat_flux*self.TBar*(numpy.pi*self.Delta**2)*self.RBar**2*self.nBar*self.vBar
+
+    @property
+    def MW_conductive_heat_flux(self):
+        return self.W_conductive_heat_flux/1e6
+
+    @property
+    def MW_convective_heat_flux(self):
+        return self.MW_heat_flux - self.MW_conductive_heat_flux
+
+    @property
+    def MW_convective_heat_flux_psi_unit_vector(self):
+        return self.MW_heat_flux_psi_unit_vector - self.MW_conductive_heat_flux_psi_unit_vector
 
     @property
     def normed_ambipolariy(self):
@@ -3227,6 +3397,32 @@ class normalized_perfect_simulation(perfect_simulation):
     @property
     def normed_flow(self):
         return self.Delta*self.vBar*self.flow
+
+    @property
+    def Am_parallel_current(self):
+        # C m/s = Am
+        return self.Delta*self.vBar*self.eBar*self.parallel_current
+
+    @property
+    def A_m2_parallel_current(self):
+        # C m/s m^{-3}= Am^{-2}
+        return self.Delta*self.vBar*self.eBar*self.nBar*self.parallel_current_density
+
+    @property
+    def A_m2_Z_parallel_flux(self):
+        # C m/s m^{-3}= Am^{-2}
+        return self.Delta*self.vBar*self.eBar*self.nBar*self.Z_parallel_flux
+
+    @property
+    def kA_m2_parallel_current(self):
+        # C m/s m^{-3}= Am^{-2}
+        return self.A_m2_parallel_current/1e3
+
+    @property
+    def MA_m2_parallel_current(self):
+        # C m/s m^{-3}= Am^{-2}
+        return self.A_m2_parallel_current/1e6
+
     
     @property
     def normed_potential_perturbation(self):
