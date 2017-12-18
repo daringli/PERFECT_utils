@@ -2,6 +2,7 @@ import os, numpy
 from setSpeciesParameters import speciesParams
 from coulomb_logarithms import lambda_ee as coulombLog
 from nu_r import nu_r #nu_r
+from input_psiN_params_from_geometry_file import input_psiN_params_from_geometry_file
 
 def syncSpeciesParams(simulation,speciesFilename="species_database.namelist"):
     normFilename = simulation.norm
@@ -26,6 +27,20 @@ def updateDeltaOmega(simul):
     else:
         print "Only SI units are currently supported"
     return (Delta,omega)
+    #print "Delta after:" + str(Delta)
+
+def updatePsi(simul,geometryFilename="input.geometry.h5"):
+    #print "Delta before:" + str(simul.Delta)
+    if simul.units=="SI":
+        (psiMid,psiDiameter,psiA) = input_psiN_params_from_geometry_file(geometryFilename)
+        assert (simul.RBar == 1)
+        assert (simul.BBar == 1)
+        simul.inputs.psiAHat=psiA
+        simul.inputs.psiMid=psiMid
+        simul.inputs.psiDiameter=psiDiameter
+    else:
+        print "Only SI units are currently supported"
+    return (psiMid,psiDiameter,psiA)
     #print "Delta after:" + str(Delta)
 
 def updateNuR(simul,n,T):
