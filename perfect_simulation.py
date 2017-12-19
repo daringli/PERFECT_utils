@@ -1993,14 +1993,14 @@ class perfect_simulation(object):
 
     @property
     def ddpsilog_to_delta_factor(self):
-        return self.Delta*numpy.sqrt(self.masses*self.THat/self.FSABHat2[:,numpy.newaxis])*self.IHat[:,0,numpy.newaxis]/(self.psiAHat*self.Z)
+        return self.Delta*numpy.sqrt(self.masses*self.THat/self.FSABHat2[:,numpy.newaxis])*self.IHat[:,0,numpy.newaxis]/(self.psiAHat*abs(self.Z))
     
     @property
     def deltaN(self):
         try:
             return self.outputs[self.group_name+self.deltaN_name][()]
         except KeyError:
-            return numpy.abs(self.ddpsilog_to_delta_factor * self.dnHatdpsiN/self.nHat)
+            return -self.ddpsilog_to_delta_factor * self.dnHatdpsiN/self.nHat
 
     @property
     def deltaN_ped(self):
@@ -2024,11 +2024,10 @@ class perfect_simulation(object):
 
     @property
     def deltaEta(self):
-        return numpy.abs(self.ddpsilog_to_delta_factor * self.detaHatdpsiN/self.etaHat)
         try:
             return self.outputs[self.group_name+self.deltaEta_name][()]
         except KeyError:
-            return numpy.abs(self.ddpsilog_to_delta_factor * self.detaHatdpsiN/self.etaHat)
+            return -self.ddpsilog_to_delta_factor * self.detaHatdpsiN/self.etaHat
 
     @property
     def max_deltaEta(self):
@@ -2039,7 +2038,7 @@ class perfect_simulation(object):
         try:
             return self.outputs[self.group_name+self.deltaT_name][()]
         except KeyError:
-            return  numpy.abs(self.ddpsilog_to_delta_factor *self.dlogTHatdpsiN)
+            return  -self.ddpsilog_to_delta_factor *self.dlogTHatdpsiN
          
     @property
     def max_deltaT(self):
