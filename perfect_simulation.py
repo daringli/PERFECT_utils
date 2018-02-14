@@ -231,7 +231,10 @@ class perfect_simulation(object):
                 
     @property
     def did_it_converge(self):
-        conv = self.outputs[self.group_name+self.did_it_converge_name][()]
+        try:
+            conv = self.outputs[self.group_name+self.did_it_converge_name][()]
+        except (TypeError,KeyError):
+            conv = -1
         if conv == -1:
             return False
         elif conv == 1:
@@ -1294,8 +1297,12 @@ class perfect_simulation(object):
 
     @property
     def VPrimeHat(self):
-        return self.outputs[self.group_name+self.VPrimeHat_name][()]
-
+        try:
+            return self.outputs[self.group_name+self.VPrimeHat_name][()]
+        except (TypeError,KeyError):
+            return numpy.sum((1/self.JHat)*self.dtheta,axis=1)
+            
+        
     @property
     def heat_source(self):
         try:
@@ -1971,7 +1978,6 @@ class perfect_simulation(object):
         return self.attrib_at_psi_of_theta("kPar",psiN_point)
 
     
-
     @property
     def FSABJPar(self):
         return numpy.sum(self.Z*(self.nHat*self.FSABFlow),axis=1)
@@ -1999,7 +2005,7 @@ class perfect_simulation(object):
     def deltaN(self):
         try:
             return self.outputs[self.group_name+self.deltaN_name][()]
-        except KeyError:
+        except (KeyError,TypeError):
             return -self.ddpsilog_to_delta_factor * self.dnHatdpsiN/self.nHat
 
     @property
@@ -2026,7 +2032,7 @@ class perfect_simulation(object):
     def deltaEta(self):
         try:
             return self.outputs[self.group_name+self.deltaEta_name][()]
-        except KeyError:
+        except (KeyError,TypeError):
             return -self.ddpsilog_to_delta_factor * self.detaHatdpsiN/self.etaHat
 
     @property
@@ -2037,7 +2043,7 @@ class perfect_simulation(object):
     def deltaT(self):
         try:
             return self.outputs[self.group_name+self.deltaT_name][()]
-        except KeyError:
+        except (KeyError,TypeError):
             return  -self.ddpsilog_to_delta_factor *self.dlogTHatdpsiN
          
     @property
@@ -2477,15 +2483,17 @@ class perfect_simulation(object):
     def IHat(self):
         try:
             IHat = self.input_geometry[self.input_geometry_groupname+"IHat"][()]
-        except AttributeError:
+            return nstack(IHat,axis=1,n=len(self.theta)) #add theta axis
+
+        except (TypeError,KeyError,AttributeError):
             pass
         try:
             IHat = self.outputs[self.group_name+self.IHat_name][()]
-        except KeyError:
+            return nstack(IHat,axis=1,n=len(self.theta)) #add theta axis
+        except (TypeError,KeyError):
             print "IHat could not be obtained since no external geometry has been specified and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate geometry."
 
-        return nstack(IHat,axis=1,n=len(self.theta)) #add theta axis
-
+        
     
     @property
     def FSA_IHat(self):
@@ -2514,12 +2522,13 @@ class perfect_simulation(object):
         try:
             RHat= self.input_geometry[self.input_geometry_groupname+"RHat"][()]
         except AttributeError:
-            pass
-        try:
-            RHat = self.outputs[self.group_name+self.RHat_name][()]
-        except KeyError:
-            print "RHat could not be obtained since no external geometry has been specified and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate geometry."
-        
+            #print self.input_geometry
+            #print self.input_geometry_filename
+            try:
+                RHat = self.outputs[self.group_name+self.RHat_name][()]
+            except KeyError,TypeError:
+                print "RHat could not be obtained since no external geometry has been specified and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate geometry."
+                return None
         if arraylist_rank(RHat) == 2:
             return RHat
         elif arraylist_rank(RHat) == 1:
@@ -2742,8 +2751,11 @@ class perfect_simulation(object):
         
     @property
     def FSABHat2(self):
-        return self.outputs[self.group_name+self.FSABHat2_name][()]
-
+        try:
+            return self.outputs[self.group_name+self.FSABHat2_name][()]
+        except (KeyError,TypeError):
+            return self.FSA(self.BHat**2)
+        
     @property
     def Bt(self):
         #will always be positive for PERFECT Miller (in toroidal direction)
@@ -3397,6 +3409,7 @@ class normalized_perfect_simulation(perfect_simulation):
     def normed_flow(self):
         return self.Delta*self.vBar*self.flow
 
+    
     @property
     def Am_parallel_current(self):
         # C m/s = Am
@@ -3421,6 +3434,13 @@ class normalized_perfect_simulation(perfect_simulation):
     def MA_m2_parallel_current(self):
         # C m/s m^{-3}= Am^{-2}
         return self.A_m2_parallel_current/1e6
+
+    
+    @property
+    def MA_m2_parallel_JBS_proxy(self):
+        # C m/s = Am
+        B0 = numpy.sqrt(self.FSABHat2)
+        return self.Delta*self.vBar*self.eBar*self.nBar*self.FSABJPar/B0/1e6
 
     
     @property
