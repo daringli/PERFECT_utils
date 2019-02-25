@@ -343,10 +343,11 @@ class perfect_simulation(object):
             a=getattr(self,attrib)
         else:
             a=attrib
+
         rank=arraylist_rank(a)
         if rank==3:
             #sanity check
-            if len(a[1]) == self.Ntheta:
+            if len(a[0]) == self.Ntheta:
                 axis = 1
                 VPH=numpy.expand_dims(numpy.fabs(self.VPrimeHat),axis=1)
             else:
@@ -357,7 +358,7 @@ class perfect_simulation(object):
                 j=1 
         elif rank==2:
             if len(a[1]) == self.Ntheta:
-                print "OK!!!!!!!!!!!!!!!!!!!!"
+                #print "OK!!!!!!!!!!!!!!!!!!!!"
                 #psi, theta dependence
                 axis = 1
                 if jacobian==True:
@@ -955,6 +956,8 @@ class perfect_simulation(object):
         signOfVPrimeHat=numpy.sign(VPrimeHat)
         return self.outputs[self.group_name+self.heat_flux_name][()]*signOfVPrimeHat
 
+    
+    
     @property
     def ion_heat_flux(self):
         return numpy.sum(self.heat_flux[:,:-1],axis=1)
@@ -1998,6 +2001,10 @@ class perfect_simulation(object):
         return self.outputs[self.group_name+self.U_name][()]
 
     @property
+    def max_U_insideLCFS(self):
+        return numpy.array([numpy.max(self.U[:self.pedestal_start_stop_indices[1],ispecies]) for ispecies in range(self.Nspecies)])  
+
+    @property
     def ddpsilog_to_delta_factor(self):
         return self.Delta*numpy.sqrt(self.masses*self.THat/self.FSABHat2[:,numpy.newaxis])*self.IHat[:,0,numpy.newaxis]/(self.psiAHat*abs(self.Z))
     
@@ -2026,7 +2033,11 @@ class perfect_simulation(object):
     @property
     def max_deltaN(self):
         return numpy.array([numpy.max(self.deltaN[:,ispecies]) for ispecies in range(self.Nspecies)])
-        
+
+    
+    @property
+    def max_deltaN_insideLCFS(self):
+        return numpy.array([numpy.max(self.deltaN[:self.pedestal_start_stop_indices[1],ispecies]) for ispecies in range(self.Nspecies)])   
 
     @property
     def deltaEta(self):
@@ -2040,6 +2051,10 @@ class perfect_simulation(object):
         return numpy.array([numpy.max(self.deltaEta[:,ispecies]) for ispecies in range(self.Nspecies)])
 
     @property
+    def max_deltaEta_insideLCFS(self):
+        return numpy.array([numpy.max(self.deltaEta[:self.pedestal_start_stop_indices[1],ispecies]) for ispecies in range(self.Nspecies)]) 
+
+    @property
     def deltaT(self):
         try:
             return self.outputs[self.group_name+self.deltaT_name][()]
@@ -2051,12 +2066,30 @@ class perfect_simulation(object):
         return numpy.array([numpy.max(self.deltaT[:,ispecies]) for ispecies in range(self.Nspecies)])
 
     @property
+    def max_deltaT_insideLCFS(self):
+        return numpy.array([numpy.max(self.deltaT[:self.pedestal_start_stop_indices[1],ispecies]) for ispecies in range(self.Nspecies)]) 
+
+    @property
     def masses(self):
         m= numpy.array(self.inputs.masses)
         if m.shape == ():
             m.shape = (1,)
         return m
-        
+
+    @property
+    def mHat(self):
+        return self.masses
+
+    @property
+    def gyrofreq(self):
+        return numpy.expand_dims(self.BHat,axis=2) * self.Z/self.mHat
+
+    @property
+    def braginskii_tauHat_a(self):
+        # multiply by RBar/vBar for dimensions of seconds
+        # gives sqrt(2) times eq. (1.5) in Helander & Sigmar
+        return self.masses**(1/2) * self.THat**(3/2)/self.nHat * numpy.sqrt(2)/self.nu_r 
+
     @property
     def THat(self):
         try:
@@ -2390,6 +2423,17 @@ class perfect_simulation(object):
         return self.outputs[self.group_name+self.collisionality_name][()]
 
     @property
+    def collisionality_star(self):
+        return self.outputs[self.group_name+self.collisionality_name][()]/self.epsilon**(3/2)
+
+    
+    @property
+    def collisionality_at_point(self):
+        point = 0.97 # in psiN3
+        i = get_index_range(self.psiN3,[point,point])[1] 
+        return self.collisionality[i]
+
+    @property
     def density_perturbation(self):
         #non-adiabatic part
         return self.outputs[self.group_name+self.density_perturbation_name][()]
@@ -2499,7 +2543,7 @@ class perfect_simulation(object):
     def FSA_IHat(self):
         try:
             return self.input_geometry[self.input_geometry_groupname+"IHat"][()]
-        except AttributeError:
+        except (TypeError,KeyError,AttributeError):
             pass
         try:
             return self.outputs[self.group_name+self.IHat_name][()]
@@ -2510,13 +2554,13 @@ class perfect_simulation(object):
     def ddpsiN_IHat(self):
         try:
             return self.input_geometry[self.input_geometry_groupname+"dIHatdpsi"][()]
-        except AttributeError:
+        except (TypeError,KeyError,AttributeError):
             pass
         try:
             return self.outputs[self.group_name+self.dIHatdpsiN_name][()]
         except KeyError:
-            print "dIHatdpsi could not be obtained since no external geometry has been specified and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate geometry."
-    
+            print "IHat could not be obtained since no external geometry has been specified and simulation output probably does not exist. Try running perfect with solveSystem=.false. to generate geometry."
+        
     @property
     def RHat(self):
         try:
@@ -2769,6 +2813,38 @@ class perfect_simulation(object):
     def epsilon(self):
         return self.outputs[self.group_name+self.epsilon_name][()]
 
+
+    @property
+    def epsilon_geometry(self):
+        try:
+            return self.input_geometry[self.input_geometry_groupname+"epsilon"][()]
+        except AttributeError:
+            print "epsilon could not be obtained since no external geometry has been specified."
+
+    @property
+    def R0_geometry(self):
+        try:
+            return self.input_geometry[self.input_geometry_groupname+"R0"][()]
+        except AttributeError:
+            print "R0 could not be obtained since no external geometry has been specified."
+
+    @property
+    def a_geometry(self):
+        return self.epsilon_geometry * self.R0_geometry
+
+    @property
+    def a_geometry_100(self):
+        self.epsilon_geometry * self.R0_geometry
+        point = 1.0 # in psiN, hence 100
+        i = get_index_range(self.actual_psiN,[point,point])[1] 
+        return self.a_geometry[i]
+
+    @property
+    def epsilon32_at_point(self):
+        point = 0.97 # in psiN3
+        i = get_index_range(self.psiN3,[point,point])[1] 
+        return self.epsilon_geometry[i]**(3/2.0)
+            
     @property
     def Bp(self):
         #will typically be negative for PERFECT Miller (opposite to poloidal direction)
@@ -2836,6 +2912,27 @@ class perfect_simulation(object):
         #for PERFECT Mille geometry, Bp does not depend on psi
         return self.attrib_at_psi_of_theta("Bp",psiN_point)
 
+    @property
+    def BmaxHat(self):
+        return numpy.max(self.BHat)
+    
+    @property
+    def ft(self):
+        #"fraction of trapped particles", (11.24) in Helander & Sigmar
+        # but with lambda = v_\perp^2/Bv^2 (no B0)
+        lambdac = 1/self.BmaxHat
+        Nlambda = 50
+        lambd = numpy.linspace(0,lambdac,Nlambda)
+        dlambda = lambd[1]-lambd[0]
+        integrand = numpy.zeros((Nlambda,self.Npsi))
+        for i in range(Nlambda):
+            integrand[i] = lambd[i]/self.FSA(numpy.sqrt(1 - lambd[i] * self.BHat))
+        return 1 - 0.75 * self.FSABHat2 * numpy.trapz(integrand,dx=dlambda,axis=0)
+
+    @property
+    def fc(self):
+        return 1 - self.ft
+        
     @property
     def poloidal_flow_parallel(self):
         return numpy.expand_dims(self.Bp/self.BHat,axis=2)*self.flow
@@ -3012,6 +3109,22 @@ class perfect_simulation(object):
         self.Delta*nstack(numpy.sqrt(self.masses/self.THat),axis=1,n=len(self.theta))*self.perpendicular_flow
 
 
+    @property
+    def banana_regime_qi(self):
+        # (11.31) in Helander & Sigmar
+        # <q_i \cdot \nabla \psi>, multiply by:
+        # nBar * TBar**2 ** mBar * vBar/(e**2 * BBar * RBar)
+        # to get flux in TW/m
+        return -0.92*numpy.expand_dims(self.ft,axis=1) * self.nHat * self.THat * numpy.expand_dims(self.FSA_IHat**2,axis=1) * self.dTHatdpsiN/(self.mHat*self.FSA(self.gyrofreq**2) * self.braginskii_tauHat_a)
+
+    @property
+    def banana_regime_qi2(self):
+        # boxed equation under (11.57) in Helander & Sigmar
+        # <q_i \cdot \nabla \psi>, multiply by:
+        # nBar * TBar**2 ** mBar * vBar/(e**2 * BBar * RBar)
+        # to get flux in TW/m
+        return -(2 * self.nHat * self.THat * numpy.expand_dims(self.FSA_IHat**2,axis=1) * self.dTHatdpsiN/(self.mHat*self.FSA(self.gyrofreq**2) * self.braginskii_tauHat_a)) *numpy.expand_dims(self.FSA(numpy.expand_dims(self.FSABHat2,axis=1)/self.BHat**2) - self.fc/(self.fc + 0.462 * self.ft),axis=1)
+        
     def copy_simulation_to_dir(self,dir):
         #try to make the new directory or don't if it exists
         try:
@@ -3051,6 +3164,7 @@ class perfect_simulation(object):
 
 #####################################
 
+
 class normalized_perfect_simulation(perfect_simulation):
     def __init__(self,input_filename,norm_filename,species_filename=None,output_filename=None,psiN_to_psi_filename=None,global_term_multiplier_filename=None,group_name=None,pedestal_start_stop=(None,None),pedestal_point = None,core_point=None):
         perfect_simulation.__init__(self,input_filename,output_filename,species_filename,psiN_to_psi_filename,global_term_multiplier_filename,group_name,pedestal_start_stop,pedestal_point,core_point)
@@ -3086,6 +3200,7 @@ class normalized_perfect_simulation(perfect_simulation):
         self.eBar=self.normfile[norm_group_name]["eBar"]
         self.ePhiBar=self.normfile[norm_group_name]["ePhiBar"]
         self.vBar=numpy.sqrt(2*self.TBar/float(self.mBar))
+        self.PhiBar = self.ePhiBar/self.eBar
         
     def verify_Delta(self,tolerance):
         if self.units=="SI":
@@ -3139,6 +3254,15 @@ class normalized_perfect_simulation(perfect_simulation):
         return sim_copy
 
     @property
+    def tau_i(self):
+        # Helander+Sigmar (1.5) times sqrt(2)
+        return (self.RBar*self.nBar/(self.TBar**2 * self.nu_r)) * numpy.sqrt(self.mBar) * self.T**(3/2)/(self.Z**4 * self.n)
+    
+    @property
+    def m(self):
+        return self.mHat * self.mBar
+    
+    @property
     def a(self):
         return self.epsilon*self.RBar
 
@@ -3159,8 +3283,39 @@ class normalized_perfect_simulation(perfect_simulation):
         return self.nBar*self.etaHat
 
     @property
+    def dndpsiN(self):
+        return self.nBar*self.ddpsiN_nHat
+
+    
+    @property
+    def dTdpsiN(self):
+        return self.TBar*self.ddpsiN_THat
+
+    @property
+    def dVdpsi(self):
+        signOfVPrimeHat=numpy.sign(self.VPrimeHat)
+        return signOfVPrimeHat * 2 *numpy.pi * self.VPrimeHat * self.RBar/self.BBar
+
+    @property
+    def dVdpsiN(self):
+        return self.dVdpsi * self.psia
+
+    @property
+    def rho(self):
+        return self.a_geometry_100 * numpy.sqrt(self.actual_psiN)
+
+
+    @property
+    def dTdrho(self):
+        return self.dTdpsiN/self.drdpsiN[:,numpy.newaxis]
+    
+    @property
+    def dVdrho(self):
+        return self.dVdpsi/self.drdpsi
+    
+    @property
     def Phi(self):
-        return self.ePhiBar*self.PhiHat/self.eBar
+        return self.PhiBar*self.PhiHat
 
     @property
     def p(self):
@@ -3200,7 +3355,12 @@ class normalized_perfect_simulation(perfect_simulation):
     @property
     def e20_particle_flux(self):
         # m^2 m^{-3} m/s = 1/s
-        return self.particle_flux*(numpy.pi*self.Delta**2)*self.RBar**2*self.nBar*self.vBar/1e20
+        # 2018-09-26 added a factor 2pi from the toroidal integration
+        # 2019-02-22: need an extra sign factor to cancel out the sign correction in the non-integrated flux when psiAHat <0
+        VPrimeHat=[self.VPrimeHat]
+        VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
+        signOfVPrimeHat=numpy.sign(VPrimeHat)
+        return signOfVPrimeHat * 2*numpy.pi * self.particle_flux*(numpy.pi*self.Delta**2)*self.RBar**2*self.nBar*self.vBar/1e20
 
     @property
     def normed_particle_flux_psi_unit_vector_no_fsa(self):
@@ -3273,7 +3433,8 @@ class normalized_perfect_simulation(perfect_simulation):
     @property
     def Nm_m_momentum_flux(self):
         # kg m^3 m^{-3} m^2/s^2 = Nm
-        return self.mBar*self.m_momentum_flux*(numpy.pi*self.Delta**2)*(self.RBar**3)*self.nBar*self.vBar**2
+        # 2018-09-26 added a factor 2pi from the toroidal integration
+        return 2*numpy.pi * self.mBar*self.m_momentum_flux*(numpy.pi*self.Delta**2)*(self.RBar**3)*self.nBar*self.vBar**2
 
     @property
     def Nm_ion_m_momentum_flux(self):
@@ -3288,15 +3449,26 @@ class normalized_perfect_simulation(perfect_simulation):
         VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
         signOfVPrimeHat=numpy.sign(VPrimeHat)
         return (self.heat_flux/VPrimeHat)*signOfVPrimeHat*self.TBar*(numpy.pi*self.Delta**2)*self.RBar*self.BBar*self.nBar*self.vBar
-
-
         
     @property
     def W_heat_flux(self):
         # V' <\int d^3 v g_a mv^2/2 v_m \cdot \nabla \psi>
         # J m^2 m^{-3} m/s = J/s = W
-        return self.heat_flux*self.TBar*(numpy.pi*self.Delta**2)*self.RBar**2*self.nBar*self.vBar
+        # 2018-09-26 added a factor 2pi from the toroidal integration
+        # 2019-02-22: need an extra sign factor to cancel out the sign correction in the non-integrated flux when psiAHat <0
+        VPrimeHat=[self.VPrimeHat]
+        VPrimeHat=numpy.dot(numpy.transpose(VPrimeHat),[numpy.array([1]*self.num_species)])
+        signOfVPrimeHat=numpy.sign(VPrimeHat)
+        return signOfVPrimeHat*2*numpy.pi * self.heat_flux*self.TBar*(numpy.pi*self.Delta**2)*self.RBar**2*self.nBar*self.vBar
 
+    @property
+    def W_ExB_heat_flux(self):
+        return self.n*self.T * 2*np.pi * np.sum(self.dtheta * self.ddtheta_normed_potential_perturbation/self.B**2,axis=1)[:,np.newaxis]
+
+    @property
+    def W_heat_flux2(self):
+        return self.W_heat_flux + self.W_ExB_heat_flux
+    
     @property
     def MW_heat_flux(self):
         # V' <\int d^3 v g_a mv^2/2 v_m \cdot \nabla \psi>
@@ -3308,6 +3480,100 @@ class normalized_perfect_simulation(perfect_simulation):
         # V' <\int d^3 v g_a mv^2/2 v_m \cdot \nabla \psi>
         # MJ m^2 m^{-3} m/s = MJ/s = MW
         return numpy.sum(self.MW_heat_flux[:,:-1],axis=1)
+
+    @property
+    def heat_chi(self):
+        # V' <\int d^3 v g_a mv^2/2 v_m \cdot \nabla \psi>
+        # MJ m^2 m^{-3} m/s = MJ/s = MW
+        print self.a_geometry_100
+        return -self.W_heat_flux/(self.n * self.dTdrho * self.dVdrho[:,numpy.newaxis])
+
+    @property
+    def FSAOmegap(self):
+        return self.BBar*self.FSABp[:,numpy.newaxis]*self.Z*self.eBar/self.m
+
+    @property
+    def helander_banana_ion_chi_small_epsilon(self):
+        # Helander+Sigmar (11.32)
+        return 1.35 * self.epsilon_geometry[:,numpy.newaxis]**(1/2) * self.T/(self.m*self.FSAOmegap**2 * self.tau_i)
+
+    @property
+    def nu_aa(self):
+        return self.nu_r * (self.vBar/self.RBar) * self.Z**4/self.mHat**(1/2) *(self.nHat/self.THat**(3/2))
+
+    
+    @property
+    def ie_heat_exchange_freq(self):
+        return self.nu_aa[:,0] * 3*numpy.sqrt(self.mHat[-1]/self.mHat[0]) *(self.nHat[:,-1]/self.nHat[:,0]) * (self.THat[:,0]/self.THat[:,-1])**(3/2) * (self.THat[:,-1] - self.THat[:,0])
+    
+    @property
+    def nuPrime_a(self):
+        nuPrime = numpy.zeros((self.Npsi,self.Nspecies))
+        for a in range(self.Nspecies):
+            for b in range(self.Nspecies):
+                nuPrime[:,a] = nuPrime[:,a] + self.Z[b]**2*self.nHat[:,b]
+            nuPrime[:,a] = nuPrime[:,a] * (self.Z[a]/self.THat[:,a])**2
+        nuPrime = (4/(3*numpy.sqrt(numpy.pi))) * nuPrime * self.nu_r * self.q*self.FSARHat[:,numpy.newaxis]
+        return nuPrime
+
+    @property
+    def nuStar_a(self):
+        return self.nuPrime_a/self.epsilon**(3/2)
+    
+    @property
+    def B(self):
+        return self.BHat * self.BBar
+    
+    @property
+    def B02(self):
+        return self.FSABHat2 * self.BBar**2
+
+    @property
+    def B0(self):
+        return numpy.sqrt(self.B02)
+
+    @property
+    def Omega0(self):
+        return self.Z*self.eBar * self.B0[:,numpy.newaxis]/self.m
+    
+    @property
+    def FSA_I(self):
+        return self.FSA_IHat*self.BBar*self.RBar
+
+    @property
+    def helander_banana_ion_geometric_factor_small_epsilon(self):
+        # Helander+Sigmar (11.32)
+        return 1.35 * self.epsilon_geometry[:,numpy.newaxis]**(1/2) * self.T/(self.m*self.FSAOmegap**2 * self.tau_i)
+    
+    @property
+    def helander_banana_ion_geometric_factor(self):
+        return self.B02 * self.FSA(1/self.B**2) - self.fc/(self.fc + 0.463 * self.ft)
+
+    @property
+    def psia(self):
+        return self.psiAHat * self.BBar * self.RBar**2
+    
+    @property
+    def drdpsi(self):
+        # r = a \sqrt{\psi_N}
+        return self.a_geometry_100/(2*numpy.sqrt(self.actual_psiN) * self.psia)
+
+    @property
+    def drdpsiN(self):
+        # r = a \sqrt{\psi_N}
+        return self.a_geometry_100/(2*numpy.sqrt(self.actual_psiN) )
+    
+    
+    @property
+    def helander_banana_ion_chi(self):
+        # Helander+Sigmar (11.32)
+        return   2*self.T * (self.drdpsi**2 * self.helander_banana_ion_geometric_factor * self.FSA_I**2)[:,numpy.newaxis]/(self.m*self.Omega0**2 * self.tau_i)
+    
+    @property
+    def MW_total_heat_flux(self):
+        # V' <\int d^3 v g_a mv^2/2 v_m \cdot \nabla \psi>
+        # MJ m^2 m^{-3} m/s = MJ/s = MW
+        return numpy.sum(self.MW_heat_flux,axis=1)
 
     @property
     def normed_heat_flux_psi_unit_vector(self):
@@ -3340,17 +3606,45 @@ class normalized_perfect_simulation(perfect_simulation):
         signOfVPrimeHat=numpy.sign(VPrimeHat)
         return (self.conductive_heat_flux_psi_unit_vector/VPrimeHat)*signOfVPrimeHat*self.TBar*(numpy.pi*self.Delta**2)*self.nBar*self.vBar
 
+   
     @property
     def MW_conductive_heat_flux_psi_unit_vector(self):
+        # MW/m^2
         return self.normed_conductive_heat_flux_psi_unit_vector/1e6
 
     @property
     def W_conductive_heat_flux(self):
-        return self.conductive_heat_flux*self.TBar*(numpy.pi*self.Delta**2)*self.RBar**2*self.nBar*self.vBar
+        # 2018-09-26 added a factor 2pi from the toroidal integration
+        return 2*numpy.pi * self.conductive_heat_flux*self.TBar*(numpy.pi*self.Delta**2)*self.RBar**2*self.nBar*self.vBar
 
     @property
     def MW_conductive_heat_flux(self):
         return self.W_conductive_heat_flux/1e6
+
+    @property
+    def W_banana_regime_qi(self):
+        # dV/dpsi <q_i \cdot \nabla \psi>
+        # in units of W
+        # NOTE: multiplied by 2*pi VPrimeHat to get flux from entire surface
+        # since VPrimeHat in PERFECT lacks factor 2pi
+        return self.banana_regime_qi * self.nBar * self.TBar * self.vBar * self.RBar**2 * self.Delta**2 * numpy.pi  *numpy.expand_dims(self.VPrimeHat/self.psiAHat,axis=1)
+
+    @property
+    def MW_banana_regime_qi(self):
+        return self.W_banana_regime_qi/1e6
+
+    @property
+    def W_banana_regime_qi2(self):
+        # dV/dpsi <q_i \cdot \nabla \psi>
+        # in units of W
+        # NOTE: multiplied by 2*pi VPrimeHat to get flux from entire surface
+        # since VPrimeHat in PERFECT lacks factor 2pi
+        return self.banana_regime_qi2 * self.nBar * self.TBar * self.vBar * self.RBar**2 * self.Delta**2 * numpy.pi  *numpy.expand_dims(self.VPrimeHat/self.psiAHat,axis=1)
+
+    @property
+    def MW_banana_regime_qi2(self):
+        return self.W_banana_regime_qi2/1e6
+
 
     @property
     def MW_convective_heat_flux(self):
@@ -3446,7 +3740,11 @@ class normalized_perfect_simulation(perfect_simulation):
     @property
     def normed_potential_perturbation(self):
         return self.PhiBar*self.potential_perturbation
-
+    
+    @property
+    def ddtheta_normed_potential_perturbation(self):
+        return self.ddtheta(self.normed_potential_perturbation)
+    
     @property
     def normed_poloidal_flow(self):
         return self.Delta*self.vBar*self.poloidal_flow
@@ -3746,5 +4044,4 @@ class normalized_perfect_simulation(perfect_simulation):
         print "mVtn/n dn/dr " + str((self.normed_n_FSA_toroidal_mass_flow[psi_index,ion_index]/self.n[psi_index,ion_index])*(self.n[psi_index+dpsi_index,ion_index] - self.n[psi_index-dpsi_index,ion_index])/(self.actual_psi[psi_index+dpsi_index] - self.actual_psi[psi_index-dpsi_index])*numpy.fabs(self.FSABp[psi_index]/self.RBar))
         
         return self.normed_m_momentum_flux_psi_unit_vector*((1/self.normed_conductive_heat_flux_psi_unit_vector[:,ion_index])*(self.p[:,ion_index])/(self.RBar)*(self.deltaT[:,ion_index]/(dmnVtdr*self.rho_p[:,ion_index])))[psi_index]
-
 

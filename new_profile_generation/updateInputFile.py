@@ -1,6 +1,6 @@
 import os, numpy
 from setSpeciesParameters import speciesParams
-from coulomb_logarithms import lambda_ee as coulombLog
+from coulomb_logarithms import logLambda_ee, logLambda_ie
 from nu_r import nu_r #nu_r
 from input_psiN_params_from_geometry_file import input_psiN_params_from_geometry_file
 
@@ -31,22 +31,38 @@ def updateDeltaOmega(simul):
 
 def updatePsi(simul,geometryFilename="input.geometry.h5"):
     #print "Delta before:" + str(simul.Delta)
-    if simul.units=="SI":
-        (psiMid,psiDiameter,psiA) = input_psiN_params_from_geometry_file(geometryFilename)
-        assert (simul.RBar == 1)
-        assert (simul.BBar == 1)
-        simul.inputs.psiAHat=psiA
-        simul.inputs.psiMid=psiMid
-        simul.inputs.psiDiameter=psiDiameter
+    if simul.inputs.geometryToUse == 4:
+    
+        if simul.units=="SI":
+            (psiMid,psiDiameter,psiA) = input_psiN_params_from_geometry_file(geometryFilename)
+                
+            assert (simul.RBar == 1)
+            assert (simul.BBar == 1)
+            if psiA is not None:
+                simul.inputs.psiAHat=psiA
+            simul.inputs.psiMid=psiMid
+            simul.inputs.psiDiameter=psiDiameter
+        else:
+            print "Only SI units are currently supported when reading from input.geometry.h5"
+        return (psiMid,psiDiameter,psiA)
     else:
-        print "Only SI units are currently supported"
-    return (psiMid,psiDiameter,psiA)
+        # nothing to do since we do not need to sync from geometry file.
+        pass 
     #print "Delta after:" + str(Delta)
 
-def updateNuR(simul,n,T):
+def updateNuR(simul,n,T,logLambda="ee"):
     if simul.units=="SI":
-        logLambda=coulombLog(n,T) #n,T not used beyond this point
+        if logLambda == "ee":
+            logLambda=logLambda_ee(n,T)
+        elif (logLambda == "ie") or logLambda == "ei":
+            logLambda=logLambda_ie(n,T)
+        else:
+            raise ValueError("Unrecognized Coulomb logarithm calculation: '" + logLambda +"'")
+        #n,T not used beyond this point
         print "logLambda: "+str(logLambda)
+        print "logLambda_ee: "+str(logLambda_ee(n,T))
+        print "logLambda_ie: "+str(logLambda_ie(n,T))
+        
         nur = nu_r(simul.RBar,simul.nBar,simul.TBar,logLambda)
         simul.inputs.nu_r=nur
         return nur

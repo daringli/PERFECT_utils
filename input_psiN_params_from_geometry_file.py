@@ -4,9 +4,12 @@ import sys
 def input_psiN_params_from_geometry_file(filename):
     f=h5py.File(filename,'r')
     groupname = f["/"].keys()[0]
-    psiMin  = f["/" + groupname + "/psiMin"][()][0]
-    psiMax  = f["/" + groupname + "/psiMax"][()][0]
-    psiA = f["/" + groupname + "/psi0"][()][0]
+    psiMin  = f["/" + groupname + "/psiMin"][()]
+    psiMax  = f["/" + groupname + "/psiMax"][()]
+    try:
+        psiA = f["/" + groupname + "/psi0"][()]
+    except KeyError:
+        psiA = None
     psiMid = (psiMin + psiMax)/2.0
     psiDiameter = psiMax - psiMin
     

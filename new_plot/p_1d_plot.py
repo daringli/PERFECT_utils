@@ -18,7 +18,7 @@ import scipy.integrate
 
 from mpldatacursor import datacursor
 
-def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,markers=None,markeverys=None,markersizes=None,fillstyles=None,linestyles=None,linewidths=None,xlims=None,same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","H":"i","T":"i","He":"z","N":"z","e":"e"},vlines=[],hlines=[],share_scale=[],interactive=False,colors=None,skip_species = [],yaxis_powerlimits=(0,0),hidden_xticklabels=[],yaxis_label_x=-0.15,yaxis_label_y=0.5,ylims=None,simulList=None,pedestal_start_stop=None,pedestal_point=None,core_point=None,putboxes=[],return_psps=False,set_species_title=True,group_mode="species",visualizer_rows=None,label_size=None):
+def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",speciesname="species",psiN_to_psiname="psiAHat.h5",global_term_multiplier_name="globalTermMultiplier.h5",cm=cm.rainbow,lg=True,markers=None,markeverys=None,markersizes=None,fillstyles=None,linestyles=None,linewidths=None,xlims=None,same_plot=False,outputname="default",ylabels=None,label_all=False,global_ylabel="",sort_species=True,first=["D","He"],last=["e"],generic_labels=True,label_dict={"D":"i","H":"i","T":"i","He":"z","N":"z","e":"e"},vlines=[],hlines=[],share_scale=[],interactive=False,colors=None,skip_species = [],yaxis_powerlimits=(0,0),hidden_xticklabels=[],yaxis_label_x=-0.15,yaxis_label_y=0.5,ylims=None,simulList=None,pedestal_start_stop=None,pedestal_point=None,core_point=None,putboxes=[],return_psps=False,set_species_title=True,group_mode="species",visualizer_rows=None,label_size=None,filetype=".pdf",legend=None):
     #dirlist: list of simulation directories
     #attribs: list of fields to plot from simulation
     #speciesname: species filename in the simuldir
@@ -46,7 +46,7 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
         
     all_linestyles = linestyles
                 
-    if simulList == None:
+    if simulList is None:
         normlist=[x + "/" + normname for x in dirlist]
         specieslist=[x + "/" + speciesname for x in dirlist]
         psiN_to_psiList=[x + "/" + psiN_to_psiname for x in dirlist]
@@ -84,15 +84,25 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
         simulList=perfect_simulations_from_dirs(dirlist, normlist, specieslist, psiN_to_psiList, global_term_multiplierList, pedestal_start_stop_list=pedestal_start_stop, pedestal_point_list=pedestal_point, core_point_list=core_point)      
     else:
         "p_1d_plot: simulList specified externally, ignoring dirlist, etc."
-    if markers != None:
-        if markeverys == None:
+
+    for simul in simulList:
+        pass
+        #print "max deltaT: " + str(simul.max_deltaT_insideLCFS)
+        #print "max deltaN: " +str(simul.max_deltaN_insideLCFS)
+        #print "max deltaEta: " +str(simul.max_deltaEta_insideLCFS)
+        #print "max U: " +str(simul.max_U_insideLCFS)
+        #print "nuHat_97: " + str(simul.collisionality_at_point)
+        #print "epsilon32_97: " + str(simul.epsilon32_at_point)
+        
+    if markers is not None:
+        if markeverys is None:
             markeverys = [None]*len(simulList)
-        if markersizes == None:
+        if markersizes is None:
             markersizes = [1]*len(simulList)
 
 
 
-        if fillstyles == None:
+        if fillstyles is None:
             if lg:
                 fillstyles=[]
                 for n,l in zip(noddpsi,local):
@@ -146,7 +156,7 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
     noddpsi=[simul.no_ddpsi for simul in simulList]
 
     
-    if colors == None:
+    if colors is None:
         colors=cm(numpy.linspace(0,1,len(simulList)))
         all_linecolors=[]
     
@@ -173,7 +183,7 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
     else:
         all_linecolors=colors
 
-    if all_linestyles == None:
+    if all_linestyles is None:
         if lg:
             all_linestyles=[] #linestyles generated from local or global
             for n,l in zip(noddpsi,local):
@@ -190,7 +200,7 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
     
                     
 
-    if linewidths == None:
+    if linewidths is None:
         linewidths = [1]*len(simulList)
     
     for i_a,attrib in enumerate(attribs):
@@ -259,7 +269,7 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                         x=[numpy.array(range(len(getattr(simul,attrib)))) for simul in simulList if s in simul.species]
                     elif group_mode == "simulations":
                         x=[numpy.array(range(len(getattr(simulList[i_sp],attrib)))) for s in simulList[i_sp].species]
-                if xlims == None:
+                if xlims is None:
                     # min to max among all the simulations
                     xlims = [numpy.min(x),numpy.max(x)]
 
@@ -319,7 +329,7 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
                     L=1
                 
                 x=[numpy.array(range(L)) for simul in simulList]
-            if xlims == None:
+            if xlims is None:
                 # min to max among all the simulations
                 xlims = [numpy.min(x),numpy.max(x)]
             
@@ -449,11 +459,11 @@ def perfect_1d_plot(dirlist,attribs,xattr="psi",normname="norms.namelist",specie
         if visualizer_rows is None:
             visualizer_rows = gridspec_list[i_li][0]
         
-        perfect_visualizer(psp_list,gridspec_list[i_li],global_xlabel=global_xlabel,dimensions=1,global_ylabel=global_ylabel,interactive=interactive,putboxes=putboxes,rows=visualizer_rows,global_xlabel_size=xaxis_label_size)
+        perfect_visualizer(psp_list,gridspec_list[i_li],global_xlabel=global_xlabel,dimensions=1,global_ylabel=global_ylabel,interactive=interactive,putboxes=putboxes,rows=visualizer_rows,global_xlabel_size=xaxis_label_size,legend=legend)
         if same_plot:
-            plt.savefig(outputname+".pdf")
+            plt.savefig(outputname+filetype)
         else:
-            plt.savefig(attribs[i_li]+".pdf")
+            plt.savefig(attribs[i_li]+filetype)
 
     
         

@@ -10,6 +10,16 @@ After interpolation, it extrends the profile outside a range (typically outside 
 Extension is designed to be smooth and to let local theory be valid at boundary"""
     
     def __init__(self,x,y,interval,kind=3,profile='',species='',extrapolation=2.0,offset=1.0,a=0.05,b=-0.15,C=7.0):
+        # returns log(exp(C*y(x))  + exp(C(a+bx)))/C
+        # which accomplishes a smooth transition from the profile given by the data y(x)
+        # and a linear profile for the numerical buffer zone.
+        # a & b: controls the linear behaviour in the buffer zone
+        # C: controls the abruptness of the transition
+        # NOTE: this relies on y(x) being small or negative in the buffer region
+        # y will be extrapolated outside the data range with from a univariate spline
+        # and on the linear term being small in the core
+        # This can potentially be a problem if a higher-order (like 3) spline is used,
+        # since it may start to increase in the extrapolation region.
         self.x = x
         self.y = y
         self.profile=profile

@@ -28,6 +28,9 @@ def writeProfileListToOutput(profileList,simul):
     s = simul.inputs.psi
     psiAHat = simul.psiAHat
     create_psiAHat_of_Npsi("psiAHat.h5",Npsi,ddx_grid(s),grid(s),grid(s)/psiAHat)
+
+    print "!!!!!!!!!!!!!!!!!!!"
+    print s
     
     
     # with the grid in place, we sample the profiles on it
@@ -49,6 +52,9 @@ def writeProfileListToOutput(profileList,simul):
     Phi = extractProfilesFromList(profileList,"Phi","none","any")[0]
     ddpsiN_Phi = extractProfilesFromList(profileList,"ddx_Phi","none","any")[0]
     psiN = grid(s)/psiAHat
+
+    print "!!!!!!!!!"
+    print psiN
 
     scale=(ddx_grid/psiAHat)(s)
     Phi = sampleFunclist(Phi,psiN)

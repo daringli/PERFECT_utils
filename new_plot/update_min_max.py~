@@ -1,9 +1,0 @@
-def update_min_max(self,data,min_max):
-    if len(data)==0:
-        print "update_min_max: warning, input data is empty."
-    newmax=numpy.max(data)
-    if newmax>min_max[1]:
-        min_max[1]=newmax
-    newmin=numpy.min(data)
-    if newmin<self.species_data_minmax[specy][0]:
-        self.species_data_minmax[specy][0]=newmin

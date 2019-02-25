@@ -34,7 +34,7 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
     interactive=kwarg_default("interactive",False,**kwargs)
 
     putboxes = kwarg_default("putboxes",[],**kwargs)
-
+    legend = kwarg_default("legend",None,**kwargs)
     
     #set the height differently depending on if most plots are colormaps (2D), and thus need colorbars
     if dimensions == 1:
@@ -165,9 +165,7 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
         p_subplot.plot(fig,ax)
             
         ############# 2D ###########
-        p_subplot.plot(fig,ax)
-
-
+        #p_subplot.plot(fig,ax)
 
 
         #we need to sort out ticks after plotting, since they are generated
@@ -221,7 +219,8 @@ def perfect_visualizer(p_subplot_list,gridspec_params,**kwargs):
             datacursor(display='multiple', draggable=True)
             plt.show()
 
-
+        if legend is not None:
+            plt.legend(legend)
 
         
 if __name__=="__main__":
